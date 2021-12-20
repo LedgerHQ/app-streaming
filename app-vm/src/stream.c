@@ -57,7 +57,7 @@ void stream_request_page(uint32_t addr, uint8_t *data)
     //_Static_assert(IO_APDU_BUFFER_SIZE == 255 + 5, "lol");
 
     cmd->addr = addr;
-    cmd->cmd = (CMD_REQUEST_PAGE >> 8) | (CMD_REQUEST_PAGE & 0xff);
+    cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd)-2);
     if (size != PAGE_SIZE) {
@@ -78,7 +78,7 @@ void stream_commit_page(uint32_t addr, uint8_t *data)
     //_Static_assert(IO_APDU_BUFFER_SIZE == 255 + 5, "lol");
 
     cmd->addr = addr;
-    cmd->cmd = (CMD_COMMIT_PAGE >> 8) | (CMD_COMMIT_PAGE & 0xff);
+    cmd->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd)-2);
     if (size != 2) {
@@ -101,7 +101,7 @@ void stream_init_app(uint8_t *buffer)
     app.cpu.regs[2] = 0x70000000; // sp
 
     app.code.addr = 0;
-    app.stack.addr = 0;
+    app.stack.addr = app.cpu.regs[2] - 256;
 
     //struct app_s *app = (struct app_s *)buffer;
 

@@ -116,7 +116,7 @@ if __name__ == "__main__":
             continue
 
         print(f"[<] {data}")
-        if status_word == 0x6100:
+        if status_word == 0x6101:
             assert len(data) == 4
             addr = int.from_bytes(data, "little")
             page = stream.get_page(addr)
@@ -124,5 +124,5 @@ if __name__ == "__main__":
             response = client.raw_exchange(page)
             status_word = int.from_bytes(response[-2:], "big")
             data = response[:-2]
-        else:
+        elif status_word == 0x6102:
             assert False
