@@ -72,6 +72,7 @@ class Stream:
 
         self.fp = open(path, "rb")
         self.elf = ELFFile(self.fp)
+        self.stack = {}
 
         assert self.elf.get_machine_arch() == "RISC-V"
         text = self.elf.get_section_by_name(".text")
@@ -92,14 +93,17 @@ class Stream:
         #for section_addr, data in self.sections.items():
         #    if addr >= section_addr and addr < section_addr + len(data):
 
-        if addr == 0x00010000:
+        if addr == 0x00010100:
             text = self.elf.get_section_by_name(".text")
             sh_offset = text['sh_offset']
             sh_size = text['sh_size']
             offset = sh_offset & 0xffffff00
             page = self.data[offset:offset+256]
+        elif addr in self.stack:
+            page = self.stack[addr]
         else:
-            assert False
+            page = b"\x00" * 256
+            #assert False
 
         return page
 
@@ -125,4 +129,15 @@ if __name__ == "__main__":
             status_word = int.from_bytes(response[-2:], "big")
             data = response[:-2]
         elif status_word == 0x6102:
+            assert len(data) == 4
+            addr = int.from_bytes(data, "little")
+
+            response = client.raw_exchange(bytes([0x01]))
+            print(f"{response}")
+            stream.stack[addr] = response
+
+            response = client.raw_exchange(bytes([0x02]))
+            status_word = int.from_bytes(response[-2:], "big")
+            data = response[:-2]
+        else:
             assert False

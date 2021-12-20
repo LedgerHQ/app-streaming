@@ -18,9 +18,14 @@ static void debug_write(char *buf)
 
 void ecall(struct rv_cpu *cpu)
 {
-    if (cpu->regs[10] == 0) {
-        /* check buffer */
+    uint32_t nr = cpu->regs[5];
+
+    switch (nr) {
+    case 0:
         debug_write(cpu->regs[11]);
+        break;
+    default:
+        os_sched_exit(1);
     }
 }
 

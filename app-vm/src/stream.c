@@ -81,12 +81,12 @@ void stream_commit_page(uint32_t addr, uint8_t *data)
     cmd->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd)-2);
-    if (size != 2) {
+    if (size != 1) {
     }
 
     memcpy(G_io_apdu_buffer, data, PAGE_SIZE);
     size = io_exchange(CHANNEL_APDU, PAGE_SIZE);
-    if (size != 2) {
+    if (size != 1) {
     }
 }
 
@@ -97,11 +97,11 @@ void stream_init_app(uint8_t *buffer)
     //uint32_t entrypoint;
     //uint32_t stack_addr;
 
-    app.cpu.pc = 0x100dc;
+    app.cpu.pc = 0x10108;
     app.cpu.regs[2] = 0x70000000; // sp
 
     app.code.addr = 0;
-    app.stack.addr = app.cpu.regs[2] - 256;
+    app.stack.addr = app.cpu.regs[2] - PAGE_SIZE;
 
     //struct app_s *app = (struct app_s *)buffer;
 
