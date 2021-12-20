@@ -45,3 +45,12 @@ New syscalls:
 
 - https://github.com/LedgerHQ/ledger-nanos-ui/blob/master/src/ui.rs
 - https://github.com/LedgerHQ/ledger-nanos-sdk/blob/0d676b552f81d00b96bd9a09f28565086a5efb1f/src/io.rs#L144
+
+
+## Newlib
+
+
+```
+./configure --host x86
+make
+```

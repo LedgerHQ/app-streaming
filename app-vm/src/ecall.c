@@ -6,13 +6,13 @@
 #include "types.h"
 
 
-static void debug_write(char *buf)
+static void debug_write(char *msg)
 {
   asm volatile (
      "movs r0, #0x04\n"
      "movs r1, %0\n"
      "svc      0xab\n"
-     :: "r"(buf) : "r0", "r1"
+     :: "r"(msg) : "r0", "r1"
   );
 }
 
@@ -25,7 +25,7 @@ void ecall(struct rv_cpu *cpu)
         debug_write(cpu->regs[11]);
         break;
     default:
-        os_sched_exit(1);
+        os_sched_exit(10);
         break;
     }
 }

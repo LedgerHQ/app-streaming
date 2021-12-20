@@ -44,9 +44,15 @@ struct cmd_commit_page_s {
 
 static struct app_s app;
 
-static void fatal(char *msg)
+void fatal(char *msg)
 {
-    os_sched_exit(1);
+    asm volatile (
+     "movs r0, #0x04\n"
+     "movs r1, %0\n"
+     "svc      0xab\n"
+     :: "r"(msg) : "r0", "r1"
+    );
+    os_sched_exit(7);
 }
 
 void stream_request_page(uint32_t addr, uint8_t *data)
@@ -97,7 +103,7 @@ void stream_init_app(uint8_t *buffer)
     //uint32_t entrypoint;
     //uint32_t stack_addr;
 
-    app.cpu.pc = 0x10108;
+    app.cpu.pc = 0x10110;
     app.cpu.regs[2] = 0x70000000; // sp
 
     app.code.addr = 0;
@@ -132,12 +138,12 @@ static void check_alignment(uint32_t addr, size_t size)
     switch (size) {
     case 4:
         if (addr & 3) {
-            fatal("invalid alignment");
+            fatal("invalid alignment\n");
         }
         break;
     case 2:
         if (addr & 1) {
-            fatal("invalid alignment");
+            fatal("invalid alignment\n");
         }
         break;
     case 1:
