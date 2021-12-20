@@ -1,7 +1,7 @@
 static void hello(char *str)
 {
     asm(
-        "li t0, 0\n"
+        "li t0, 1\n"
         "ecall\n");
 }
 

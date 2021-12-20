@@ -75,17 +75,21 @@ class Stream:
         self.stack = {}
 
         assert self.elf.get_machine_arch() == "RISC-V"
+
         text = self.elf.get_section_by_name(".text")
-        sh_offset = text['sh_offset']
-        sh_size = text['sh_size']
+        self.code_start = text['sh_addr']
+        self.code_end = self.code_start + text['sh_size']
 
-        self.sections = {}
-        for section in self.elf.iter_sections():
-            offset = section['sh_offset']
-            size = section['sh_size']
-            print(f"{offset:#x} {size:#x}")
-            self.sections[offset] = section.data()
+        offset = self.code_start & 0xff
+        if offset != 0:
+            self.code_start -= offset
 
+        offset_start = text['sh_offset'] - offset
+        offset_end = text['sh_offset'] + text['sh_size']
+        if offset_end & 0xff:
+            offset_end = (offset_end + 0x100) & 0xffffff00
+        self.code = self.data[offset_start:offset_end]
+        #print(hex(offset_start), hex(offset_end))
 
     def get_page(self, addr):
         assert addr & 0xff == 0
@@ -93,12 +97,9 @@ class Stream:
         #for section_addr, data in self.sections.items():
         #    if addr >= section_addr and addr < section_addr + len(data):
 
-        if addr == 0x00010100:
-            text = self.elf.get_section_by_name(".text")
-            sh_offset = text['sh_offset']
-            sh_size = text['sh_size']
-            offset = sh_offset & 0xffffff00
-            page = self.data[offset:offset+256]
+        if addr >= self.code_start and addr < self.code_end:
+            offset = (addr & 0xffffff00) - self.code_start
+            page = self.code[offset:offset+256]
         elif addr in self.stack:
             page = self.stack[addr]
         else:

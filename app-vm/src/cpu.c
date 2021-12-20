@@ -350,6 +350,7 @@ void rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_ECALL:
+            //os_sched_exit(1);
             ecall(cpu);
             break;
 

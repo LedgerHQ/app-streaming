@@ -21,11 +21,12 @@ void ecall(struct rv_cpu *cpu)
     uint32_t nr = cpu->regs[5];
 
     switch (nr) {
-    case 0:
+    case 1:
         debug_write(cpu->regs[11]);
         break;
     default:
         os_sched_exit(1);
+        break;
     }
 }
 
