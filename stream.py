@@ -116,7 +116,7 @@ if __name__ == "__main__":
     first = True
     while True:
         if first:
-            entrypoint = int(0x10110).to_bytes(4, "little")
+            entrypoint = stream.elf.header["e_entry"].to_bytes(4, "little")
             sp = int(0x70000000).to_bytes(4, "little")
             status_word, data = exchange(client, ins=0x00, data=entrypoint + sp)
             first = False
