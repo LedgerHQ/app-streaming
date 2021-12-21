@@ -14,7 +14,6 @@ import time
 from enum import IntEnum
 
 from elftools.elf.elffile import ELFFile
-#from elftools.elf import ElfFile32l
 
 os.environ["LEDGER_PROXY_ADDRESS"] = "127.0.0.1"
 os.environ["LEDGER_PROXY_PORT"] = "9999"

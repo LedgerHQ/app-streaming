@@ -13,7 +13,7 @@ static void hello(char *str)
             "ecall\n" :: "r"(c) : "t0", "a0");
             }*/
     asm(
-        "li t0, 4\n"
+        "li t0, 1\n"
         "add a0, %0, 0\n"
         "ecall\n" :: "r"(str) : "t0", "a0");
 }

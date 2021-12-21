@@ -7,8 +7,9 @@
 #include "stream.h"
 
 #define PAGE_SIZE 256
+#define PAGE_MASK ~(PAGE_SIZE-1)
 
-#define PAGE_START(addr) ((addr) & ~(PAGE_SIZE-1))
+#define PAGE_START(addr) ((addr) & PAGE_MASK)
 
 enum page_prot_e {
     PAGE_PROT_RO,
@@ -133,9 +134,14 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     return page;
 }
 
+static bool same_page(uint32_t addr1, uint32_t addr2)
+{
+    return (addr1 & PAGE_MASK) == (addr2 & PAGE_MASK);
+}
+
 static void check_alignment(uint32_t addr, size_t size)
 {
-    switch (size) {
+    /*switch (size) {
     case 4:
         if (addr & 3) {
             fatal("invalid alignment\n");
@@ -149,6 +155,9 @@ static void check_alignment(uint32_t addr, size_t size)
     case 1:
     default:
         break;
+        }*/
+    if (!same_page(addr, addr + size - 1)) {
+        fatal("not on same page\n");
     }
 }
 
