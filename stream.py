@@ -72,6 +72,8 @@ class Stream:
         self.fp = open(path, "rb")
         self.elf = ELFFile(self.fp)
         self.stack = {}
+        self.stack_end = 0x80000000
+        self.stack_start = self.stack_end - 0x1000
 
         assert self.elf.get_machine_arch() == "RISC-V"
 
@@ -93,17 +95,13 @@ class Stream:
     def get_page(self, addr):
         assert addr & 0xff == 0
 
-        #for section_addr, data in self.sections.items():
-        #    if addr >= section_addr and addr < section_addr + len(data):
-
         if addr >= self.code_start and addr < self.code_end:
             offset = (addr & 0xffffff00) - self.code_start
             page = self.code[offset:offset+256]
-        elif addr in self.stack:
-            page = self.stack[addr]
+        elif addr >= self.stack_start and addr < self.stack_end:
+            page = self.stack.get(addr, b"\x00" * 256)
         else:
-            page = b"\x00" * 256
-            #assert False
+            assert False
 
         return page
 
@@ -116,7 +114,7 @@ if __name__ == "__main__":
     while True:
         if first:
             entrypoint = stream.elf.header["e_entry"].to_bytes(4, "little")
-            sp = int(0x70000000).to_bytes(4, "little")
+            sp = int(stream.stack_end - 4).to_bytes(4, "little")
             status_word, data = exchange(client, ins=0x00, data=entrypoint + sp)
             first = False
             continue
@@ -125,6 +123,7 @@ if __name__ == "__main__":
         if status_word == 0x6101:
             assert len(data) == 4
             addr = int.from_bytes(data, "little")
+            print(f"[*] code: {addr:#x}")
             page = stream.get_page(addr)
 
             response = client.raw_exchange(page)
@@ -133,6 +132,7 @@ if __name__ == "__main__":
         elif status_word == 0x6102:
             assert len(data) == 4
             addr = int.from_bytes(data, "little")
+            print(f"[*] stack: {addr:#x}")
 
             response = client.raw_exchange(bytes([0x01]))
             print(f"{response}")

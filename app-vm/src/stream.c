@@ -105,10 +105,10 @@ void stream_init_app(uint8_t *buffer)
     //uint32_t stack_addr;
 
     app.cpu.pc = *(uint32_t *)&buffer[5+0];
-    app.cpu.regs[2] = *(uint32_t *)&buffer[5+4]; // sp
+    app.cpu.regs[2] = *(uint32_t *)&buffer[5+4] - 4; // sp
 
     app.code.addr = 0;
-    app.stack.addr = app.cpu.regs[2] - PAGE_SIZE;
+    app.stack.addr = (app.cpu.regs[2] & PAGE_MASK);
 
     //struct app_s *app = (struct app_s *)buffer;
 
