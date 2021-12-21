@@ -21,13 +21,27 @@ enum cmd_stream_e {
     CMD_COMMIT_PAGE = 0x6102,
 };
 
+enum section_e {
+    SECTION_CODE,
+    SECTION_STACK,
+    SECTION_DATA,
+    NUM_SECTIONS,
+};
+
 struct page_s {
     uint32_t addr;
     uint8_t data[PAGE_SIZE];
 };
 
+struct section {
+    uint32_t start;
+    uint32_t end;
+};
+
 struct app_s {
     struct rv_cpu cpu;
+
+    struct section sections[NUM_SECTIONS];
 
     struct page_s code;
     struct page_s stack;
@@ -45,7 +59,7 @@ struct cmd_commit_page_s {
 
 static struct app_s app;
 
-void fatal(char *msg)
+void err(char *msg)
 {
     asm volatile (
      "movs r0, #0x04\n"
@@ -53,6 +67,11 @@ void fatal(char *msg)
      "svc      0xab\n"
      :: "r"(msg) : "r0", "r1"
     );
+}
+
+void fatal(char *msg)
+{
+    err(msg);
     os_sched_exit(7);
 }
 
@@ -101,27 +120,63 @@ void stream_init_app(uint8_t *buffer)
 {
     memset(&app, 0, sizeof(app));
 
-    //uint32_t entrypoint;
-    //uint32_t stack_addr;
+    /* XXX */
+    app.sections[SECTION_CODE].start = 0x10000;
+    app.sections[SECTION_CODE].end = 0x20000;
+    app.sections[SECTION_STACK].start = 0x70000000;
+    app.sections[SECTION_STACK].end = 0x80000000;
+    app.sections[SECTION_DATA].start = 0x0;
+    app.sections[SECTION_DATA].end = 0x0;
 
     app.cpu.pc = *(uint32_t *)&buffer[5+0];
     app.cpu.regs[2] = *(uint32_t *)&buffer[5+4] - 4; // sp
 
     app.code.addr = 0;
-    app.stack.addr = (app.cpu.regs[2] & PAGE_MASK);
+    app.stack.addr = PAGE_START(app.cpu.regs[2]);
+}
 
-    //struct app_s *app = (struct app_s *)buffer;
+static bool in_section(enum section_e section, uint32_t addr)
+{
+    return addr >= app.sections[section].start && addr < app.sections[section].end;
+}
 
-    //stream_request_page(app->entrypoint, xxx);
-    //vm_init();
-    //vm_run();
+static void u32hex(uint32_t n, char *buf)
+{
+    char hex[16] = "0123456789abcdef";
+    size_t i;
+
+    for (i = 0; i < 8; i++) {
+        buf[i*2] = hex[(n >> ((24 - i * 8) + 4)) & 0xf];
+        buf[i*2+1] = hex[(n >> (24 - i * 8)) & 0xf];
+    }
 }
 
 static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 {
-    struct page_s *page = (page_prot == PAGE_PROT_RO) ? &app.code : &app.stack;
+    struct page_s *page;
 
     addr = PAGE_START(addr);
+
+    if (in_section(SECTION_CODE, addr)) {
+        page = &app.code;
+        if (page_prot != PAGE_PROT_RO) {
+            fatal("write access to code page\n");
+        }
+    } else if (in_section(SECTION_STACK, addr)) {
+        page = &app.stack;
+    } else {
+
+        char buf[19];
+
+        memcpy(buf, "sp: ", 4);
+        u32hex(addr, &buf[4]);
+        buf[12] = '\n';
+        buf[13] = '\x00';
+
+        err(buf);
+        fatal("invalid addr (no section found)\n");
+        page = NULL;
+    }
 
     if (addr != page->addr) {
         if (page_prot == PAGE_PROT_RW) {
@@ -208,17 +263,6 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
     default:
         *(uint32_t *)&page->data[offset] = value;
         break;
-    }
-}
-
-static void u32hex(uint32_t n, char *buf)
-{
-    char hex[16] = "0123456789abcdef";
-    size_t i;
-
-    for (i = 0; i < 8; i++) {
-        buf[i*2] = hex[(n >> ((24 - i * 8) + 4)) & 0xf];
-        buf[i*2+1] = hex[(n >> (24 - i * 8)) & 0xf];
     }
 }
 

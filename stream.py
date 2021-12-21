@@ -123,7 +123,7 @@ if __name__ == "__main__":
         if status_word == 0x6101:
             assert len(data) == 4
             addr = int.from_bytes(data, "little")
-            print(f"[*] code: {addr:#x}")
+            print(f"[*] read access: {addr:#x}")
             page = stream.get_page(addr)
 
             response = client.raw_exchange(page)
@@ -132,7 +132,7 @@ if __name__ == "__main__":
         elif status_word == 0x6102:
             assert len(data) == 4
             addr = int.from_bytes(data, "little")
-            print(f"[*] stack: {addr:#x}")
+            print(f"[*] write access: {addr:#x}")
 
             response = client.raw_exchange(bytes([0x01]))
             print(f"{response}")
