@@ -45,6 +45,7 @@ struct app_s {
 
     struct page_s code;
     struct page_s stack;
+    struct page_s data;
 };
 
 struct cmd_request_page_s {
@@ -122,11 +123,11 @@ void stream_init_app(uint8_t *buffer)
 
     /* XXX */
     app.sections[SECTION_CODE].start = 0x10000;
-    app.sections[SECTION_CODE].end = 0x20000;
+    app.sections[SECTION_CODE].end = 0x1d2ff+1;
     app.sections[SECTION_STACK].start = 0x70000000;
     app.sections[SECTION_STACK].end = 0x80000000;
-    app.sections[SECTION_DATA].start = 0x0;
-    app.sections[SECTION_DATA].end = 0x0;
+    app.sections[SECTION_DATA].start = 0x1e200;
+    app.sections[SECTION_DATA].end = 0x1ecff+1;
 
     app.cpu.pc = *(uint32_t *)&buffer[5+0];
     app.cpu.regs[2] = *(uint32_t *)&buffer[5+4] - 4; // sp
@@ -162,6 +163,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         if (page_prot != PAGE_PROT_RO) {
             fatal("write access to code page\n");
         }
+    } else if (in_section(SECTION_DATA, addr)) {
+        page = &app.data;
     } else if (in_section(SECTION_STACK, addr)) {
         page = &app.stack;
     } else {
@@ -256,6 +259,10 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
 
     page = get_page(addr, PAGE_PROT_RW);
     offset = addr - PAGE_START(addr);
+
+    if (offset > PAGE_SIZE - size) {
+        fatal("invali mem_write\n");
+    }
 
     switch (size) {
     case 1:

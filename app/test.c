@@ -3,21 +3,6 @@
 #include <stddef.h>
 
 
-/*int _write(int handle, char *data, int size )
-{
-    int count ;
-
-    handle = handle ; // unused
-
-    for( count = 0; count < size; count++)
-    {
-        //outputByte( data[count] ) ;  // Your low-level output function here.
-    }
-
-    return count;
-    }*/
-
-
 int puts(const char *str)
 {
     asm(
@@ -44,7 +29,7 @@ double __trunctfdf2 (long double a)
 
 int main(void)
 {
-    printf("BLAH %s\n", "kikoo");
+    printf("BLAH\n");
     //puts("BLAH %s\n");
     _exit(0);
     return 0;
