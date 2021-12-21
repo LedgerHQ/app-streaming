@@ -1,23 +1,31 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 
 
-static void hello(char *str)
+/*int _write(int handle, char *data, int size )
 {
-    size_t i;
-    char c;
+    int count ;
 
-    /*for (i = 0; str[i] != '\x00'; i++) {
-        c = str[i];
-        asm(
-            "li t0, 4\n"
-            "add a0, %0, 0\n"
-            "ecall\n" :: "r"(c) : "t0", "a0");
-            }*/
+    handle = handle ; // unused
+
+    for( count = 0; count < size; count++)
+    {
+        //outputByte( data[count] ) ;  // Your low-level output function here.
+    }
+
+    return count;
+    }*/
+
+
+int puts(const char *str)
+{
     asm(
         "li t0, 1\n"
         "add a0, %0, 0\n"
-        "ecall\n" :: "r"(str) : "t0", "a0");
+        "ecall\n"
+        :: "r"(str) : "t0", "a0"
+        );
 }
 
 static void _exit(int code)
@@ -28,9 +36,16 @@ static void _exit(int code)
         );
 }
 
-int _start(void)
+/* XXX */
+double __trunctfdf2 (long double a)
 {
-    hello("BLAH\n");
+    return a;
+}
+
+int main(void)
+{
+    printf("BLAH %s\n", "kikoo");
+    //puts("BLAH %s\n");
     _exit(0);
     return 0;
 }

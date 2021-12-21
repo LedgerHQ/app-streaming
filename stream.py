@@ -81,12 +81,17 @@ class Stream:
         self.code_start = text['sh_addr']
         self.code_end = self.code_start + text['sh_size']
 
+        # XXX
+        xxx = 0x10000
+        self.code_end += xxx # .bss
+
         offset = self.code_start & 0xff
         if offset != 0:
             self.code_start -= offset
 
         offset_start = text['sh_offset'] - offset
         offset_end = text['sh_offset'] + text['sh_size']
+        offset_end += xxx
         if offset_end & 0xff:
             offset_end = (offset_end + 0x100) & 0xffffff00
         self.code = self.data[offset_start:offset_end]

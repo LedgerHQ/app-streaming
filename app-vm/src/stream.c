@@ -167,12 +167,18 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     } else {
         char buf[19];
 
-        memcpy(buf, "sp: ", 4);
+        memcpy(buf, "reg: ", 4);
         u32hex(addr, &buf[4]);
         buf[12] = '\n';
         buf[13] = '\x00';
-
         err(buf);
+
+        memcpy(buf, "gp: ", 4);
+        u32hex(app.cpu.regs[3], &buf[4]);
+        buf[12] = '\n';
+        buf[13] = '\x00';
+        err(buf);
+
         fatal("invalid addr (no section found)\n");
         page = NULL;
     }
@@ -275,6 +281,12 @@ static void debug_cpu(uint32_t pc, uint32_t instruction)
     buf[13] = '\x00';
 
     err(buf);*/
+
+    memcpy(buf, "a5: ", 4);
+    u32hex(app.cpu.regs[15], &buf[4]);
+    buf[12] = '\n';
+    buf[13] = '\x00';
+    err(buf);
 
     u32hex(pc, &buf[0]);
     buf[8] = ' ';

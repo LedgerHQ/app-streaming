@@ -1,10 +1,19 @@
-CFLAGS=-I/usr/local/riscv32-unknown-linux-gnu/include
-LFLAGS=-L/usr/local/riscv32-unknown-linux-gnu/lib
+# -mabi=ilp32 -march=rv32i
+
+# no compression: rv32id
+CFLAGS=-I/usr/local/riscv32-unknown-linux-gnu/include -mstrict-align -march=rv32g -mno-div -mno-fdiv
+LDFLAGS=-L/usr/local/riscv32-unknown-linux-gnu/lib
 
 all: test
 
-test: test.o
-	$(CC) -static -nostdlib -o $@ $^ $(LDFLAGS)
+test: test.o std.o start.o
+	$(CC) -static -nostdlib -o $@ $^ $(LDFLAGS) -lc
 
-test.o: test.c
-	$(CC) $(CFLAGS) -mstrict-align -mabi=ilp32e -march=rv32e -c -o $@ $^
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+%.o: %.S
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+clean:
+	rm -f *.o test
