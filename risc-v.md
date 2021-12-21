@@ -7,6 +7,7 @@
 - https://github.com/shady831213/terminus
 - https://github.com/d0iasm/rvemu
 
+- https://github.com/riscv/riscv-opcodes/blob/master/opcodes-rv32i
 
 
 

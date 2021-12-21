@@ -282,11 +282,18 @@ static void debug_cpu(uint32_t pc, uint32_t instruction)
 
     err(buf);*/
 
-    memcpy(buf, "a5: ", 4);
+    /*memcpy(buf, "a5: ", 4);
     u32hex(app.cpu.regs[15], &buf[4]);
     buf[12] = '\n';
     buf[13] = '\x00';
-    err(buf);
+    err(buf);*/
+
+    /*memcpy(buf, "gp: ", 4);
+    u32hex(app.cpu.regs[3], &buf[4]);
+    buf[12] = '\n';
+    buf[13] = '\x00';
+
+    err(buf);*/
 
     u32hex(pc, &buf[0]);
     buf[8] = ' ';

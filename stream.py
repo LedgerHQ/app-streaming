@@ -4,13 +4,14 @@
 https://github.com/LedgerHQ/ledgerctl/blob/master/ledgerwallet/client.py
 """
 
-import sys
-
 import binascii
+import logging
 import os
 import pytest
 import sys
 import time
+
+from collections import namedtuple
 from enum import IntEnum
 
 from elftools.elf.elffile import ELFFile
@@ -46,6 +47,8 @@ class Curve(IntEnum):
     INVALID_03        = 0x03
     PUBLIC_KEY_MARKER = 0x80
 
+Section = namedtuple("Section", ["name", "addr", "size", "data"])
+
 
 def get_client():
     devices = enumerate_devices()
@@ -65,53 +68,107 @@ def exchange(client, ins, data=b"", p1=0, p2=0):
 
 
 class Stream:
+    PAGE_SIZE = 0x00000100
+    PAGE_MASK = 0xffffff00
+    PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
+
     def __init__(self, path):
         with open(path, "rb") as fp:
             self.data = fp.read()
 
         self.fp = open(path, "rb")
         self.elf = ELFFile(self.fp)
+        assert self.elf.get_machine_arch() == "RISC-V"
+
+        self.sections = Stream._parse_sections(self.elf)
+
         self.stack = {}
         self.stack_end = 0x80000000
         self.stack_start = self.stack_end - 0x1000
 
-        assert self.elf.get_machine_arch() == "RISC-V"
+    @staticmethod
+    def _merge_sections(sections):
+        """Merge adjacent sections."""
 
-        text = self.elf.get_section_by_name(".text")
-        self.code_start = text['sh_addr']
-        self.code_end = self.code_start + text['sh_size']
+        # XXX: what if permissions are incompatible?
 
-        # XXX
-        xxx = 0x10000
-        self.code_end += xxx # .bss
+        if len(sections) < 2:
+            return sections
 
-        offset = self.code_start & 0xff
-        if offset != 0:
-            self.code_start -= offset
+        sections.sort(key=lambda s: s.addr)
 
-        offset_start = text['sh_offset'] - offset
-        offset_end = text['sh_offset'] + text['sh_size']
-        offset_end += xxx
-        if offset_end & 0xff:
-            offset_end = (offset_end + 0x100) & 0xffffff00
-        self.code = self.data[offset_start:offset_end]
-        #print(hex(offset_start), hex(offset_end))
+        modified = True
+        while modified:
+            modified = False
+            for i in range(0, len(sections)-1):
+                a = sections[i]
+                b = sections[i+1]
+
+                a_end = a.addr + a.size
+                assert a_end <= b.addr
+                if (a_end & Stream.PAGE_MASK) == (b.addr & Stream.PAGE_MASK):
+                    gap = b.addr - a_end
+                    c = Section(f"{a.name}/{b.name}", a.addr, a.size + gap + b.size, a.data + (b"\xb5" * gap) + b.data)
+                    sections[i] = c
+                    sections.pop(i+1)
+                    modified = True
+                    break
+
+        return sections
+
+    @staticmethod
+    def _pad_sections(sections):
+        padded = []
+        mask = Stream.PAGE_MASK_INVERT
+        for s in sections:
+            gap_start = s.addr & mask
+            gap_end = (mask - ((s.addr + s.size) & mask)) & mask
+            data = (b"\xc5" * gap_start) + s.data + (b"\xd5" * gap_end)
+            section = Section(f"{s.name}[padded]", s.addr & Stream.PAGE_MASK, s.size + gap_start + gap_end, data)
+            padded.append(section)
+        return padded
+
+    @staticmethod
+    def _parse_sections(elf):
+        sections = []
+        for section in elf.iter_sections():
+            if section.name not in [".text", ".rodata", ".data", ".sdata", ".sbss", ".bss"]:
+                continue
+
+            s = Section(section.name, section["sh_addr"], section["sh_size"], section.data())
+            if s.size > 0:
+                sections.append(s)
+
+        sections = Stream._merge_sections(sections)
+        sections = Stream._pad_sections(sections)
+
+        for section in sections:
+            logger.debug(f"section {section.name:10s}: {section.addr:#010x} - {section.addr+section.size:#010x} ({section.size} bytes)")
+
+        return sections
 
     def get_page(self, addr):
-        assert addr & 0xff == 0
+        assert (addr & Stream.PAGE_MASK_INVERT) == 0
 
-        if addr >= self.code_start and addr < self.code_end:
-            offset = (addr & 0xffffff00) - self.code_start
-            page = self.code[offset:offset+256]
-        elif addr >= self.stack_start and addr < self.stack_end:
+        page = None
+        if addr >= self.stack_start and addr < self.stack_end:
             page = self.stack.get(addr, b"\x00" * 256)
         else:
-            assert False
+            for section in self.sections:
+                if addr >= section.addr and addr <= section.addr + section.size:
+                    offset = (addr & Stream.PAGE_MASK) - section.addr
+                    page = section.data[offset:offset+Stream.PAGE_SIZE]
+                    break
 
+        assert page is not None
         return page
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
+    logger = logging.getLogger("stream")
+    logger.setLevel(logging.DEBUG)
+
     stream = Stream("../app/test")
     client = get_client()
 
