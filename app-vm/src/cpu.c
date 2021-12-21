@@ -282,27 +282,27 @@ void rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_BEQ:
-            pc_inc = inst.rs1 == inst.rs2 ? imm_b(inst) : INST_SIZE;
+            pc_inc = cpu->regs[inst.rs1] == cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_BNE:
-            pc_inc = inst.rs1 != inst.rs2 ? imm_b(inst) : INST_SIZE;
+            pc_inc = cpu->regs[inst.rs1] != cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_BLT:
-            pc_inc = (i32) inst.rs1 < (i32) inst.rs2 ? imm_b(inst) : INST_SIZE;
+            pc_inc = (i32) cpu->regs[inst.rs1] < (i32) cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_BGE:
-            pc_inc = (i32) inst.rs1 >= (i32) inst.rs2 ? imm_b(inst) : INST_SIZE;
+            pc_inc = (i32) cpu->regs[inst.rs1] >= (i32) cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_BLTU:
-            pc_inc = inst.rs1 < inst.rs2 ? imm_b(inst) : INST_SIZE;
+            pc_inc = cpu->regs[inst.rs1] < cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_BGEU:
-            pc_inc = inst.rs1 >= inst.rs2 ? imm_b(inst) : INST_SIZE;
+            pc_inc = cpu->regs[inst.rs1] >= cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_LB:
