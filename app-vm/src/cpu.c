@@ -306,23 +306,23 @@ void rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_LB:
-            cpu->regs[inst.rd] = sign_extend_b(mem_read(cpu->regs[inst.rs1] + (i32) imm_b(inst), 1));
+            cpu->regs[inst.rd] = sign_extend_b(mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1));
             break;
 
         case RV_OP_LH:
-            cpu->regs[inst.rd] = sign_extend_h(mem_read(cpu->regs[inst.rs1] + (i32) imm_b(inst), 2));
+            cpu->regs[inst.rd] = sign_extend_h(mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2));
             break;
 
         case RV_OP_LW:
-            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_b(inst), 4);
+            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 4);
             break;
 
         case RV_OP_LBU:
-            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_b(inst), 1);
+            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1);
             break;
 
         case RV_OP_LHU:
-            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_b(inst), 2);
+            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2);
             break;
 
         case RV_OP_SB:
