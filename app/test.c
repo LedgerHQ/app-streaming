@@ -1,8 +1,10 @@
-//#include <stdint.h>
+#include <stdint.h>
+#include <stddef.h>
+
 
 static void hello(char *str)
 {
-    unsigned int i;
+    size_t i;
     char c;
 
     /*for (i = 0; str[i] != '\x00'; i++) {
@@ -26,7 +28,7 @@ static void _exit(int code)
         );
 }
 
-int main(void)
+int _start(void)
 {
     hello("BLAH\n");
     _exit(0);

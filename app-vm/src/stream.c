@@ -165,7 +165,6 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     } else if (in_section(SECTION_STACK, addr)) {
         page = &app.stack;
     } else {
-
         char buf[19];
 
         memcpy(buf, "sp: ", 4);
@@ -270,18 +269,20 @@ static void debug_cpu(uint32_t pc, uint32_t instruction)
 {
     char buf[19];
 
+    /*memcpy(buf, "sp: ", 4);
+    u32hex(app.cpu.regs[2], &buf[4]);
+    buf[12] = '\n';
+    buf[13] = '\x00';
+
+    err(buf);*/
+
     u32hex(pc, &buf[0]);
     buf[8] = ' ';
     u32hex(instruction, &buf[9]);
     buf[17] = '\n';
     buf[18] = '\x00';
 
-    asm volatile (
-                  "movs r0, #0x04\n"
-                  "movs r1, %0\n"
-                  "svc      0xab\n"
-                  :: "r"(buf) : "r0", "r1"
-                  );
+    err(buf);
 }
 
 

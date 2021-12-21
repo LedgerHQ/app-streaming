@@ -53,4 +53,9 @@ New syscalls:
 ```
 ./configure --host x86
 make
+
+cd newlib
+./configure --host riscv32-unknown-linux-gnu --target riscv32-unknown-linux-gnu
+make
+make install
 ```
