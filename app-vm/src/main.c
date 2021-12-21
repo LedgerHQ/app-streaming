@@ -133,7 +133,7 @@ static void app_main_(void)
             continue;
         }
 
-        stream_init_app(NULL);
+        stream_init_app(G_io_apdu_buffer);
         stream_run_app();
 
         os_sched_exit(-1);
