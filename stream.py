@@ -171,31 +171,25 @@ if __name__ == "__main__":
             first = False
             continue
 
-        print(f"[<] {data}")
+        print(f"[<] {status_word:#06x} {data[:4].hex()}")
         if status_word == 0x6101:
             assert len(data) == 4
             addr = int.from_bytes(data, "little")
             print(f"[*] read access: {addr:#x}")
             page = stream.get_page(addr)
+            assert len(page) == Stream.PAGE_SIZE
 
-            response = client.raw_exchange(page)
-            status_word = int.from_bytes(response[-2:], "big")
-            data = response[:-2]
-        elif status_word == 0x6102:
-            assert len(data) == 4
-            addr = int.from_bytes(data, "little")
+            status_word, data = exchange(client, 0x00, data=page[1:], p2=page[0])
+        elif (status_word & 0xff00) == 0x6200:
+            assert len(data) == 4 + (Stream.PAGE_SIZE - 2)
+
+            addr = int.from_bytes(data, "little") & Stream.PAGE_MASK
             print(f"[*] write access: {addr:#x}")
 
-            response = client.raw_exchange(bytes([0x01]))
-            print(f"{response}")
-            # XXX not alwasy stack
-            stream.stack[addr] = response
+            # XXX not always stack
+            stream.stack[addr] = bytes([data[0]]) + data[4:] + bytes([status_word & 0xff])
 
-            response = client.raw_exchange(bytes([0x02]))
-            status_word = int.from_bytes(response[-2:], "big")
-            data = response[:-2]
-        elif data == b"":
-            break
+            status_word, data = exchange(client, 0x01)
         else:
             print(f"{status_word:#06x}, {data}")
             assert False

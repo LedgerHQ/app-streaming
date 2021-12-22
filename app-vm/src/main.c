@@ -6,16 +6,10 @@
 #include "ux.h"
 #include "os_io_seproxyhal.h"
 
-#include "ui.h"
+#include "apdu.h"
 #include "stream.h"
+#include "ui.h"
 
-
-#define OFFSET_CLA 0
-#define OFFSET_INS 1
-#define OFFSET_P1 2
-#define OFFSET_P2 3
-#define OFFSET_LC 4
-#define OFFSET_CDATA 5
 
 typedef enum {
     GET_VERSION = 0x03,     /// version of the application

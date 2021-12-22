@@ -4,6 +4,8 @@
 #include "os_io_seproxyhal.h"
 
 #include "rv.h"
+
+#include "apdu.h"
 #include "stream.h"
 
 #define PAGE_SIZE 256
@@ -22,7 +24,7 @@ enum page_prot_e {
 
 enum cmd_stream_e {
     CMD_REQUEST_PAGE = 0x6101,
-    CMD_COMMIT_PAGE = 0x6102,
+    CMD_COMMIT_PAGE = 0x6200,
 };
 
 enum section_e {
@@ -59,8 +61,18 @@ struct cmd_request_page_s {
 } __attribute__((packed));
 
 struct cmd_commit_page_s {
-    uint32_t addr;
-    uint16_t cmd;
+    uint32_t addr; // XXX | data[0]
+    uint8_t data[PAGE_SIZE-2];
+    uint16_t cmd; // XXX | data[255]
+} __attribute__((packed));
+
+struct response_s {
+    uint8_t cla;
+    uint8_t ins;
+    uint8_t p1;
+    uint8_t p2;
+    uint8_t lc;
+    uint8_t data[PAGE_SIZE - 1];
 } __attribute__((packed));
 
 static struct app_s app;
@@ -81,21 +93,34 @@ void fatal(char *msg)
     os_sched_exit(7);
 }
 
+static void parse_apdu(struct response_s *response, size_t size) {
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
+
+    if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
+        fatal("invalid apdu\n");
+    }
+}
+
 void stream_request_page(struct page_s *page)
 {
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
 
-    //_Static_assert(IO_APDU_BUFFER_SIZE == 255 + 5, "lol");
-
     cmd->addr = page->addr;
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
-    if (size != PAGE_SIZE) {
+
+    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
+    parse_apdu(response, size);
+
+    if (response->lc != PAGE_SIZE - 1) {
+        fatal("invalid response size\n");
     }
 
-    memcpy(page->data, G_io_apdu_buffer, PAGE_SIZE);
+    /* the first byte of the page is in p2 */
+    page->data[0] = response->p2;
+    memcpy(&page->data[1], response->data, PAGE_SIZE - 1);
 
     /* TODO: check page merkle hash */
 }
@@ -107,18 +132,21 @@ void stream_commit_page(struct page_s *page)
     struct cmd_commit_page_s *cmd = (struct cmd_commit_page_s *)G_io_apdu_buffer;
     size_t size;
 
-    //_Static_assert(IO_APDU_BUFFER_SIZE == 255 + 5, "lol");
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd), "invalid IO_APDU_BUFFER_SIZE");
 
-    cmd->addr = page->addr;
-    cmd->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
+    /* the first byte of the page is encoded into addr */
+    cmd->addr = page->addr | page->data[0];
+    /* the last byte of the page is encoded into the status code */
+    cmd->cmd = (CMD_COMMIT_PAGE >> 8) | (page->data[PAGE_SIZE-1] << 8);
+    memcpy(cmd->data, &page->data[1], PAGE_SIZE - 2);
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
-    if (size != 1) {
-    }
 
-    memcpy(G_io_apdu_buffer, page->data, PAGE_SIZE);
-    size = io_exchange(CHANNEL_APDU, PAGE_SIZE);
-    if (size != 1) {
+    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
+    parse_apdu(response, size);
+
+    if (response->lc != 0) {
+        fatal("invalid response size\n");
     }
 }
 
