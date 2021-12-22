@@ -56,7 +56,7 @@ New syscalls:
 make
 
 cd newlib
-CFLAGS='-march=rv32g' ./configure --host riscv32-unknown-linux-gnu --target riscv32-unknown-linux-gnu --enable-multilib --disable-newlib-supplied-syscalls
+CFLAGS='-march=rv32g' ./configure --host riscv32-unknown-linux-gnu --target riscv32-unknown-linux-gnu --enable-multilib --disable-newlib-supplied-syscalls --enable-newlib-nano-malloc --enable-lite-exit
 make
 make install
 ```
@@ -64,3 +64,7 @@ make install
 - https://interrupt.memfault.com/blog/boostrapping-libc-with-newlib
 - https://stackoverflow.com/questions/48160285/rv32e-version-of-the-soft-float-methods-such-as-divdi3-and-mulsi3
 - https://stackoverflow.com/questions/50214840/risc-v-startup-code-for-stack-pointer-initalization
+
+From `newlib/README`:
+
+- `--enable-lite-exit`

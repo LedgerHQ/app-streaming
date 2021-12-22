@@ -39,7 +39,9 @@ int _lseek(int file, int ptr, int dir) {
 __attribute__((noreturn)) void _exit(int status) {
     asm(
         "li t0, 0\n"
+        "add a0, %0, 0\n"
         "ecall\n"
+        :: "r"(status) : "t0", "a0"
         );
     while (1);
 }

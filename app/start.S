@@ -21,6 +21,8 @@ _start:
     /* Call main, leaving the arguments undefined. */
     call main
 
+    call _exit
+
     /* Spin after main() returns. */
 1:
     j 1b

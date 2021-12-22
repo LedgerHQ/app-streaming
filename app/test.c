@@ -18,16 +18,6 @@ int puts(const char *str)
     return 0;
 }
 
-static void _exit(int code)
-{
-    asm(
-        "li t0, 0\n"
-        "add a0, %0, 0\n"
-        "ecall\n"
-        :: "r"(code) : "t0", "a0"
-        );
-}
-
 static void test_send(uint32_t code)
 {
     asm(
@@ -65,7 +55,7 @@ void test_sha256(void)
     size_t i;
 
     if (memcmp(hash, "\xa2\x7c\x89\x6c\x48\x59\x20\x48\x43\x16\x6a\xf6\x6f\x0e\x90\x2b\x9c\x3b\x3e\xd6\xd2\xfd\x13\xd4\x35\xab\xc0\x20\x06\x5c\x52\x6f", sizeof(hash)) != 0) {
-        _exit(2);
+        exit(2);
     }
 
     for (i = 0; i < sizeof(hash); i++) {
