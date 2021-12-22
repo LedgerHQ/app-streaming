@@ -24,7 +24,7 @@ For app developers:
 ## Limitations
 
 - overhead (especially for BLE?)
-- a companion (Ledger Live Desktop / Mobile is always required)
+- a companion  is always required (Ledger Live Desktop / Mobile)
 
 
 ## TODO
