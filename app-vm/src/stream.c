@@ -11,6 +11,10 @@
 
 #define PAGE_START(addr) ((addr) & PAGE_MASK)
 
+#define NPAGE_CODE  4
+#define NPAGE_STACK 2
+#define NPAGE_DATA  2
+
 enum page_prot_e {
     PAGE_PROT_RO,
     PAGE_PROT_RW,
@@ -31,6 +35,7 @@ enum section_e {
 struct page_s {
     uint32_t addr;
     uint8_t data[PAGE_SIZE];
+    size_t usage;
 };
 
 struct section {
@@ -43,9 +48,9 @@ struct app_s {
 
     struct section sections[NUM_SECTIONS];
 
-    struct page_s code;
-    struct page_s stack;
-    struct page_s data;
+    struct page_s code[NPAGE_CODE];
+    struct page_s stack[NPAGE_STACK];
+    struct page_s data[NPAGE_DATA];
 };
 
 struct cmd_request_page_s {
@@ -132,8 +137,9 @@ void stream_init_app(uint8_t *buffer)
     app.cpu.pc = *(uint32_t *)&buffer[5+0];
     app.cpu.regs[2] = *(uint32_t *)&buffer[5+4] - 4; // sp
 
-    app.code.addr = 0;
-    app.stack.addr = PAGE_START(app.cpu.regs[2]);
+    for (int i = 0; i < NPAGE_STACK; i++) {
+        app.stack[i].addr = PAGE_START(app.cpu.regs[2] - i * PAGE_SIZE);
+    }
 }
 
 static bool in_section(enum section_e section, uint32_t addr)
@@ -154,21 +160,25 @@ static void u32hex(uint32_t n, char *buf)
 
 static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 {
-    struct page_s *page;
+    struct page_s *pages, *page;
+    size_t npage = 0;
     bool writeable = false;
 
     addr = PAGE_START(addr);
 
     if (in_section(SECTION_CODE, addr)) {
-        page = &app.code;
         if (page_prot != PAGE_PROT_RO) {
             fatal("write access to code page\n");
         }
+        pages = app.code;
+        npage = NPAGE_CODE;
     } else if (in_section(SECTION_DATA, addr)) {
-        page = &app.data;
+        pages = app.data;
+        npage = NPAGE_DATA;
         writeable = true;
     } else if (in_section(SECTION_STACK, addr)) {
-        page = &app.stack;
+        pages = app.stack;
+        npage = NPAGE_STACK;
         writeable = true;
     } else {
         char buf[19];
@@ -186,16 +196,29 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         err(buf);
 
         fatal("invalid addr (no section found)\n");
-        page = NULL;
+        pages = NULL;
     }
 
-    if (addr != page->addr) {
-        if (writeable) {
-            stream_commit_page(page);
+    page = &pages[0];
+    for (size_t i = 0; i < npage; i++) {
+        /* return the page if address matches */
+        if (addr == pages[i].addr) {
+            pages[i].usage++;
+            return &pages[i];
         }
-        page->addr = addr;
-        stream_request_page(page);
+        /* otherwise find the less used page */
+        if (pages[i].usage < page->usage) {
+            page = &pages[i];
+        }
     }
+
+    if (writeable) {
+        stream_commit_page(page);
+    }
+
+    page->addr = addr;
+    page->usage = 0;
+    stream_request_page(page);
 
     return page;
 }
@@ -366,7 +389,7 @@ void stream_run_app(void)
 
     while (1) {
         instruction = mem_read(app.cpu.pc, sizeof(instruction));
-        debug_cpu(app.cpu.pc, instruction);
+        //debug_cpu(app.cpu.pc, instruction);
         rv_cpu_execute(&app.cpu, instruction);
     }
 }
