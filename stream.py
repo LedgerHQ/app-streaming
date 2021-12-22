@@ -4,6 +4,7 @@
 https://github.com/LedgerHQ/ledgerctl/blob/master/ledgerwallet/client.py
 """
 
+import argparse
 import binascii
 import logging
 import os
@@ -15,15 +16,6 @@ from collections import namedtuple
 from enum import IntEnum
 
 from elftools.elf.elffile import ELFFile
-
-os.environ["LEDGER_PROXY_ADDRESS"] = "127.0.0.1"
-os.environ["LEDGER_PROXY_PORT"] = "9999"
-
-from ledgerwallet.client import LedgerClient, CommException
-from ledgerwallet.crypto.ecc import PrivateKey
-from ledgerwallet.params import Bip32Path
-from ledgerwallet.transport import enumerate_devices
-from ledgerwallet.utils import serialize
 
 CLA = 0x12
 
@@ -48,6 +40,21 @@ class Curve(IntEnum):
     PUBLIC_KEY_MARKER = 0x80
 
 Section = namedtuple("Section", ["name", "addr", "size", "data"])
+
+
+def import_ledgerwallet(use_speculos):
+    global LedgerClient
+    global CommException
+    global enumerate_devices
+    global serialize
+
+    if use_speculos:
+        os.environ["LEDGER_PROXY_ADDRESS"] = "127.0.0.1"
+        os.environ["LEDGER_PROXY_PORT"] = "9999"
+
+    from ledgerwallet.client import LedgerClient, CommException
+    from ledgerwallet.transport import enumerate_devices
+    from ledgerwallet.utils import serialize
 
 
 def get_client():
@@ -169,7 +176,15 @@ if __name__ == "__main__":
     logger = logging.getLogger("stream")
     logger.setLevel(logging.DEBUG)
 
-    stream = Stream("../app/test")
+    parser = argparse.ArgumentParser(description="RISC-V vm companion.")
+    parser.add_argument("--app", type=str, required=True, help="application path")
+    parser.add_argument("--speculos", action="store_true", help="use speculos")
+
+    args = parser.parse_args()
+
+    import_ledgerwallet(args.speculos)
+
+    stream = Stream(args.app)
     client = get_client()
 
     first = True
