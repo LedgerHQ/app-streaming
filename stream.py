@@ -29,6 +29,10 @@ def import_ledgerwallet(use_speculos: bool) -> None:
     from ledgerwallet.transport import enumerate_devices
     from ledgerwallet.utils import serialize
 
+    if False:
+        logger = logging.getLogger("ledgerwallet")
+        logger.setLevel(logging.DEBUG)
+
 
 def get_client():
     CLA = 0x12
@@ -149,7 +153,7 @@ class Stream:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
     logger = logging.getLogger("stream")
-    logger.setLevel(logging.DEBUG)
+    #logger.setLevel(logging.DEBUG)
 
     parser = argparse.ArgumentParser(description="RISC-V vm companion.")
     parser.add_argument("--app", type=str, required=True, help="application path")
