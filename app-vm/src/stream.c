@@ -56,12 +56,12 @@ struct app_s {
 struct cmd_request_page_s {
     uint32_t addr;
     uint16_t cmd;
-};
+} __attribute__((packed));
 
 struct cmd_commit_page_s {
     uint32_t addr;
     uint16_t cmd;
-};
+} __attribute__((packed));
 
 static struct app_s app;
 
@@ -91,7 +91,7 @@ void stream_request_page(struct page_s *page)
     cmd->addr = page->addr;
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
 
-    size = io_exchange(CHANNEL_APDU, sizeof(*cmd)-2);
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
     if (size != PAGE_SIZE) {
     }
 
@@ -112,7 +112,7 @@ void stream_commit_page(struct page_s *page)
     cmd->addr = page->addr;
     cmd->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
 
-    size = io_exchange(CHANNEL_APDU, sizeof(*cmd)-2);
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
     if (size != 1) {
     }
 
