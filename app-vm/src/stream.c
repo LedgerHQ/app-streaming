@@ -1,11 +1,13 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "cx.h"
 #include "os_io_seproxyhal.h"
 
 #include "rv.h"
 
 #include "apdu.h"
+#include "merkle.h"
 #include "stream.h"
 
 #define PAGE_SIZE 256
@@ -13,7 +15,7 @@
 
 #define PAGE_START(addr) ((addr) & PAGE_MASK)
 
-#define NPAGE_CODE  5
+#define NPAGE_CODE  3
 #define NPAGE_STACK 3
 #define NPAGE_DATA  1
 
@@ -24,7 +26,10 @@ enum page_prot_e {
 
 enum cmd_stream_e {
     CMD_REQUEST_PAGE = 0x6101,
-    CMD_COMMIT_PAGE = 0x6200,
+    CMD_REQUEST_HMAC = 0x6102,
+    CMD_REQUEST_PROOF = 0x6103,
+    CMD_COMMIT_PAGE = 0x6201,
+    CMD_COMMIT_HMAC = 0x6202,
 };
 
 enum section_e {
@@ -37,6 +42,7 @@ enum section_e {
 struct page_s {
     uint32_t addr;
     uint8_t data[PAGE_SIZE];
+    uint32_t iv;
     size_t usage;
 };
 
@@ -53,14 +59,25 @@ struct app_s {
     struct page_s code[NPAGE_CODE];
     struct page_s stack[NPAGE_STACK];
     struct page_s data[NPAGE_DATA];
+
+    uint32_t bss_max;
+    uint32_t stack_min;
+
+    cx_aes_key_t key;
+    uint8_t hmac_key[32];
+    uint8_t encryption_key[32];
 };
 
 /* this message comes from the client */
 struct cmd_app_init_s {
     uint32_t pc;
-    uint32_t sp;
+    uint32_t bss;
 
     uint32_t section_ranges[2 * NUM_SECTIONS];
+
+    uint8_t merkle_tree_root_hash[CX_SHA256_SIZE];
+    uint32_t merkle_tree_size;
+    uint8_t last_entry_init[8];
 } __attribute__((packed));
 
 struct cmd_request_page_s {
@@ -69,9 +86,15 @@ struct cmd_request_page_s {
 } __attribute__((packed));
 
 struct cmd_commit_page_s {
-    uint32_t addr; // XXX | data[0]
-    uint8_t data[PAGE_SIZE-2];
-    uint16_t cmd; // XXX | data[255]
+    uint8_t data[PAGE_SIZE];
+    uint16_t cmd;
+} __attribute__((packed));
+
+struct cmd_commit_hmac_s {
+    uint32_t addr;
+    uint32_t iv;
+    uint8_t mac[32];
+    uint16_t cmd;
 } __attribute__((packed));
 
 struct response_s {
@@ -81,6 +104,11 @@ struct response_s {
     uint8_t p2;
     uint8_t lc;
     uint8_t data[PAGE_SIZE - 1];
+} __attribute__((packed));
+
+struct response_hmac_s {
+    uint32_t iv;
+    uint8_t mac[32];
 } __attribute__((packed));
 
 static struct app_s app;
@@ -109,14 +137,48 @@ static void parse_apdu(struct response_s *response, size_t size) {
     }
 }
 
-void stream_request_page(struct page_s *page)
+/* This IV is made of:
+ * - addr and iv32 to ensure that 2 identical data pages won't result in the
+ *   same encrypted data
+ * - sha256 of a secret key to prevent attacks on known cleartexts */
+static void compute_iv(uint8_t *iv, uint32_t addr, uint32_t iv32)
+{
+    /* add address to the IV to prevent 2 pages with identical data and iv32
+     * from resulting in the same ciphertext */
+    memcpy(&iv[0], &addr, sizeof(addr));
+    memcpy(&iv[4], &iv32, sizeof(iv32));
+    memset(&iv[8], '\x00', CX_AES_BLOCK_SIZE - 8);
+}
+
+static void encrypt_page(void *data, void *out, uint32_t addr, uint32_t iv32)
+{
+    int flag = CX_CHAIN_CBC | CX_ENCRYPT;
+    size_t size = PAGE_SIZE;
+    uint8_t iv[CX_AES_BLOCK_SIZE];
+
+    compute_iv(iv, addr, iv32);
+    cx_aes_iv_no_throw(&app.key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+}
+
+static void decrypt_page(void *data, void *out, uint32_t addr, uint32_t iv32)
+{
+    int flag = CX_CHAIN_CBC | CX_DECRYPT;
+    size_t size = PAGE_SIZE;
+    uint8_t iv[CX_AES_BLOCK_SIZE];
+
+    compute_iv(iv, addr, iv32);
+    cx_aes_iv_no_throw(&app.key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+}
+
+void stream_request_page(struct page_s *page, bool read_only)
 {
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
 
+    /* 1. retrieve page data */
+
     cmd->addr = page->addr;
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
-
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
     struct response_s *response = (struct response_s *)G_io_apdu_buffer;
@@ -130,25 +192,85 @@ void stream_request_page(struct page_s *page)
     page->data[0] = response->p2;
     memcpy(&page->data[1], response->data, PAGE_SIZE - 1);
 
-    /* TODO: check page merkle hash */
+    /* 2. retrieve hmac */
+
+    cmd->cmd = (CMD_REQUEST_HMAC >> 8) | ((CMD_REQUEST_HMAC & 0xff) << 8);
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
+
+    response = (struct response_s *)G_io_apdu_buffer;
+    parse_apdu(response, size);
+
+    if (response->lc != sizeof(struct response_hmac_s)) {
+        fatal("invalid response size\n");
+    }
+
+    struct response_hmac_s *r = (struct response_hmac_s *)&response->data;
+
+    cx_hmac_sha256_t hmac_sha256_ctx;
+    uint32_t stuff[2];
+    uint8_t mac[32];
+
+    stuff[0] = page->addr;
+    stuff[1] = r->iv;
+
+    cx_hmac_sha256_init_no_throw(&hmac_sha256_ctx, app.hmac_key, sizeof(app.hmac_key));
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, page->data, sizeof(page->data), NULL, 0);
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, (uint8_t *)stuff, sizeof(stuff), mac, sizeof(mac));
+
+    if (memcmp(mac, r->mac, sizeof(mac)) != 0) {
+        fatal("invalid hmac\n");
+    }
+
+    /* 3. decrypt page */
+
+    page->iv = r->iv;
+    decrypt_page(page->data, page->data, page->addr, page->iv);
+
+    /* 4. verify iv thanks to the merkle tree */
+    if (read_only) {
+        /* if the page is readonly, the iv is always 0 */
+        return;
+    }
+
+    /* TODO: ideally, this should be done before decryption. */
+
+    cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
+
+    response = (struct response_s *)G_io_apdu_buffer;
+    parse_apdu(response, size);
+
+    if ((response->lc % sizeof(struct proof_s)) != 0) {
+        fatal("invalid proof size\n");
+    }
+
+    size_t count = response->lc / sizeof(struct proof_s);
+    if (!merkle_verify_proof((struct entry_s *)&stuff, (struct proof_s *)&response->data, count)) {
+        fatal("invalid iv (merkle proof)\n");
+    }
 }
 
 void stream_commit_page(struct page_s *page)
 {
-    /* TODO: encrypt page */
-
-    struct cmd_commit_page_s *cmd = (struct cmd_commit_page_s *)G_io_apdu_buffer;
+    struct cmd_commit_page_s *cmd1 = (struct cmd_commit_page_s *)G_io_apdu_buffer;
+    cx_hmac_sha256_t hmac_sha256_ctx;
     size_t size;
 
-    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd), "invalid IO_APDU_BUFFER_SIZE");
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd1), "invalid IO_APDU_BUFFER_SIZE");
 
-    /* the first byte of the page is encoded into addr */
-    cmd->addr = page->addr | page->data[0];
-    /* the last byte of the page is encoded into the status code */
-    cmd->cmd = (CMD_COMMIT_PAGE >> 8) | (page->data[PAGE_SIZE-1] << 8);
-    memcpy(cmd->data, &page->data[1], PAGE_SIZE - 2);
+    /* 1. encryption */
+    if (page->iv == 0xffffffff) {
+        fatal("iv reuse\n");
+    }
+    page->iv++;
+    encrypt_page(page->data, cmd1->data, page->addr, page->iv);
 
-    size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
+    /* initialize hmac here since cmd1->data may be overwritten later */
+    cx_hmac_sha256_init_no_throw(&hmac_sha256_ctx, app.hmac_key, sizeof(app.hmac_key));
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, cmd1->data, sizeof(cmd1->data), NULL, 0);
+
+    cmd1->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd1));
 
     struct response_s *response = (struct response_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
@@ -156,11 +278,59 @@ void stream_commit_page(struct page_s *page)
     if (response->lc != 0) {
         fatal("invalid response size\n");
     }
+
+    /* 2. hmac(data || addr || iv) */
+
+    struct cmd_commit_hmac_s *cmd2 = (struct cmd_commit_hmac_s *)G_io_apdu_buffer;
+    uint32_t stuff[2];
+
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd2), "invalid IO_APDU_BUFFER_SIZE");
+
+    stuff[0] = page->addr;
+    stuff[1] = page->iv;
+
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, (uint8_t *)stuff, sizeof(stuff), cmd2->mac, sizeof(cmd2->mac));
+
+    cmd2->addr = page->addr;
+    cmd2->iv = page->iv;
+    cmd2->cmd = (CMD_COMMIT_HMAC >> 8) | ((CMD_COMMIT_HMAC & 0xff) << 8);
+
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd2));
+
+    response = (struct response_s *)G_io_apdu_buffer;
+    parse_apdu(response, size);
+
+    if (response->lc == 0 || (response->lc % sizeof(struct proof_s)) != 0) {
+        fatal("invalid proof size\n");
+    }
+
+    /* 3. update merkle tree */
+    size_t count = response->lc / sizeof(struct proof_s);
+
+    if (page->iv == 1) {
+        if (!merkle_insert((struct entry_s *)&stuff, (struct proof_s *)&response->data, count)) {
+            fatal("merkle insert failed\n");
+        }
+    } else {
+        uint32_t old_stuff[2];
+        old_stuff[0] = page->addr;
+        old_stuff[1] = page->iv - 1;
+        if (!merkle_update((struct entry_s *)&old_stuff, (struct entry_s *)&stuff, (struct proof_s *)&response->data, count)) {
+            fatal("merkle update failed\n");
+        }
+    }
 }
 
+/* TODO: encrypt received parameters */
+/* TODO: use different hmac keys for read-only data and else */
 void stream_init_app(uint8_t *buffer)
 {
-    memset(&app, 0, sizeof(app));
+    memset(&app, '\x00', sizeof(app));
+
+    memset(app.hmac_key, 'k', sizeof(app.hmac_key));
+    memset(app.encryption_key, 'K', sizeof(app.encryption_key));
+
+    cx_aes_init_key_no_throw(app.encryption_key, sizeof(app.encryption_key), &app.key);
 
     struct cmd_app_init_s *cmd = (struct cmd_app_init_s *)buffer;
     for (int i = 0; i < NUM_SECTIONS; i++) {
@@ -168,13 +338,18 @@ void stream_init_app(uint8_t *buffer)
         app.sections[i].end = cmd->section_ranges[2 * i + 1];
     }
 
-    app.cpu.pc = cmd->pc;
-    app.cpu.regs[2] = cmd->sp - 4;
-}
+    uint32_t sp = app.sections[SECTION_STACK].end;
+    if (PAGE_START(sp) != sp) {
+        fatal("invalid stack end\n");
+    }
 
-static bool in_section(enum section_e section, uint32_t addr)
-{
-    return addr >= app.sections[section].start && addr < app.sections[section].end;
+    app.stack_min = sp;
+    app.bss_max = PAGE_START(cmd->bss);
+
+    app.cpu.pc = cmd->pc;
+    app.cpu.regs[2] = sp - 4;
+
+    init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
 }
 
 static void u32hex(uint32_t n, char *buf)
@@ -185,6 +360,25 @@ static void u32hex(uint32_t n, char *buf)
     for (i = 0; i < 4; i++) {
         buf[i*2] = hex[(n >> ((24 - i * 8) + 4)) & 0xf];
         buf[i*2+1] = hex[(n >> (24 - i * 8)) & 0xf];
+    }
+}
+
+static bool in_section(enum section_e section, uint32_t addr)
+{
+    return addr >= app.sections[section].start && addr < app.sections[section].end;
+}
+
+/* the page argument is just here to avoid declaring this structure on the stack
+ * since this struct is quite large */
+static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
+{
+    uint32_t addr;
+
+    for (addr = from; addr < to; addr += PAGE_SIZE) {
+        memset(page->data, '\x00', sizeof(page->data));
+        page->addr = addr;
+        page->iv = 0;
+        stream_commit_page(page);
     }
 }
 
@@ -213,10 +407,10 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     } else {
         char buf[19];
 
-        memcpy(buf, "reg: ", 4);
-        u32hex(addr, &buf[4]);
-        buf[12] = '\n';
-        buf[13] = '\x00';
+        memcpy(buf, "addr: ", 5);
+        u32hex(addr, &buf[5]);
+        buf[13] = '\n';
+        buf[14] = '\x00';
         err(buf);
 
         memcpy(buf, "gp: ", 4);
@@ -248,14 +442,40 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         return found;
     }
 
-    /* don't commit page if it never was retrieved (it's address is zero) */
+    /* don't commit page if it never was retrieved (its address is zero) */
     if (writeable && page->addr != 0) {
         stream_commit_page(page);
     }
 
+    /*
+     * If a heap/stack page is accessed:
+     * - create unexisting pages if they don't exist (initialized with zeroes)
+     * - commit the page which is going to be replaced otherwise
+     */
+    bool zero_page = false;
+    if (pages == app.data) {
+        if (addr >= app.bss_max) {
+            create_empty_pages(app.bss_max, addr + PAGE_SIZE, page);
+            app.bss_max = addr + PAGE_SIZE;
+            zero_page = true;
+        }
+    } else if (pages == app.stack) {
+        if (addr < app.stack_min) {
+            create_empty_pages(PAGE_START(addr), app.stack_min, page);
+            app.stack_min = addr;
+            zero_page = true;
+        }
+    }
+
     page->addr = addr;
     page->usage = 0;
-    stream_request_page(page);
+
+    if (!zero_page) {
+        stream_request_page(page, !writeable);
+    } else {
+        page->iv = 1;
+        memset(page->data, '\x00', sizeof(page->data));
+    }
 
     return page;
 }
@@ -310,15 +530,14 @@ uint32_t mem_read(uint32_t addr, size_t size)
         break;
     }
 
-    char buf[32];
-    memcpy(buf, "[*] read:  ", 11);
-    u32hex(value, &buf[11]);
-    buf[19] = '@';
-    u32hex(addr, &buf[20]);
-    buf[28] = '\n';
-    buf[29] = '\x00';
-
     if (0) {
+        char buf[32];
+        memcpy(buf, "[*] read:  ", 11);
+        u32hex(value, &buf[11]);
+        buf[19] = '@';
+        u32hex(addr, &buf[20]);
+        buf[28] = '\n';
+        buf[29] = '\x00';
         err(buf);
     }
 
@@ -358,12 +577,11 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         break;
     }
 
-    buf[19] = '@';
-    u32hex(addr, &buf[20]);
-    buf[28] = '\n';
-    buf[29] = '\x00';
-
     if (0) {
+        buf[19] = '@';
+        u32hex(addr, &buf[20]);
+        buf[28] = '\n';
+        buf[29] = '\x00';
         err(buf);
     }
 }
@@ -371,44 +589,6 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
 static void debug_cpu(uint32_t pc, uint32_t instruction)
 {
     char buf[19];
-
-    /*memcpy(buf, "sp: ", 4);
-    u32hex(app.cpu.regs[2], &buf[4]);
-    buf[12] = '\n';
-    buf[13] = '\x00';
-
-    err(buf);*/
-
-    /*memcpy(buf, "a5: ", 4);
-    u32hex(app.cpu.regs[15], &buf[4]);
-    buf[12] = '\n';
-    buf[13] = '\x00';
-    err(buf);*/
-
-    /*memcpy(buf, "s0: ", 4);
-    u32hex(app.cpu.regs[8], &buf[4]);
-    buf[12] = '\n';
-    buf[13] = '\x00';
-    err(buf);*/
-
-    /*memcpy(buf, "s1: ", 4);
-    u32hex(app.cpu.regs[9], &buf[4]);
-    buf[12] = '\n';
-    buf[13] = '\x00';
-    err(buf);*/
-
-    /*memcpy(buf, "sp: ", 4);
-    u32hex(app.cpu.regs[2], &buf[4]);
-    buf[12] = '\n';
-    buf[13] = '\x00';
-    err(buf);*/
-
-    /*memcpy(buf, "gp: ", 4);
-    u32hex(app.cpu.regs[3], &buf[4]);
-    buf[12] = '\n';
-    buf[13] = '\x00';
-
-    err(buf);*/
 
     u32hex(pc, &buf[0]);
     buf[8] = ' ';

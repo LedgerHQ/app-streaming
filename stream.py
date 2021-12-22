@@ -9,26 +9,21 @@ import logging
 import os
 import sys
 
-from elftools.elf.elffile import ELFFile
+from elf import Elf
+from merkletree import Entry, MerkleTree
 
 
-class Section:
-    def __init__(self, name, addr, size, data, writeable):
-        self.name = name
-        self.addr = addr
-        self.size = size
+class Page:
+    def __init__(self, data, mac, iv=0, read_only=False):
+        self.read_only = False
+        self.update(data, mac, iv)
+        self.read_only = read_only
+
+    def update(self, data, mac, iv):
+        assert not self.read_only
         self.data = data
-        self.writeable = writeable
-
-    def get_page(self, addr):
-        offset = (addr & Stream.PAGE_MASK) - self.addr
-        return self.data[offset:offset+Stream.PAGE_SIZE]
-
-    def write_page(self, addr, data):
-        assert self.writeable
-
-        offset = (addr & Stream.PAGE_MASK) - self.addr
-        self.data = self.data[:offset] + data + self.data[offset+Stream.PAGE_SIZE:]
+        self.mac = mac
+        self.iv = iv
 
 
 def import_ledgerwallet(use_speculos: bool) -> None:
@@ -77,161 +72,135 @@ class Stream:
     STACK_SIZE = 0x1000
 
     def __init__(self, path):
-        with open(path, "rb") as fp:
-            elf = ELFFile(fp)
-            assert elf.get_machine_arch() == "RISC-V"
-            self.sections = Stream._parse_sections(elf)
-            self.entrypoint = elf.header["e_entry"]
+        self.elf = Elf(path)
+
+        self.pages = {}
+        self.merkletree = MerkleTree()
+
+        for addr, (data, mac) in self.elf.get_encrypted_pages("code"):
+            assert addr not in self.pages
+            # Since this pages are read-only, don't call _write_page() to avoid
+            # inserting them in the merkle tree.
+            self.pages[addr] = Page(data, mac, read_only=True)
+
+        iv = 1
+        for addr, (data, mac) in self.elf.get_encrypted_pages("data", iv):
+            assert addr not in self.pages
+            # The IV is set to 1. This is an error for the VM to encounter
+            # writeable pages initialized to 0.
+            self._write_page(addr, data, mac, iv)
 
         self.stack = {}
         self.stack_end = 0x80000000
         self.stack_start = self.stack_end - Stream.STACK_SIZE
 
-    @staticmethod
-    def _merge_sections(sections):
-        """Merge adjacent sections."""
-
-        if len(sections) < 2:
-            return sections
-
-        sections.sort(key=lambda s: s.addr)
-
-        modified = True
-        while modified:
-            modified = False
-            for i in range(0, len(sections)-1):
-                a = sections[i]
-                b = sections[i+1]
-
-                a_end = a.addr + a.size
-                assert a_end <= b.addr
-                if (a_end & Stream.PAGE_MASK) == (b.addr & Stream.PAGE_MASK):
-                    assert a.writeable == b.writeable
-                    gap = b.addr - a_end
-                    c = Section(f"{a.name}/{b.name}", a.addr, a.size + gap + b.size, a.data + (b"\xb5" * gap) + b.data, a.writeable)
-                    sections[i] = c
-                    sections.pop(i+1)
-                    modified = True
-                    break
-
-        return sections
-
-    @staticmethod
-    def _pad_sections(sections):
-        padded = []
-        mask = Stream.PAGE_MASK_INVERT
-        for s in sections:
-            gap_start = s.addr & mask
-            gap_end = (Stream.PAGE_SIZE - ((s.addr + s.size) & mask)) & mask
-            data = (b"\xc5" * gap_start) + s.data + (b"\xd5" * gap_end)
-            assert (len(data) % Stream.PAGE_SIZE) == 0
-            section = Section(f"{s.name}[padded]", s.addr & Stream.PAGE_MASK, s.size + gap_start + gap_end, data, s.writeable)
-            padded.append(section)
-        return padded
-
-    @staticmethod
-    def _parse_sections(elf):
-        sections = []
-        permissions = {
-            ".text": False,
-            ".rodata": False,
-            ".data": True,
-            ".sdata": True,
-            ".sbss": True,
-            ".bss": True,
-        }
-        for section in elf.iter_sections():
-            if section.name not in permissions.keys():
-                continue
-
-            writeable = permissions[section.name]
-            s = Section(section.name, section["sh_addr"], section["sh_size"], section.data(), writeable)
-
-            if section.name == ".bss":
-                s.size += Stream.HEAP_SIZE
-                s.data += Stream.HEAP_SIZE * b"\x00"
-
-            if s.size > 0:
-                sections.append(s)
-
-        sections = Stream._merge_sections(sections)
-        sections = Stream._pad_sections(sections)
-
-        for section in sections:
-            logger.debug(f"section {section.name:10s}: {section.addr:#010x} - {section.addr+section.size:#010x} ({section.size} bytes)")
-
-        return sections
-
-    def _get_section(self, addr):
-        for section in self.sections:
-            if addr >= section.addr and addr <= section.addr + section.size:
-                return section
-
-        logger.error(f"no section found for address {addr:#x}")
-        assert False
-
     def _get_page(self, addr):
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
+        return self.pages[addr]
 
-        if addr >= self.stack_start and addr < self.stack_end:
-            page = self.stack.get(addr, b"\x00" * 256)
-        else:
-            section = self._get_section(addr)
-            page = section.get_page(addr)
-
-        return page
-
-    def _write_page(self, addr, data):
+    def _write_page(self, addr, data, mac, iv):
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
-
-        if addr >= self.stack_start and addr < self.stack_end:
-            self.stack[addr] = data
+        assert len(data) == Stream.PAGE_SIZE
+        if addr not in self.pages:
+            self.pages[addr] = Page(data, mac, iv)
+            self.merkletree.insert(Entry.from_values(addr, iv))
         else:
-            section = self._get_section(addr)
-            section.write_page(addr, data)
+            self.pages[addr].update(data, mac, iv)
+            self.merkletree.update(Entry.from_values(addr, iv))
 
     def init_app(self):
-        entrypoint = self.entrypoint
-        sp = self.stack_end - 4
-        section_data = [s for s in self.sections if ".bss" in s.name]
-        section_code = [s for s in self.sections if ".text" in s.name]
-        assert len(section_data) == 1
-        assert len(section_code) == 1
+        entrypoint = self.elf.entrypoint
+
+        sdata_start, sdata_end = self.elf.get_section_range("data")
+        scode_start, scode_end = self.elf.get_section_range("code")
+
+        bss = sdata_end
+
         addresses = [
             entrypoint,
-            sp,
-            section_code[0].addr,
-            section_code[0].addr + section_code[0].size,
-            section_data[0].addr,
-            section_data[0].addr + section_data[0].size,
+            bss,
+            scode_start,
+            scode_end,
             self.stack_start,
-            self.stack_end
+            self.stack_end,
+            sdata_start,
+            sdata_end + Stream.HEAP_SIZE,
         ]
+
+        logger.debug(f"bss:   {bss:#x}")
+        logger.debug(f"code:  {scode_start:#x} - {scode_end:#x}")
+        logger.debug(f"data:  {sdata_start:#x} - {sdata_end + Stream.HEAP_SIZE:#x}")
+        logger.debug(f"stack: {self.stack_start:#x} - {self.stack_end:#x}")
+
         data = b"\x00" * 3  # for alignment
         data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
+        data += self.merkletree.root_hash()
+        data += len(self.merkletree.entries).to_bytes(4, "little")
+        data += bytes(self.merkletree.entries[-1])
         status_word, data = exchange(client, ins=0x00, data=data)
         return status_word, data
 
     def handle_read_access(self, data):
+        # 1. addr was received
         assert len(data) == 4
         addr = int.from_bytes(data, "little")
         logger.debug(f"read access: {addr:#x}")
-        page = self._get_page(addr)
-        assert len(page) == Stream.PAGE_SIZE
 
-        status_word, data = exchange(client, 0x00, data=page[1:], p2=page[0])
+        # 2. send encrypted page data
+        page = self._get_page(addr)
+        assert len(page.data) == Stream.PAGE_SIZE
+        status_word, data = exchange(client, 0x01, data=page.data[1:], p2=page.data[0])
+        assert status_word == 0x6102
+
+        # 4. send iv and mac
+        assert len(page.mac) == 32
+        data = page.iv.to_bytes(4, "little") + page.mac
+        status_word, data = exchange(client, 0x02, data=data)
+
+        # 5. send merkle proof
+        if not page.read_only:
+            assert status_word == 0x6103
+            entry, proof = self.merkletree.get_proof(addr)
+            assert entry.addr == addr
+            assert entry.counter == page.iv
+
+            # TODO: handle larger proofs
+            assert len(proof) <= 250
+            status_word, data = exchange(client, 0x03, data=proof)
+
         return status_word, data
 
-    def handle_write_access(self, data, status_word):
-        assert len(data) == 4 + (Stream.PAGE_SIZE - 2)
+    def handle_write_access(self, data):
+        # 1. encrypted page data was received
+        assert len(data) == Stream.PAGE_SIZE
+        page_data = data
 
-        addr = int.from_bytes(data, "little") & Stream.PAGE_MASK
-        logger.debug(f"write access: {addr:#x}")
-
-        data = bytes([data[0]]) + data[4:] + bytes([status_word & 0xff])
-        self._write_page(addr, data)
-
+        # 2. receive addr, iv and mac
         status_word, data = exchange(client, 0x01)
+        assert status_word == 0x6202
+        assert len(data) == 4 + 4 + 32
+
+        addr = int.from_bytes(data[:4], "little") & Stream.PAGE_MASK
+        iv = int.from_bytes(data[4:8], "little")
+        mac = data[8:]
+        logger.debug(f"write access: {addr:#x} {iv:#x} {mac.hex()}")
+
+        # 3. commit page and send merkle proof
+        if self.merkletree.has_addr(addr):
+            # proof of previous value
+            entry, proof = self.merkletree.get_proof(addr)
+            assert entry.addr == addr
+            assert entry.counter + 1 == iv
+        else:
+            # proof of last entry
+            entry, proof = self.merkletree.get_proof_of_last_entry()
+
+        self._write_page(addr, page_data, mac, iv)
+
+        # TODO: handle larger proofs
+        assert len(proof) <= 250
+
+        status_word, data = exchange(client, 0x02, data=proof)
         return status_word, data
 
 
@@ -259,8 +228,8 @@ if __name__ == "__main__":
         logger.debug(f"[<] {status_word:#06x} {data[:4].hex()}")
         if status_word == 0x6101:
             status_word, data = stream.handle_read_access(data)
-        elif (status_word & 0xff00) == 0x6200:
-            status_word, data = stream.handle_write_access(data, status_word)
+        elif status_word == 0x6201:
+            status_word, data = stream.handle_write_access(data)
         else:
             logger.error(f"unexpected status {status_word:#06x}, {data}")
             assert False
