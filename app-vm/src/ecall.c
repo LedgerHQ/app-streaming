@@ -22,10 +22,10 @@ void ecall(struct rv_cpu *cpu)
 
     switch (nr) {
     case 1:
-        debug_write(cpu->regs[11]);
+        debug_write(cpu->regs[10]);
         break;
     default:
-        os_sched_exit(10);
+        os_sched_exit(cpu->regs[10]);
         break;
     }
 }

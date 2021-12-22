@@ -334,6 +334,10 @@ void rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_SW:
+            /*if (pc_set == 0x10270 && cpu->regs[inst.rs2] == 0x7fffff68) {
+                os_sched_exit(3);
+                // sp == 0x7ffffd98
+                }*/
             mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 4, cpu->regs[inst.rs2]);
             break;
 

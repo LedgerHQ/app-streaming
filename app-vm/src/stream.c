@@ -123,11 +123,11 @@ void stream_init_app(uint8_t *buffer)
 
     /* XXX */
     app.sections[SECTION_CODE].start = 0x10000;
-    app.sections[SECTION_CODE].end = 0x111ff+1;
+    app.sections[SECTION_CODE].end = 0x113ff+1;
     app.sections[SECTION_STACK].start = 0x70000000;
     app.sections[SECTION_STACK].end = 0x80000000;
-    app.sections[SECTION_DATA].start = 0x12100;
-    app.sections[SECTION_DATA].end = 0x121ff+1;
+    app.sections[SECTION_DATA].start = 0x12300;
+    app.sections[SECTION_DATA].end = 0x123ff+1;
 
     app.cpu.pc = *(uint32_t *)&buffer[5+0];
     app.cpu.regs[2] = *(uint32_t *)&buffer[5+4] - 4; // sp
@@ -250,6 +250,18 @@ uint32_t mem_read(uint32_t addr, size_t size)
         break;
     }
 
+    char buf[32];
+    memcpy(buf, "[*] read:  ", 11);
+    u32hex(value, &buf[11]);
+    buf[19] = '@';
+    u32hex(addr, &buf[20]);
+    buf[28] = '\n';
+    buf[29] = '\x00';
+
+    if (0) {
+        err(buf);
+    }
+
     return value;
 }
 
@@ -267,6 +279,9 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         fatal("invalid mem_write\n");
     }
 
+    char buf[32];
+    memcpy(buf, "[*] write: ", 11);
+
     switch (size) {
     case 1:
         *(uint8_t *)&page->data[offset] = value & 0xff;
@@ -281,6 +296,15 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         *(uint32_t *)&page->data[offset] = value;
         u32hex(value, &buf[11]);
         break;
+    }
+
+    buf[19] = '@';
+    u32hex(addr, &buf[20]);
+    buf[28] = '\n';
+    buf[29] = '\x00';
+
+    if (0) {
+        err(buf);
     }
 }
 
@@ -297,6 +321,24 @@ static void debug_cpu(uint32_t pc, uint32_t instruction)
 
     /*memcpy(buf, "a5: ", 4);
     u32hex(app.cpu.regs[15], &buf[4]);
+    buf[12] = '\n';
+    buf[13] = '\x00';
+    err(buf);*/
+
+    /*memcpy(buf, "s0: ", 4);
+    u32hex(app.cpu.regs[8], &buf[4]);
+    buf[12] = '\n';
+    buf[13] = '\x00';
+    err(buf);*/
+
+    /*memcpy(buf, "s1: ", 4);
+    u32hex(app.cpu.regs[9], &buf[4]);
+    buf[12] = '\n';
+    buf[13] = '\x00';
+    err(buf);*/
+
+    /*memcpy(buf, "sp: ", 4);
+    u32hex(app.cpu.regs[2], &buf[4]);
     buf[12] = '\n';
     buf[13] = '\x00';
     err(buf);*/
