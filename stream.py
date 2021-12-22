@@ -5,44 +5,17 @@ https://github.com/LedgerHQ/ledgerctl/blob/master/ledgerwallet/client.py
 """
 
 import argparse
-import binascii
 import logging
 import os
-import pytest
 import sys
-import time
 
 from collections import namedtuple
-from enum import IntEnum
-
 from elftools.elf.elffile import ELFFile
-
-CLA = 0x12
-
-class Ins(IntEnum):
-    GET_PUBLIC_KEY    = 0x02
-    SIGN_SSH_BLOB     = 0x04
-    SIGN_GENERIC_HASH = 0x06
-    SIGN_DIRECT_HASH  = 0x08
-    GET_ECDH_SECRET   = 0x0A
-
-class P1(IntEnum):
-    FIRST             = 0x00
-    NEXT              = 0x01
-    LAST_MARKER       = 0x80
-    LAST              = 0x81
-
-
-class Curve(IntEnum):
-    PRIME256          = 0x01
-    CURVE25519        = 0x02
-    INVALID_03        = 0x03
-    PUBLIC_KEY_MARKER = 0x80
 
 Section = namedtuple("Section", ["name", "addr", "size", "data"])
 
 
-def import_ledgerwallet(use_speculos):
+def import_ledgerwallet(use_speculos: bool) -> None:
     global LedgerClient
     global CommException
     global enumerate_devices
@@ -58,6 +31,7 @@ def import_ledgerwallet(use_speculos):
 
 
 def get_client():
+    CLA = 0x12
     devices = enumerate_devices()
     if len(devices) == 0:
         print("No Ledger device has been found.")
@@ -191,7 +165,6 @@ if __name__ == "__main__":
     while True:
         if first:
             entrypoint = stream.elf.header["e_entry"].to_bytes(4, "little")
-            #entrypoint = int(0x00010110).to_bytes(4, "little")
             sp = int(stream.stack_end - 4).to_bytes(4, "little")
             status_word, data = exchange(client, ins=0x00, data=entrypoint + sp)
             first = False
