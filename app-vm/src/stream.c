@@ -162,8 +162,8 @@ void stream_init_app(uint8_t *buffer)
     app.sections[SECTION_DATA].start = 0x12300;
     app.sections[SECTION_DATA].end = 0x123ff+1;
 
-    app.cpu.pc = *(uint32_t *)&buffer[5+0];
-    app.cpu.regs[2] = *(uint32_t *)&buffer[5+4] - 4; // sp
+    app.cpu.pc = *(uint32_t *)&buffer[8+0];
+    app.cpu.regs[2] = *(uint32_t *)&buffer[8+4] - 4; // sp
 
     for (int i = 0; i < NPAGE_STACK; i++) {
         app.stack[i].addr = PAGE_START(app.cpu.regs[2] - i * PAGE_SIZE);

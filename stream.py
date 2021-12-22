@@ -167,7 +167,9 @@ if __name__ == "__main__":
         if first:
             entrypoint = stream.elf.header["e_entry"].to_bytes(4, "little")
             sp = int(stream.stack_end - 4).to_bytes(4, "little")
-            status_word, data = exchange(client, ins=0x00, data=entrypoint + sp)
+            data = b"\x00" * 3 # for alignment
+            data += entrypoint + sp
+            status_word, data = exchange(client, ins=0x00, data=data)
             first = False
             continue
 
