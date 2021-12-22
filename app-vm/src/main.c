@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -5,6 +6,7 @@
 #include "ux.h"
 #include "os_io_seproxyhal.h"
 
+#include "ui.h"
 #include "stream.h"
 
 
@@ -134,7 +136,7 @@ __attribute__((section(".boot"))) int main() {
                 USB_power(0);
                 USB_power(1);
 
-                //ui_menu_main();
+                ui_menu_main();
 
 #ifdef HAVE_BLE
                 BLE_power(0, NULL);

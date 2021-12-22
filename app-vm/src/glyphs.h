@@ -9,6 +9,28 @@ extern unsigned char const C_boilerplate_logo_bitmap[32];
         extern const bagl_icon_details_t C_boilerplate_logo;
         #endif // GLYPH_boilerplate_logo_BPP
         #endif // HAVE_BAGL
+#ifndef GLYPH_icon_dashboard_BPP
+        #define GLYPH_icon_dashboard_WIDTH 14
+        #define GLYPH_icon_dashboard_HEIGHT 14
+        #define GLYPH_icon_dashboard_BPP 1
+extern unsigned int const C_icon_dashboard_colors[];
+extern unsigned char const C_icon_dashboard_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_dashboard;
+        #endif // GLYPH_icon_dashboard_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_dashboard_x_BPP
+        #define GLYPH_icon_dashboard_x_WIDTH 14
+        #define GLYPH_icon_dashboard_x_HEIGHT 14
+        #define GLYPH_icon_dashboard_x_BPP 1
+extern unsigned int const C_icon_dashboard_x_colors[];
+extern unsigned char const C_icon_dashboard_x_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_dashboard_x;
+        #endif // GLYPH_icon_dashboard_x_BPP
+        #endif // HAVE_BAGL
 #ifndef GLYPH_icon_down_BPP
         #define GLYPH_icon_down_WIDTH 7
         #define GLYPH_icon_down_HEIGHT 4
