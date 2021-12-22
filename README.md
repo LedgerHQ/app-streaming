@@ -32,4 +32,4 @@ For app developers:
 - malloc: newlib _sbrk
 - sign code, encrypt writeable data
 - syscalls: access to VM memory
-- RISC-V: use uncompressed instructions
+- RISC-V: use compressed instructions
