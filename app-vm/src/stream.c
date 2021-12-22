@@ -231,7 +231,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     for (size_t i = 0; i < npage; i++) {
         /* return the page if address matches */
         if (addr == pages[i].addr) {
-            pages[i].usage++;
+            pages[i].usage = MAX(npage, pages[i].usage + 1);
             return &pages[i];
         }
         /* otherwise find the less used page */
