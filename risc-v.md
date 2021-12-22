@@ -8,6 +8,8 @@
 - https://github.com/d0iasm/rvemu
 
 - https://github.com/riscv/riscv-opcodes/blob/master/opcodes-rv32i
+- [“C” Standard Extension for Compressed Instructions, Version 2.0](https://five-embeddev.com/riscv-isa-manual/latest/c.html]
+- https://riscv.org/wp-content/uploads/2015/11/riscv-compressed-spec-v1.9.pdf
 
 
 
