@@ -15,3 +15,11 @@
 - plus de limite de nombre d'app à installer
 - mise à jour automatique
 - mêmes applications pour tous les devices
+
+
+## TODO
+
+- malloc: newlib _sbrk
+- sign code, encrypt writeable data
+- syscalls: access to VM memory
+- RISC-V: use uncompressed instructions
