@@ -228,16 +228,22 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     }
 
     page = &pages[0];
+    struct page_s *found = NULL;
     for (size_t i = 0; i < npage; i++) {
         /* return the page if address matches */
         if (addr == pages[i].addr) {
-            pages[i].usage = MAX(npage, pages[i].usage + 1);
-            return &pages[i];
+            pages[i].usage = MIN(npage * 2, pages[i].usage + 1);
+            found = &pages[i];
+        } else {
+            pages[i].usage = MAX(0, pages[i].usage - 1);
+            /* otherwise find the less used page */
+            if (pages[i].usage <= page->usage) {
+                page = &pages[i];
+            }
         }
-        /* otherwise find the less used page */
-        if (pages[i].usage < page->usage) {
-            page = &pages[i];
-        }
+    }
+    if (found != NULL) {
+        return found;
     }
 
     if (writeable) {
