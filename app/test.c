@@ -1,6 +1,7 @@
 #include <stdio.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "sha256.h"
@@ -65,16 +66,34 @@ void test_sha256(void)
     }
 
     if (memcmp(hexdigest, "a27c896c4859204843166af66f0e902b9c3b3ed6d2fd13d435abc020065c526f", sizeof(hexdigest)) != 0) {
-        _exit(1);
+        exit(1);
+    }
+}
+
+void test_malloc(void)
+{
+    unsigned char *p = malloc(1024);
+    if (p == NULL) {
+        exit(9);
+    }
+
+    for (size_t i = 0; i < 1024; i++) {
+        p[i] = i & 0xff;
+    }
+
+    unsigned char c = p[1000];
+    if (c != (1000 & 0xff)) {
+        exit(1);
     }
 }
 
 int main(void)
 {
-    test_sha256();
+    //test_sha256();
     //printf("BLAH\n");
     //puts("BLAH %s\n");
-    test_send(0x61626364);
-    _exit(0);
+    //test_send(0x61626364);
+    test_malloc();
+
     return 0;
 }

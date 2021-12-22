@@ -122,6 +122,12 @@ class Stream:
                 continue
 
             s = Section(section.name, section["sh_addr"], section["sh_size"], section.data())
+
+            if section.name == ".bss":
+                heap_size = 0x10000
+                data = section.data() + heap_size * b"\x00"
+                s = Section(section.name, section["sh_addr"], section["sh_size"] + heap_size, data)
+
             if s.size > 0:
                 sections.append(s)
 

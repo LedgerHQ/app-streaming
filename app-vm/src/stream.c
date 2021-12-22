@@ -156,11 +156,11 @@ void stream_init_app(uint8_t *buffer)
 
     /* XXX */
     app.sections[SECTION_CODE].start = 0x10000;
-    app.sections[SECTION_CODE].end = 0x113ff+1;
+    app.sections[SECTION_CODE].end = 0x11a00;
     app.sections[SECTION_STACK].start = 0x70000000;
     app.sections[SECTION_STACK].end = 0x80000000;
-    app.sections[SECTION_DATA].start = 0x12300;
-    app.sections[SECTION_DATA].end = 0x123ff+1;
+    app.sections[SECTION_DATA].start = 0x12900;
+    app.sections[SECTION_DATA].end = 0x22e00;
 
     app.cpu.pc = *(uint32_t *)&buffer[8+0];
     app.cpu.regs[2] = *(uint32_t *)&buffer[8+4] - 4; // sp
