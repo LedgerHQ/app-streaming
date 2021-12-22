@@ -205,5 +205,8 @@ if __name__ == "__main__":
             response = client.raw_exchange(bytes([0x02]))
             status_word = int.from_bytes(response[-2:], "big")
             data = response[:-2]
+        elif data == b"":
+            break
         else:
+            print(f"{status_word:#06x}, {data}")
             assert False

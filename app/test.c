@@ -28,6 +28,16 @@ static void _exit(int code)
         );
 }
 
+static void test_send(uint32_t code)
+{
+    asm(
+        "li t0, 2\n"
+        "add a0, %0, 0\n"
+        "ecall\n"
+        :: "r"(code) : "t0", "a0"
+        );
+}
+
 /* XXX */
 double __trunctfdf2 (long double a)
 {
@@ -72,8 +82,9 @@ void test_sha256(void)
 int main(void)
 {
     test_sha256();
-    printf("BLAH\n");
+    //printf("BLAH\n");
     //puts("BLAH %s\n");
-    _exit(10);
+    test_send(0x61626364);
+    _exit(0);
     return 0;
 }
