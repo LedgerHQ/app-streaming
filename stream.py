@@ -103,8 +103,9 @@ class Stream:
         mask = Stream.PAGE_MASK_INVERT
         for s in sections:
             gap_start = s.addr & mask
-            gap_end = (mask - ((s.addr + s.size) & mask)) & mask
+            gap_end = (Stream.PAGE_SIZE - ((s.addr + s.size) & mask)) & mask
             data = (b"\xc5" * gap_start) + s.data + (b"\xd5" * gap_end)
+            assert (len(data) % Stream.PAGE_SIZE) == 0
             section = Section(f"{s.name}[padded]", s.addr & Stream.PAGE_MASK, s.size + gap_start + gap_end, data)
             padded.append(section)
         return padded
