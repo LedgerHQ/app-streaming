@@ -13,9 +13,9 @@
 
 #define PAGE_START(addr) ((addr) & PAGE_MASK)
 
-#define NPAGE_CODE  4
-#define NPAGE_STACK 2
-#define NPAGE_DATA  2
+#define NPAGE_CODE  5
+#define NPAGE_STACK 3
+#define NPAGE_DATA  1
 
 enum page_prot_e {
     PAGE_PROT_RO,
