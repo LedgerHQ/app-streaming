@@ -199,6 +199,7 @@ if __name__ == "__main__":
 
             response = client.raw_exchange(bytes([0x01]))
             print(f"{response}")
+            # XXX not alwasy stack
             stream.stack[addr] = response
 
             response = client.raw_exchange(bytes([0x02]))

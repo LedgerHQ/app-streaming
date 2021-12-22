@@ -76,26 +76,26 @@ void fatal(char *msg)
     os_sched_exit(7);
 }
 
-void stream_request_page(uint32_t addr, uint8_t *data)
+void stream_request_page(struct page_s *page)
 {
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
 
     //_Static_assert(IO_APDU_BUFFER_SIZE == 255 + 5, "lol");
 
-    cmd->addr = addr;
+    cmd->addr = page->addr;
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd)-2);
     if (size != PAGE_SIZE) {
     }
 
-    memcpy(data, G_io_apdu_buffer, PAGE_SIZE);
+    memcpy(page->data, G_io_apdu_buffer, PAGE_SIZE);
 
     /* TODO: check page merkle hash */
 }
 
-void stream_commit_page(uint32_t addr, uint8_t *data)
+void stream_commit_page(struct page_s *page)
 {
     /* TODO: encrypt page */
 
@@ -104,14 +104,14 @@ void stream_commit_page(uint32_t addr, uint8_t *data)
 
     //_Static_assert(IO_APDU_BUFFER_SIZE == 255 + 5, "lol");
 
-    cmd->addr = addr;
+    cmd->addr = page->addr;
     cmd->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd)-2);
     if (size != 1) {
     }
 
-    memcpy(G_io_apdu_buffer, data, PAGE_SIZE);
+    memcpy(G_io_apdu_buffer, page->data, PAGE_SIZE);
     size = io_exchange(CHANNEL_APDU, PAGE_SIZE);
     if (size != 1) {
     }
@@ -123,11 +123,11 @@ void stream_init_app(uint8_t *buffer)
 
     /* XXX */
     app.sections[SECTION_CODE].start = 0x10000;
-    app.sections[SECTION_CODE].end = 0x1d2ff+1;
+    app.sections[SECTION_CODE].end = 0x111ff+1;
     app.sections[SECTION_STACK].start = 0x70000000;
     app.sections[SECTION_STACK].end = 0x80000000;
-    app.sections[SECTION_DATA].start = 0x1e200;
-    app.sections[SECTION_DATA].end = 0x1ecff+1;
+    app.sections[SECTION_DATA].start = 0x12100;
+    app.sections[SECTION_DATA].end = 0x121ff+1;
 
     app.cpu.pc = *(uint32_t *)&buffer[5+0];
     app.cpu.regs[2] = *(uint32_t *)&buffer[5+4] - 4; // sp
@@ -146,7 +146,7 @@ static void u32hex(uint32_t n, char *buf)
     char hex[16] = "0123456789abcdef";
     size_t i;
 
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < 4; i++) {
         buf[i*2] = hex[(n >> ((24 - i * 8) + 4)) & 0xf];
         buf[i*2+1] = hex[(n >> (24 - i * 8)) & 0xf];
     }
@@ -155,6 +155,7 @@ static void u32hex(uint32_t n, char *buf)
 static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 {
     struct page_s *page;
+    bool writeable = false;
 
     addr = PAGE_START(addr);
 
@@ -165,8 +166,10 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         }
     } else if (in_section(SECTION_DATA, addr)) {
         page = &app.data;
+        writeable = true;
     } else if (in_section(SECTION_STACK, addr)) {
         page = &app.stack;
+        writeable = true;
     } else {
         char buf[19];
 
@@ -187,11 +190,11 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     }
 
     if (addr != page->addr) {
-        if (page_prot == PAGE_PROT_RW) {
-            stream_commit_page(page->addr, page->data);
+        if (writeable) {
+            stream_commit_page(page);
         }
-        stream_request_page(addr, page->data);
         page->addr = addr;
+        stream_request_page(page);
     }
 
     return page;
@@ -199,7 +202,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 
 static bool same_page(uint32_t addr1, uint32_t addr2)
 {
-    return (addr1 & PAGE_MASK) == (addr2 & PAGE_MASK);
+    return PAGE_START(addr1) == PAGE_START(addr2);
 }
 
 static void check_alignment(uint32_t addr, size_t size)
@@ -233,17 +236,17 @@ uint32_t mem_read(uint32_t addr, size_t size)
 
     page = get_page(addr, PAGE_PROT_RO);
     offset = addr - PAGE_START(addr);
-    value = *(uint32_t *)&page->data[offset];
 
     switch (size) {
     case 1:
-        value &= 0xff;
+        value = *(uint8_t *)&page->data[offset];
         break;
     case 2:
-        value &= 0xffff;
+        value = *(uint16_t *)&page->data[offset];
         break;
     case 4:
     default:
+        value = *(uint32_t *)&page->data[offset];
         break;
     }
 
@@ -261,19 +264,22 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
     offset = addr - PAGE_START(addr);
 
     if (offset > PAGE_SIZE - size) {
-        fatal("invali mem_write\n");
+        fatal("invalid mem_write\n");
     }
 
     switch (size) {
     case 1:
         *(uint8_t *)&page->data[offset] = value & 0xff;
+        u32hex(value & 0xff, &buf[11]);
         break;
     case 2:
         *(uint16_t *)&page->data[offset] = value & 0xffff;
+        u32hex(value & 0xffff, &buf[11]);
         break;
     case 4:
     default:
         *(uint32_t *)&page->data[offset] = value;
+        u32hex(value, &buf[11]);
         break;
     }
 }
