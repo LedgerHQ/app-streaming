@@ -55,6 +55,14 @@ struct app_s {
     struct page_s data[NPAGE_DATA];
 };
 
+/* this message comes from the client */
+struct cmd_app_init_s {
+    uint32_t pc;
+    uint32_t sp;
+
+    uint32_t section_ranges[2 * NUM_SECTIONS];
+} __attribute__((packed));
+
 struct cmd_request_page_s {
     uint32_t addr;
     uint16_t cmd;
@@ -154,20 +162,18 @@ void stream_init_app(uint8_t *buffer)
 {
     memset(&app, 0, sizeof(app));
 
-    /* XXX */
-    app.sections[SECTION_CODE].start = 0x10000;
-    app.sections[SECTION_CODE].end = 0x11a00;
-    app.sections[SECTION_STACK].start = 0x70000000;
-    app.sections[SECTION_STACK].end = 0x80000000;
-    app.sections[SECTION_DATA].start = 0x12900;
-    app.sections[SECTION_DATA].end = 0x22e00;
-
-    app.cpu.pc = *(uint32_t *)&buffer[8+0];
-    app.cpu.regs[2] = *(uint32_t *)&buffer[8+4] - 4; // sp
+    struct cmd_app_init_s *cmd = (struct cmd_app_init_s *)buffer;
+    for (int i = 0; i < NUM_SECTIONS; i++) {
+        app.sections[i].start = cmd->section_ranges[2 * i];
+        app.sections[i].end = cmd->section_ranges[2 * i + 1];
+    }
 
     for (int i = 0; i < NPAGE_STACK; i++) {
         app.stack[i].addr = PAGE_START(app.cpu.regs[2] - i * PAGE_SIZE);
     }
+
+    app.cpu.pc = cmd->pc;
+    app.cpu.regs[2] = cmd->sp - 4;
 }
 
 static bool in_section(enum section_e section, uint32_t addr)

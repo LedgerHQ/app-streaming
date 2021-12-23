@@ -175,10 +175,26 @@ if __name__ == "__main__":
     first = True
     while True:
         if first:
-            entrypoint = stream.elf.header["e_entry"].to_bytes(4, "little")
-            sp = int(stream.stack_end - 4).to_bytes(4, "little")
+            entrypoint = stream.elf.header["e_entry"]
+            sp = stream.stack_end - 4
+            section_data = [s for s in stream.sections if ".bss" in s.name]
+            section_code = [s for s in stream.sections if ".text" in s.name]
+            assert len(section_data) == 1
+            assert len(section_code) == 1
+            addresses = [
+                entrypoint,
+                sp,
+                section_code[0].addr,
+                section_code[0].addr + section_code[0].size,
+                section_data[0].addr,
+                section_data[0].addr + section_data[0].size,
+                stream.stack_start,
+                stream.stack_end
+            ]
+            for addr in addresses:
+                print(hex(addr))
             data = b"\x00" * 3 # for alignment
-            data += entrypoint + sp
+            data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
             status_word, data = exchange(client, ins=0x00, data=data)
             first = False
             continue
