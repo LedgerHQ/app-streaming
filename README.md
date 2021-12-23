@@ -8,6 +8,7 @@ For users:
 
 For app developers:
 
+- apps are maintainable without any specific knowledge
 - développement d'app facile
 - plus de limite de taille de stack et de code
 - ajout d'un heap et de malloc
@@ -19,17 +20,24 @@ For app developers:
 - ne plus dépendre des évolutions du firmware
 - mêmes applications pour tous les devices
 - plus d'os_lib_call
+- testing is made easy
 
 
 ## Limitations
 
-- overhead (especially for BLE?)
+- overhead (especially for BLE?). Performances could be increased by removing the IO task
 - a companion  is always required (Ledger Live Desktop / Mobile)
+
+
+## How to build a RISC-V app
+
+TODO: create a Dockerfile
+
+`docker pull dockcross/linux-riscv32:latest` + newlib
 
 
 ## TODO
 
-- malloc: newlib _sbrk
 - sign code, encrypt writeable data
 - syscalls: access to VM memory
 - RISC-V: use compressed instructions
