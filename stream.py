@@ -54,7 +54,7 @@ def get_client():
     CLA = 0x12
     devices = enumerate_devices()
     if len(devices) == 0:
-        print("No Ledger device has been found.")
+        logger.error("No Ledger device has been found.")
         sys.exit(0)
 
     return LedgerClient(devices[0], cla=CLA)
@@ -167,6 +167,7 @@ class Stream:
             if addr >= section.addr and addr <= section.addr + section.size:
                 return section
 
+        logger.error(f"no section found for address {addr:#x}")
         assert False
 
     def _get_page(self, addr):
@@ -214,7 +215,7 @@ class Stream:
     def handle_read_access(self, data):
         assert len(data) == 4
         addr = int.from_bytes(data, "little")
-        print(f"[*] read access: {addr:#x}")
+        logger.debug(f"read access: {addr:#x}")
         page = self._get_page(addr)
         assert len(page) == Stream.PAGE_SIZE
 
@@ -225,7 +226,7 @@ class Stream:
         assert len(data) == 4 + (Stream.PAGE_SIZE - 2)
 
         addr = int.from_bytes(data, "little") & Stream.PAGE_MASK
-        print(f"[*] write access: {addr:#x}")
+        logger.debug(f"write access: {addr:#x}")
 
         data = bytes([data[0]]) + data[4:] + bytes([status_word & 0xff])
         self._write_page(addr, data)
@@ -237,13 +238,16 @@ class Stream:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
     logger = logging.getLogger("stream")
-    # logger.setLevel(logging.DEBUG)
 
     parser = argparse.ArgumentParser(description="RISC-V vm companion.")
     parser.add_argument("--app", type=str, required=True, help="application path")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
+    parser.add_argument("--verbose", action="store_true", help="")
 
     args = parser.parse_args()
+
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
 
     import_ledgerwallet(args.speculos)
 
@@ -252,11 +256,11 @@ if __name__ == "__main__":
 
     status_word, data = stream.init_app()
     while True:
-        print(f"[<] {status_word:#06x} {data[:4].hex()}")
+        logger.debug(f"[<] {status_word:#06x} {data[:4].hex()}")
         if status_word == 0x6101:
             status_word, data = stream.handle_read_access(data)
         elif (status_word & 0xff00) == 0x6200:
             status_word, data = stream.handle_write_access(data, status_word)
         else:
-            print(f"unexpected status {status_word:#06x}, {data}")
+            logger.error(f"unexpected status {status_word:#06x}, {data}")
             assert False
