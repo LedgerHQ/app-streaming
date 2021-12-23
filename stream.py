@@ -155,6 +155,49 @@ class Stream:
         assert page is not None
         return page
 
+    def init_app(self):
+        entrypoint = self.elf.header["e_entry"]
+        sp = self.stack_end - 4
+        section_data = [s for s in self.sections if ".bss" in s.name]
+        section_code = [s for s in self.sections if ".text" in s.name]
+        assert len(section_data) == 1
+        assert len(section_code) == 1
+        addresses = [
+            entrypoint,
+            sp,
+            section_code[0].addr,
+            section_code[0].addr + section_code[0].size,
+            section_data[0].addr,
+            section_data[0].addr + section_data[0].size,
+            self.stack_start,
+            self.stack_end
+        ]
+        data = b"\x00" * 3 # for alignment
+        data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
+        status_word, data = exchange(client, ins=0x00, data=data)
+        return status_word, data
+
+    def handle_read_access(self, data):
+        assert len(data) == 4
+        addr = int.from_bytes(data, "little")
+        print(f"[*] read access: {addr:#x}")
+        page = self.get_page(addr)
+        assert len(page) == Stream.PAGE_SIZE
+
+        status_word, data = exchange(client, 0x00, data=page[1:], p2=page[0])
+        return status_word, data
+
+    def handle_write_access(self, data, status_word):
+        assert len(data) == 4 + (Stream.PAGE_SIZE - 2)
+
+        addr = int.from_bytes(data, "little") & Stream.PAGE_MASK
+        print(f"[*] write access: {addr:#x}")
+
+        # XXX not always stack
+        self.stack[addr] = bytes([data[0]]) + data[4:] + bytes([status_word & 0xff])
+
+        status_word, data = exchange(client, 0x01)
+        return status_word, data
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
@@ -172,50 +215,13 @@ if __name__ == "__main__":
     stream = Stream(args.app)
     client = get_client()
 
-    first = True
+    status_word, data = stream.init_app()
     while True:
-        if first:
-            entrypoint = stream.elf.header["e_entry"]
-            sp = stream.stack_end - 4
-            section_data = [s for s in stream.sections if ".bss" in s.name]
-            section_code = [s for s in stream.sections if ".text" in s.name]
-            assert len(section_data) == 1
-            assert len(section_code) == 1
-            addresses = [
-                entrypoint,
-                sp,
-                section_code[0].addr,
-                section_code[0].addr + section_code[0].size,
-                section_data[0].addr,
-                section_data[0].addr + section_data[0].size,
-                stream.stack_start,
-                stream.stack_end
-            ]
-            data = b"\x00" * 3 # for alignment
-            data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
-            status_word, data = exchange(client, ins=0x00, data=data)
-            first = False
-            continue
-
         print(f"[<] {status_word:#06x} {data[:4].hex()}")
         if status_word == 0x6101:
-            assert len(data) == 4
-            addr = int.from_bytes(data, "little")
-            print(f"[*] read access: {addr:#x}")
-            page = stream.get_page(addr)
-            assert len(page) == Stream.PAGE_SIZE
-
-            status_word, data = exchange(client, 0x00, data=page[1:], p2=page[0])
+            status_word, data = stream.handle_read_access(data)
         elif (status_word & 0xff00) == 0x6200:
-            assert len(data) == 4 + (Stream.PAGE_SIZE - 2)
-
-            addr = int.from_bytes(data, "little") & Stream.PAGE_MASK
-            print(f"[*] write access: {addr:#x}")
-
-            # XXX not always stack
-            stream.stack[addr] = bytes([data[0]]) + data[4:] + bytes([status_word & 0xff])
-
-            status_word, data = exchange(client, 0x01)
+            status_word, data = stream.handle_write_access(data, status_word)
         else:
-            print(f"{status_word:#06x}, {data}")
+            print(f"unexpected status {status_word:#06x}, {data}")
             assert False
