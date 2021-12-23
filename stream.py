@@ -9,10 +9,26 @@ import logging
 import os
 import sys
 
-from collections import namedtuple
 from elftools.elf.elffile import ELFFile
 
-Section = namedtuple("Section", ["name", "addr", "size", "data"])
+
+class Section:
+    def __init__(self, name, addr, size, data, writeable):
+        self.name = name
+        self.addr = addr
+        self.size = size
+        self.data = data
+        self.writeable = writeable
+
+    def get_page(self, addr):
+        offset = (addr & Stream.PAGE_MASK) - self.addr
+        return self.data[offset:offset+Stream.PAGE_SIZE]
+
+    def write_page(self, addr, data):
+        assert self.writeable
+
+        offset = (addr & Stream.PAGE_MASK) - self.addr
+        self.data = self.data[:offset] + data + self.data[offset+Stream.PAGE_SIZE:]
 
 
 def import_ledgerwallet(use_speculos: bool) -> None:
@@ -75,8 +91,6 @@ class Stream:
     def _merge_sections(sections):
         """Merge adjacent sections."""
 
-        # XXX: what if permissions are incompatible?
-
         if len(sections) < 2:
             return sections
 
@@ -92,8 +106,9 @@ class Stream:
                 a_end = a.addr + a.size
                 assert a_end <= b.addr
                 if (a_end & Stream.PAGE_MASK) == (b.addr & Stream.PAGE_MASK):
+                    assert a.writeable == b.writeable
                     gap = b.addr - a_end
-                    c = Section(f"{a.name}/{b.name}", a.addr, a.size + gap + b.size, a.data + (b"\xb5" * gap) + b.data)
+                    c = Section(f"{a.name}/{b.name}", a.addr, a.size + gap + b.size, a.data + (b"\xb5" * gap) + b.data, a.writeable)
                     sections[i] = c
                     sections.pop(i+1)
                     modified = True
@@ -110,23 +125,32 @@ class Stream:
             gap_end = (Stream.PAGE_SIZE - ((s.addr + s.size) & mask)) & mask
             data = (b"\xc5" * gap_start) + s.data + (b"\xd5" * gap_end)
             assert (len(data) % Stream.PAGE_SIZE) == 0
-            section = Section(f"{s.name}[padded]", s.addr & Stream.PAGE_MASK, s.size + gap_start + gap_end, data)
+            section = Section(f"{s.name}[padded]", s.addr & Stream.PAGE_MASK, s.size + gap_start + gap_end, data, s.writeable)
             padded.append(section)
         return padded
 
     @staticmethod
     def _parse_sections(elf):
         sections = []
+        permissions = {
+            ".text": False,
+            ".rodata": False,
+            ".data": True,
+            ".sdata": True,
+            ".sbss": True,
+            ".bss": True,
+        }
         for section in elf.iter_sections():
-            if section.name not in [".text", ".rodata", ".data", ".sdata", ".sbss", ".bss"]:
+            if section.name not in permissions.keys():
                 continue
 
-            s = Section(section.name, section["sh_addr"], section["sh_size"], section.data())
+            writeable = permissions[section.name]
+            s = Section(section.name, section["sh_addr"], section["sh_size"], section.data(), writeable)
 
             if section.name == ".bss":
                 heap_size = 0x10000
-                data = section.data() + heap_size * b"\x00"
-                s = Section(section.name, section["sh_addr"], section["sh_size"] + heap_size, data)
+                s.size += heap_size
+                s.data += heap_size * b"\x00"
 
             if s.size > 0:
                 sections.append(s)
@@ -139,21 +163,32 @@ class Stream:
 
         return sections
 
-    def get_page(self, addr):
+    def _get_section(self, addr):
+        for section in self.sections:
+            if addr >= section.addr and addr <= section.addr + section.size:
+                return section
+
+        assert False
+
+    def _get_page(self, addr):
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
 
-        page = None
         if addr >= self.stack_start and addr < self.stack_end:
             page = self.stack.get(addr, b"\x00" * 256)
         else:
-            for section in self.sections:
-                if addr >= section.addr and addr <= section.addr + section.size:
-                    offset = (addr & Stream.PAGE_MASK) - section.addr
-                    page = section.data[offset:offset+Stream.PAGE_SIZE]
-                    break
+            section = self._get_section(addr)
+            page = section.get_page(addr)
 
-        assert page is not None
         return page
+
+    def _write_page(self, addr, data):
+        assert (addr & Stream.PAGE_MASK_INVERT) == 0
+
+        if addr >= self.stack_start and addr < self.stack_end:
+            self.stack[addr] = data
+        else:
+            section = self._get_section(addr)
+            section.write_page(addr, data)
 
     def init_app(self):
         entrypoint = self.elf.header["e_entry"]
@@ -172,7 +207,7 @@ class Stream:
             self.stack_start,
             self.stack_end
         ]
-        data = b"\x00" * 3 # for alignment
+        data = b"\x00" * 3  # for alignment
         data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
         status_word, data = exchange(client, ins=0x00, data=data)
         return status_word, data
@@ -181,7 +216,7 @@ class Stream:
         assert len(data) == 4
         addr = int.from_bytes(data, "little")
         print(f"[*] read access: {addr:#x}")
-        page = self.get_page(addr)
+        page = self._get_page(addr)
         assert len(page) == Stream.PAGE_SIZE
 
         status_word, data = exchange(client, 0x00, data=page[1:], p2=page[0])
@@ -193,16 +228,17 @@ class Stream:
         addr = int.from_bytes(data, "little") & Stream.PAGE_MASK
         print(f"[*] write access: {addr:#x}")
 
-        # XXX not always stack
-        self.stack[addr] = bytes([data[0]]) + data[4:] + bytes([status_word & 0xff])
+        data = bytes([data[0]]) + data[4:] + bytes([status_word & 0xff])
+        self._write_page(addr, data)
 
         status_word, data = exchange(client, 0x01)
         return status_word, data
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
     logger = logging.getLogger("stream")
-    #logger.setLevel(logging.DEBUG)
+    # logger.setLevel(logging.DEBUG)
 
     parser = argparse.ArgumentParser(description="RISC-V vm companion.")
     parser.add_argument("--app", type=str, required=True, help="application path")

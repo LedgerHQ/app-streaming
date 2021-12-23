@@ -168,10 +168,6 @@ void stream_init_app(uint8_t *buffer)
         app.sections[i].end = cmd->section_ranges[2 * i + 1];
     }
 
-    for (int i = 0; i < NPAGE_STACK; i++) {
-        app.stack[i].addr = PAGE_START(app.cpu.regs[2] - i * PAGE_SIZE);
-    }
-
     app.cpu.pc = cmd->pc;
     app.cpu.regs[2] = cmd->sp - 4;
 }
@@ -252,7 +248,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         return found;
     }
 
-    if (writeable) {
+    /* don't commit page if it never was retrieved (it's address is zero) */
+    if (writeable && page->addr != 0) {
         stream_commit_page(page);
     }
 
