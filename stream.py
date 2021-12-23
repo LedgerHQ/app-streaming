@@ -73,19 +73,19 @@ class Stream:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
+    HEAP_SIZE = 0x10000
+    STACK_SIZE = 0x1000
+
     def __init__(self, path):
         with open(path, "rb") as fp:
-            self.data = fp.read()
-
-        self.fp = open(path, "rb")
-        self.elf = ELFFile(self.fp)
-        assert self.elf.get_machine_arch() == "RISC-V"
-
-        self.sections = Stream._parse_sections(self.elf)
+            elf = ELFFile(fp)
+            assert elf.get_machine_arch() == "RISC-V"
+            self.sections = Stream._parse_sections(elf)
+            self.entrypoint = elf.header["e_entry"]
 
         self.stack = {}
         self.stack_end = 0x80000000
-        self.stack_start = self.stack_end - 0x1000
+        self.stack_start = self.stack_end - Stream.STACK_SIZE
 
     @staticmethod
     def _merge_sections(sections):
@@ -148,9 +148,8 @@ class Stream:
             s = Section(section.name, section["sh_addr"], section["sh_size"], section.data(), writeable)
 
             if section.name == ".bss":
-                heap_size = 0x10000
-                s.size += heap_size
-                s.data += heap_size * b"\x00"
+                s.size += Stream.HEAP_SIZE
+                s.data += Stream.HEAP_SIZE * b"\x00"
 
             if s.size > 0:
                 sections.append(s)
@@ -191,7 +190,7 @@ class Stream:
             section.write_page(addr, data)
 
     def init_app(self):
-        entrypoint = self.elf.header["e_entry"]
+        entrypoint = self.entrypoint
         sp = self.stack_end - 4
         section_data = [s for s in self.sections if ".bss" in s.name]
         section_code = [s for s in self.sections if ".text" in s.name]
