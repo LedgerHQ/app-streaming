@@ -2,7 +2,7 @@
 
 For users:
 
-- plus de limite de nombre d'app à installer
+- no more app to install from Ledger Live (and no more app number limitation)
 - mise à jour automatique
 - plus de changement de contexte de transport (déconnexion USB) lors du passage d'une app à une autre
 
