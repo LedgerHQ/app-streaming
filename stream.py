@@ -191,8 +191,6 @@ if __name__ == "__main__":
                 stream.stack_start,
                 stream.stack_end
             ]
-            for addr in addresses:
-                print(hex(addr))
             data = b"\x00" * 3 # for alignment
             data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
             status_word, data = exchange(client, ins=0x00, data=data)
