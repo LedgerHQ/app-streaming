@@ -5,7 +5,7 @@ Each page is made of 256 bytes of data associated to an address (4 bytes). A pag
 All pages exchanged between the host and the VM are:
 
 - encrypted using AES-256. The page data (256 bytes) is encrypted with the key `KeyAES`. The IV is `addr || counter || '\x00' * 8` where `addr` and `counter` are 4 bytes each, encoded in little-endian.
-- authenticated using HMAC-SHA256. The following message is authenticated using the key `KeyHMAC`: `data || addr || counter` where `data` is the page data (256 bytes) followed by `addr` and `counter` which are 4 bytes each and encoded in little-endian.
+- authenticated using HMAC-SHA256. The following message is authenticated using the key `KeyHMAC`: `encrypted_data || addr || counter` where `encrypted_data` is the page data (256 bytes) encrypted using AES followed by `addr` and `counter` which are 4 bytes each and encoded in little-endian.
 
 There are 2 sets of 2 keys for AES encryption/decryption and HMAC authentication:
 
@@ -17,8 +17,8 @@ There are 2 sets of 2 keys for AES encryption/decryption and HMAC authentication
 
 There are 2 kind of exchanges, always initiated by the VM:
 
-- Requesting a page, given its address. The page data, counter, HMAC and merkle tree proof is returned by the host.
-- Committing a writeable page. The page data, counter, HMAC and merkle tree proof is sent by the VM.
+- Requesting a page, given its address. The page data, counter, HMAC and merkle tree proof are returned by the host.
+- Committing a writeable page. The page data, counter and HMAC are sent by the VM.
 
 Committing a page always increments its associated counter.
 
