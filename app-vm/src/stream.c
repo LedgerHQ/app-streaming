@@ -207,15 +207,15 @@ void stream_request_page(struct page_s *page, bool read_only)
     struct response_hmac_s *r = (struct response_hmac_s *)&response->data;
 
     cx_hmac_sha256_t hmac_sha256_ctx;
-    uint32_t stuff[2];
+    struct entry_s entry;;
     uint8_t mac[32];
 
-    stuff[0] = page->addr;
-    stuff[1] = r->iv;
+    entry.addr = page->addr;
+    entry.iv = r->iv;
 
     cx_hmac_sha256_init_no_throw(&hmac_sha256_ctx, app.hmac_key, sizeof(app.hmac_key));
     cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, page->data, sizeof(page->data), NULL, 0);
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, (uint8_t *)stuff, sizeof(stuff), mac, sizeof(mac));
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data), mac, sizeof(mac));
 
     if (memcmp(mac, r->mac, sizeof(mac)) != 0) {
         fatal("invalid hmac\n");
@@ -245,7 +245,7 @@ void stream_request_page(struct page_s *page, bool read_only)
     }
 
     size_t count = response->lc / sizeof(struct proof_s);
-    if (!merkle_verify_proof((struct entry_s *)&stuff, (struct proof_s *)&response->data, count)) {
+    if (!merkle_verify_proof(&entry, (struct proof_s *)&response->data, count)) {
         fatal("invalid iv (merkle proof)\n");
     }
 }
@@ -282,14 +282,14 @@ void stream_commit_page(struct page_s *page)
     /* 2. hmac(data || addr || iv) */
 
     struct cmd_commit_hmac_s *cmd2 = (struct cmd_commit_hmac_s *)G_io_apdu_buffer;
-    uint32_t stuff[2];
+    struct entry_s entry;
 
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd2), "invalid IO_APDU_BUFFER_SIZE");
 
-    stuff[0] = page->addr;
-    stuff[1] = page->iv;
+    entry.addr = page->addr;
+    entry.iv = page->iv;
 
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, (uint8_t *)stuff, sizeof(stuff), cmd2->mac, sizeof(cmd2->mac));
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data), cmd2->mac, sizeof(cmd2->mac));
 
     cmd2->addr = page->addr;
     cmd2->iv = page->iv;
@@ -308,14 +308,14 @@ void stream_commit_page(struct page_s *page)
     size_t count = response->lc / sizeof(struct proof_s);
 
     if (page->iv == 1) {
-        if (!merkle_insert((struct entry_s *)&stuff, (struct proof_s *)&response->data, count)) {
+        if (!merkle_insert(&entry, (struct proof_s *)&response->data, count)) {
             fatal("merkle insert failed\n");
         }
     } else {
-        uint32_t old_stuff[2];
-        old_stuff[0] = page->addr;
-        old_stuff[1] = page->iv - 1;
-        if (!merkle_update((struct entry_s *)&old_stuff, (struct entry_s *)&stuff, (struct proof_s *)&response->data, count)) {
+        struct entry_s old_entry;
+        old_entry.addr = page->addr;
+        old_entry.iv = page->iv - 1;
+        if (!merkle_update(&old_entry, &entry, (struct proof_s *)&response->data, count)) {
             fatal("merkle update failed\n");
         }
     }

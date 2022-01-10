@@ -3,13 +3,23 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct entry_s;
-struct proof_s;
-
 struct proof_s {
     uint8_t op;
     uint8_t digest[32];
-};
+} __attribute__((packed));
+
+/*
+ * Merkle Tree node.
+ */
+struct entry_s {
+    union {
+        uint8_t data[8];
+        struct {
+            uint32_t addr;
+            uint32_t iv;
+        };
+    };
+} __attribute__((packed));
 
 bool merkle_insert(struct entry_s *entry, struct proof_s *proof, size_t count);
 bool merkle_update(struct entry_s *old_entry, struct entry_s *entry, struct proof_s *proof, size_t count);

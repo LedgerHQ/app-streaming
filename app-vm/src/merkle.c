@@ -4,10 +4,6 @@
 
 #include "cx.h"
 
-struct entry_s {
-    uint8_t data[8]; // addr, iv
-} __attribute__((packed));
-
 static uint8_t root_hash[CX_SHA256_SIZE];
 static size_t n;
 static cx_sha256_t hash_ctx;
@@ -69,25 +65,6 @@ static size_t bit_count(uint32_t x)
     return count;
 }
 
-static void log_merkle_root_hash(void)
-{
-    char hex[16] = "0123456789abcdef";
-    size_t i;
-    char buf[3];
-
-    buf[2] = '\x00';
-
-    err("\nroot hash: ");
-
-    for (i = 0; i < sizeof(root_hash); i++) {
-        buf[0] = hex[(root_hash[i] >> 4) & 0xf];
-        buf[1] = hex[root_hash[i] & 0xf];
-        err(buf);
-    }
-
-    err("\n");
-}
-
 bool merkle_insert(struct entry_s *entry, struct proof_s *proof, size_t count)
 {
     /* XXX: check that n doesn't overflow */
@@ -109,7 +86,6 @@ bool merkle_insert(struct entry_s *entry, struct proof_s *proof, size_t count)
 
     proof_hash(&last_entry, proof, count, tmp_proof.digest);
     if (memcmp(tmp_proof.digest, root_hash, sizeof(root_hash)) != 0) {
-        fatal("invalid proof hash\n");
         return false;
     }
 
@@ -123,21 +99,16 @@ bool merkle_insert(struct entry_s *entry, struct proof_s *proof, size_t count)
     memcpy(&last_entry, entry, sizeof(*entry));
     n++;
 
-    //log_merkle_root_hash();
-
     return true;
 }
 
 bool merkle_update(struct entry_s *old_entry, struct entry_s *entry, struct proof_s *proof, size_t count)
 {
     if (!merkle_verify_proof(old_entry, proof, count)) {
-        fatal("invalid update proof hash\n");
         return false;
     }
 
     proof_hash(entry, (struct proof_s *)proof, count, root_hash);
-
-    //log_merkle_root_hash();
 
     /* update last entry if required */
     if (memcmp(&last_entry, old_entry, sizeof(last_entry)) == 0) {
@@ -161,6 +132,4 @@ void init_merkle_tree(uint8_t *root_hash_init, size_t merkle_tree_size, struct e
     memcpy(root_hash, root_hash_init, sizeof(root_hash));
     memcpy(&last_entry, last_entry_init, sizeof(last_entry));
     n = merkle_tree_size;
-
-    //log_merkle_root_hash();
 }
