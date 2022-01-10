@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-https://www.cc.gatech.edu/~milos/rogers_micro07.pdf
-https://www.microarch.org/micro40/talks/3B-3.pdf
-https://en.wikipedia.org/wiki/Binary_search_tree
-https://medium.com/ontologynetwork/everything-you-need-to-know-about-merkle-trees-82b47da0634a
-https://datatracker.ietf.org/doc/html/rfc6962
-"""
-
 import hashlib
 
 

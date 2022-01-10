@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 """
+This is an experiment with Merkle Trees. Not used by the project.
+
 https://www.cc.gatech.edu/~milos/rogers_micro07.pdf
 https://www.microarch.org/micro40/talks/3B-3.pdf
 https://en.wikipedia.org/wiki/Binary_search_tree
