@@ -118,11 +118,11 @@ bool merkle_update(struct entry_s *old_entry, struct entry_s *entry, struct proo
     return true;
 }
 
-bool merkle_verify_proof(struct entry_s *entry, uint8_t *proof, size_t count)
+bool merkle_verify_proof(struct entry_s *entry, struct proof_s *proof, size_t count)
 {
     uint8_t digest[CX_SHA256_SIZE];
 
-    proof_hash(entry, (struct proof_s *)proof, count, digest);
+    proof_hash(entry, proof, count, digest);
 
     return memcmp(digest, root_hash, sizeof(root_hash)) == 0;
 }
