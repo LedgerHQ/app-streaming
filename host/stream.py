@@ -93,6 +93,11 @@ class Stream:
         self.stack_end = 0x80000000
         self.stack_start = self.stack_end - Stream.STACK_SIZE
 
+        self.send_buffer = b""
+        self.send_buffer_counter = 0
+        self.recv_buffer = b"a" * 1000
+        self.recv_buffer_counter = 0
+
     def _get_page(self, addr):
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
         return self.pages[addr]
@@ -202,6 +207,47 @@ class Stream:
         status_word, data = exchange(client, 0x02, data=proof)
         return status_word, data
 
+    def handle_send_buffer(self, data):
+        logger.info(f"got buffer {data}")
+        assert len(data) == 254
+
+        n = int.from_bytes(data[250:254], "little")
+        stop = (n & 0x80000000) != 0
+        assert self.send_buffer_counter == (n & 0x7fffffff)
+        self.send_buffer_counter += 1
+
+        size = data[249]
+        self.send_buffer += data[:size]
+
+        if stop:
+            logger.info(f"received buffer: {self.send_buffer} (len: {len(self.send_buffer)})")
+            self.send_buffer = b""
+            self.send_buffer_counter = 0
+
+        status_word, data = exchange(client, 0x00, data=b"")
+        return status_word, data
+
+    def handle_recv_buffer(self, data):
+        assert len(data) == 5
+
+        counter = int.from_bytes(data[:4], "little")
+        maxsize = int.from_bytes(data[4:], "little")
+
+        assert self.recv_buffer_counter == counter
+        self.recv_buffer_counter += 1
+
+        buf = self.recv_buffer[:maxsize]
+        self.recv_buffer = self.recv_buffer[maxsize:]
+        if len(self.recv_buffer) == 0:
+            logger.debug(f"recv buffer last (size: {maxsize}, {len(buf)})")
+            self.recv_buffer_counter = 0
+            last = 0x01
+        else:
+            last = 0x00
+
+        status_word, data = exchange(client, 0x00, p1=last, data=buf)
+        return status_word, data
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
@@ -229,6 +275,10 @@ if __name__ == "__main__":
             status_word, data = stream.handle_read_access(data)
         elif status_word == 0x6201:
             status_word, data = stream.handle_write_access(data)
+        elif status_word == 0x6301:
+            status_word, data = stream.handle_send_buffer(data)
+        elif status_word == 0x6401:
+            status_word, data = stream.handle_recv_buffer(data)
         else:
             logger.error(f"unexpected status {status_word:#06x}, {data}")
             assert False

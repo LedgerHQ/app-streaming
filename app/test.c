@@ -4,36 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sdk.h"
 #include "sha256.h"
 
-
-int puts(const char *str)
-{
-    asm(
-        "li t0, 1\n"
-        "add a0, %0, 0\n"
-        "ecall\n"
-        :: "r"(str) : "t0", "a0"
-        );
-
-    return 0;
-}
-
-static void test_send(uint32_t code)
-{
-    asm(
-        "li t0, 2\n"
-        "add a0, %0, 0\n"
-        "ecall\n"
-        :: "r"(code) : "t0", "a0"
-        );
-}
-
-/* XXX */
-double __trunctfdf2 (long double a)
-{
-    return a;
-}
 
 void test_sha256(void)
 {
@@ -65,6 +38,8 @@ void test_sha256(void)
         hexdigest[i*2+1] = hex[c & 0xf];
     }
 
+    xsend((uint8_t *)hexdigest, sizeof(hexdigest));
+
     if (memcmp(hexdigest, "a27c896c4859204843166af66f0e902b9c3b3ed6d2fd13d435abc020065c526f", sizeof(hexdigest)) != 0) {
         exit(1);
     }
@@ -87,13 +62,46 @@ void test_malloc(void)
     }
 }
 
+void test_sha256_2(void)
+{
+    uint8_t hash[32];
+    uint8_t *p = malloc(2048);
+    size_t n = xrecv(p, 1024);
+
+    if (n != 1000) {
+        _exit(5);
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        if (p[i] != 'a') {
+            _exit(3);
+        }
+    }
+
+    sha256sum(p, n, hash);
+
+    char hexdigest[64];
+    char hex[16] = "0123456789abcdef";
+
+    for (size_t i = 0; i < sizeof(hash); i++) {
+        uint8_t c = hash[i];
+        hexdigest[i*2] = hex[(c >> 4) & 0xf];
+        hexdigest[i*2+1] = hex[c & 0xf];
+    }
+
+    xsend((uint8_t *)hexdigest, sizeof(hexdigest));
+
+    free(p);
+}
+
 int main(void)
 {
     //test_sha256();
     //printf("BLAH\n");
     //puts("BLAH %s\n");
-    //test_send(0x61626364);
-    test_malloc();
+    //xsend((uint8_t *)"hello\n", 5);
+    //test_malloc();
+    test_sha256_2();
 
     return 0;
 }

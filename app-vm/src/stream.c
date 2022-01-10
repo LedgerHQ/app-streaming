@@ -4,18 +4,13 @@
 #include "cx.h"
 #include "os_io_seproxyhal.h"
 #include "os_random.h"
-#include "os_task.h"
 
 #include "rv.h"
 
 #include "apdu.h"
+#include "error.h"
 #include "merkle.h"
 #include "stream.h"
-
-#define PAGE_SIZE 256
-#define PAGE_MASK ~(PAGE_SIZE-1)
-
-#define PAGE_START(addr) ((addr) & PAGE_MASK)
 
 #define NPAGE_CODE  3
 #define NPAGE_STACK 3
@@ -24,14 +19,6 @@
 enum page_prot_e {
     PAGE_PROT_RO,
     PAGE_PROT_RW,
-};
-
-enum cmd_stream_e {
-    CMD_REQUEST_PAGE = 0x6101,
-    CMD_REQUEST_HMAC = 0x6102,
-    CMD_REQUEST_PROOF = 0x6103,
-    CMD_COMMIT_PAGE = 0x6201,
-    CMD_COMMIT_HMAC = 0x6202,
 };
 
 enum section_e {
@@ -118,22 +105,6 @@ struct response_hmac_s {
 } __attribute__((packed));
 
 static struct app_s app;
-
-void err(char *msg)
-{
-    asm volatile (
-     "movs r0, #0x04\n"
-     "movs r1, %0\n"
-     "svc      0xab\n"
-     :: "r"(msg) : "r0", "r1"
-    );
-}
-
-void fatal(char *msg)
-{
-    err(msg);
-    os_sched_exit(7);
-}
 
 static void parse_apdu(const struct response_s *response, size_t size) {
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
@@ -637,6 +608,22 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         buf[29] = '\x00';
         err(buf);
     }
+}
+
+uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
+{
+    if (size == 0 || size > PAGE_SIZE) {
+        fatal("invalid size\n");
+    }
+
+    if (!same_page(addr, addr + size - 1)) {
+        fatal("not on same page\n");
+    }
+
+    struct page_s *page = get_page(addr, writeable ? PAGE_PROT_RW : PAGE_PROT_RO);
+    uint32_t offset = addr - PAGE_START(addr);
+
+    return &page->data[offset];
 }
 
 static void debug_cpu(uint32_t pc, uint32_t instruction)
