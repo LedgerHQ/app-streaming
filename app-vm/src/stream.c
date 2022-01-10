@@ -3,6 +3,8 @@
 
 #include "cx.h"
 #include "os_io_seproxyhal.h"
+#include "os_random.h"
+#include "os_task.h"
 
 #include "rv.h"
 
@@ -51,6 +53,11 @@ struct section {
     uint32_t end;
 };
 
+struct key_s {
+    cx_aes_key_t aes;
+    uint8_t hmac[32];
+};
+
 struct app_s {
     struct rv_cpu cpu;
 
@@ -63,9 +70,8 @@ struct app_s {
     uint32_t bss_max;
     uint32_t stack_min;
 
-    cx_aes_key_t key;
-    uint8_t hmac_key[32];
-    uint8_t encryption_key[32];
+    struct key_s static_key;
+    struct key_s dynamic_key;
 };
 
 /* this message comes from the client */
@@ -157,7 +163,10 @@ static void encrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
     uint8_t iv[CX_AES_BLOCK_SIZE];
 
     compute_iv(iv, addr, iv32);
-    cx_aes_iv_no_throw(&app.key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+
+    /* Code pages are never commited since they're read-only. Hence, the AES key
+     * is always the dynamic one for encryption. */
+    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
 }
 
 static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv32)
@@ -165,9 +174,29 @@ static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
     int flag = CX_CHAIN_CBC | CX_DECRYPT;
     size_t size = PAGE_SIZE;
     uint8_t iv[CX_AES_BLOCK_SIZE];
+    cx_aes_key_t *key;
+
+    if (iv32 == 0 || iv32 == 1) {
+        key = &app.static_key.aes;
+    } else {
+        key = &app.dynamic_key.aes;
+    }
 
     compute_iv(iv, addr, iv32);
-    cx_aes_iv_no_throw(&app.key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+    cx_aes_iv_no_throw(key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+}
+
+static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
+{
+    /*
+     * The IV of pages encrypted by the host (read-only and writeable pages) is
+     * always 0. The IV of pages encrypted by the VM is always greater than 0.
+     */
+    if (iv == 0) {
+        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.static_key.hmac, sizeof(app.static_key.hmac));
+    } else {
+        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.dynamic_key.hmac, sizeof(app.dynamic_key.hmac));
+    }
 }
 
 void stream_request_page(struct page_s *page, bool read_only)
@@ -213,7 +242,8 @@ void stream_request_page(struct page_s *page, bool read_only)
     entry.addr = page->addr;
     entry.iv = r->iv;
 
-    cx_hmac_sha256_init_no_throw(&hmac_sha256_ctx, app.hmac_key, sizeof(app.hmac_key));
+    /* TODO: ideally, the IV should be verified before */
+    init_hmac_ctx(&hmac_sha256_ctx, entry.iv);
     cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, page->data, sizeof(page->data), NULL, 0);
     cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data), mac, sizeof(mac));
 
@@ -251,7 +281,7 @@ void stream_request_page(struct page_s *page, bool read_only)
     }
 }
 
-void stream_commit_page(struct page_s *page)
+void stream_commit_page(struct page_s *page, bool insert)
 {
     struct cmd_commit_page_s *cmd1 = (struct cmd_commit_page_s *)G_io_apdu_buffer;
     cx_hmac_sha256_t hmac_sha256_ctx;
@@ -267,7 +297,7 @@ void stream_commit_page(struct page_s *page)
     encrypt_page(page->data, cmd1->data, page->addr, page->iv);
 
     /* initialize hmac here since cmd1->data may be overwritten later */
-    cx_hmac_sha256_init_no_throw(&hmac_sha256_ctx, app.hmac_key, sizeof(app.hmac_key));
+    init_hmac_ctx(&hmac_sha256_ctx, page->iv);
     cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, cmd1->data, sizeof(cmd1->data), NULL, 0);
 
     cmd1->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
@@ -308,7 +338,7 @@ void stream_commit_page(struct page_s *page)
     /* 3. update merkle tree */
     size_t count = response->lc / sizeof(struct proof_s);
 
-    if (page->iv == 1) {
+    if (insert) {
         if (!merkle_insert(&entry, (struct proof_s *)&response->data, count)) {
             fatal("merkle insert failed\n");
         }
@@ -322,16 +352,36 @@ void stream_commit_page(struct page_s *page)
     }
 }
 
+static void init_static_keys(void)
+{
+    memset(app.static_key.hmac, 'k', sizeof(app.static_key.hmac));
+
+    uint8_t encryption_key[32];
+    memset(encryption_key, 'K', sizeof(encryption_key));
+    cx_aes_init_key_no_throw(encryption_key, sizeof(encryption_key), &app.static_key.aes);
+
+    explicit_bzero(encryption_key, sizeof(encryption_key));
+}
+
+static void init_dynamic_keys(void)
+{
+    cx_get_random_bytes(app.dynamic_key.hmac, sizeof(app.dynamic_key.hmac));
+
+    uint8_t encryption_key[32];
+    cx_get_random_bytes(encryption_key, sizeof(encryption_key));
+    cx_aes_init_key_no_throw(encryption_key, sizeof(encryption_key), &app.dynamic_key.aes);
+
+    explicit_bzero(encryption_key, sizeof(encryption_key));
+}
+
 /* TODO: encrypt received parameters */
 /* TODO: use different hmac keys for read-only data and else */
 void stream_init_app(uint8_t *buffer)
 {
     memset(&app, '\x00', sizeof(app));
 
-    memset(app.hmac_key, 'k', sizeof(app.hmac_key));
-    memset(app.encryption_key, 'K', sizeof(app.encryption_key));
-
-    cx_aes_init_key_no_throw(app.encryption_key, sizeof(app.encryption_key), &app.key);
+    init_static_keys();
+    init_dynamic_keys();
 
     struct cmd_app_init_s *cmd = (struct cmd_app_init_s *)buffer;
     for (int i = 0; i < NUM_SECTIONS; i++) {
@@ -378,8 +428,10 @@ static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
     for (addr = from; addr < to; addr += PAGE_SIZE) {
         memset(page->data, '\x00', sizeof(page->data));
         page->addr = addr;
+        /* During the first commit, the IV will be incremented to 1 and the
+         * dynamic keys will be used for decryption and HMAC. */
         page->iv = 0;
-        stream_commit_page(page);
+        stream_commit_page(page, true);
     }
 }
 
@@ -445,7 +497,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 
     /* don't commit page if it never was retrieved (its address is zero) */
     if (writeable && page->addr != 0) {
-        stream_commit_page(page);
+        stream_commit_page(page, false);
     }
 
     /*
@@ -473,6 +525,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     if (!zero_page) {
         stream_request_page(page, !writeable);
     } else {
+        /* the IV was incremented by 1 during commit */
         page->iv = 1;
         memset(page->data, '\x00', sizeof(page->data));
     }

@@ -83,12 +83,11 @@ class Stream:
             # inserting them in the merkle tree.
             self.pages[addr] = Page(data, mac, read_only=True)
 
-        iv = 1
-        for addr, (data, mac) in self.elf.get_encrypted_pages("data", iv):
+        for addr, (data, mac) in self.elf.get_encrypted_pages("data"):
             assert addr not in self.pages
-            # The IV is set to 1. This is an error for the VM to encounter
-            # writeable pages initialized to 0.
-            self._write_page(addr, data, mac, iv)
+            # The IV is set to 0. It allows the VM to tell which key should be
+            # use for decryption and HMAC verification.
+            self._write_page(addr, data, mac, 0)
 
         self.stack = {}
         self.stack_end = 0x80000000
