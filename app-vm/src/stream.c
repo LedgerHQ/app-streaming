@@ -129,7 +129,7 @@ void fatal(char *msg)
     os_sched_exit(7);
 }
 
-static void parse_apdu(struct response_s *response, size_t size) {
+static void parse_apdu(const struct response_s *response, size_t size) {
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
 
     if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
@@ -150,7 +150,7 @@ static void compute_iv(uint8_t *iv, uint32_t addr, uint32_t iv32)
     memset(&iv[8], '\x00', CX_AES_BLOCK_SIZE - 8);
 }
 
-static void encrypt_page(void *data, void *out, uint32_t addr, uint32_t iv32)
+static void encrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv32)
 {
     int flag = CX_CHAIN_CBC | CX_ENCRYPT;
     size_t size = PAGE_SIZE;
@@ -160,7 +160,7 @@ static void encrypt_page(void *data, void *out, uint32_t addr, uint32_t iv32)
     cx_aes_iv_no_throw(&app.key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
 }
 
-static void decrypt_page(void *data, void *out, uint32_t addr, uint32_t iv32)
+static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv32)
 {
     int flag = CX_CHAIN_CBC | CX_DECRYPT;
     size_t size = PAGE_SIZE;
