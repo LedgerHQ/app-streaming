@@ -9,7 +9,7 @@ static size_t n;
 static cx_sha256_t hash_ctx;
 static struct entry_s last_entry;
 
-static void hash_entry(struct entry_s *entry, uint8_t *hash)
+static void hash_entry(const struct entry_s *entry, uint8_t *hash)
 {
     cx_sha256_init_no_throw(&hash_ctx);
 
@@ -19,7 +19,7 @@ static void hash_entry(struct entry_s *entry, uint8_t *hash)
                      hash, CX_SHA256_SIZE);
 }
 
-static void hash_nodes(uint8_t *left, uint8_t *right, uint8_t *hash)
+static void hash_nodes(const uint8_t *left, const uint8_t *right, uint8_t *hash)
 {
     cx_sha256_init_no_throw(&hash_ctx);
 
@@ -30,14 +30,14 @@ static void hash_nodes(uint8_t *left, uint8_t *right, uint8_t *hash)
                      hash, CX_SHA256_SIZE);
 }
 
-static void proof_hash(struct entry_s *entry, struct proof_s *proof, size_t count, uint8_t *digest)
+static void proof_hash(const struct entry_s *entry, const struct proof_s *proof, size_t count, uint8_t *digest)
 {
     if (entry != NULL) {
         hash_entry(entry, digest);
     }
 
     for (size_t i = 0; i < count; i++) {
-        uint8_t *left, *right;
+        const uint8_t *left, *right;
 
         if (proof->op == 'L') {
             left = proof->digest;
@@ -65,7 +65,7 @@ static size_t bit_count(uint32_t x)
     return count;
 }
 
-bool merkle_insert(struct entry_s *entry, struct proof_s *proof, size_t count)
+bool merkle_insert(const struct entry_s *entry, const struct proof_s *proof, size_t count)
 {
     /* XXX: check that n doesn't overflow */
 
@@ -102,13 +102,13 @@ bool merkle_insert(struct entry_s *entry, struct proof_s *proof, size_t count)
     return true;
 }
 
-bool merkle_update(struct entry_s *old_entry, struct entry_s *entry, struct proof_s *proof, size_t count)
+bool merkle_update(const struct entry_s *old_entry, const struct entry_s *entry, const struct proof_s *proof, size_t count)
 {
     if (!merkle_verify_proof(old_entry, proof, count)) {
         return false;
     }
 
-    proof_hash(entry, (struct proof_s *)proof, count, root_hash);
+    proof_hash(entry, proof, count, root_hash);
 
     /* update last entry if required */
     if (memcmp(&last_entry, old_entry, sizeof(last_entry)) == 0) {
@@ -118,7 +118,7 @@ bool merkle_update(struct entry_s *old_entry, struct entry_s *entry, struct proo
     return true;
 }
 
-bool merkle_verify_proof(struct entry_s *entry, struct proof_s *proof, size_t count)
+bool merkle_verify_proof(const struct entry_s *entry, const struct proof_s *proof, size_t count)
 {
     uint8_t digest[CX_SHA256_SIZE];
 
@@ -127,7 +127,7 @@ bool merkle_verify_proof(struct entry_s *entry, struct proof_s *proof, size_t co
     return memcmp(digest, root_hash, sizeof(root_hash)) == 0;
 }
 
-void init_merkle_tree(uint8_t *root_hash_init, size_t merkle_tree_size, struct entry_s *last_entry_init)
+void init_merkle_tree(const uint8_t *root_hash_init, size_t merkle_tree_size, const struct entry_s *last_entry_init)
 {
     memcpy(root_hash, root_hash_init, sizeof(root_hash));
     memcpy(&last_entry, last_entry_init, sizeof(last_entry));

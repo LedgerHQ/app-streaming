@@ -21,7 +21,7 @@ struct entry_s {
     };
 } __attribute__((packed));
 
-bool merkle_insert(struct entry_s *entry, struct proof_s *proof, size_t count);
-bool merkle_update(struct entry_s *old_entry, struct entry_s *entry, struct proof_s *proof, size_t count);
-bool merkle_verify_proof(struct entry_s *entry, struct proof_s *proof, size_t count);
-void init_merkle_tree(uint8_t *root_hash_init, size_t merkle_tree_size, struct entry_s *last_entry_init);
+bool merkle_insert(const struct entry_s *entry, const struct proof_s *proof, size_t count);
+bool merkle_update(const struct entry_s *old_entry, const struct entry_s *entry, const struct proof_s *proof, size_t count);
+bool merkle_verify_proof(const struct entry_s *entry, const struct proof_s *proof, size_t count);
+void init_merkle_tree(const uint8_t *root_hash_init, size_t merkle_tree_size, const struct entry_s *last_entry_init);
