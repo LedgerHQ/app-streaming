@@ -38,6 +38,5 @@ TODO: create a Dockerfile
 
 ## TODO
 
-- sign code, encrypt writeable data
 - syscalls: access to VM memory
 - RISC-V: use compressed instructions

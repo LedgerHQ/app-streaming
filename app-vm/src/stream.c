@@ -192,7 +192,7 @@ void stream_request_page(struct page_s *page, bool read_only)
     page->data[0] = response->p2;
     memcpy(&page->data[1], response->data, PAGE_SIZE - 1);
 
-    /* 2. retrieve hmac */
+    /* 2. retrieve and verify hmac */
 
     cmd->cmd = (CMD_REQUEST_HMAC >> 8) | ((CMD_REQUEST_HMAC & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
@@ -207,7 +207,7 @@ void stream_request_page(struct page_s *page, bool read_only)
     struct response_hmac_s *r = (struct response_hmac_s *)&response->data;
 
     cx_hmac_sha256_t hmac_sha256_ctx;
-    struct entry_s entry;;
+    struct entry_s entry;
     uint8_t mac[32];
 
     entry.addr = page->addr;
@@ -222,17 +222,18 @@ void stream_request_page(struct page_s *page, bool read_only)
     }
 
     /* 3. decrypt page */
+    /* TODO: ideally, decryption should happen before IV verification */
 
     page->iv = r->iv;
     decrypt_page(page->data, page->data, page->addr, page->iv);
 
-    /* 4. verify iv thanks to the merkle tree */
+    /* 4. verify iv thanks to the merkle tree if the page is writeable */
     if (read_only) {
-        /* if the page is readonly, the iv is always 0 */
+        if (page->iv != 0) {
+            fatal("invalid id for read-only page\n");
+        }
         return;
     }
-
-    /* TODO: ideally, this should be done before decryption. */
 
     cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
@@ -448,9 +449,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     }
 
     /*
-     * If a heap/stack page is accessed:
-     * - create unexisting pages if they don't exist (initialized with zeroes)
-     * - commit the page which is going to be replaced otherwise
+     * If a heap/stack page is accessed, create unexisting pages if they don't
+     * exist (initialized with zeroes).
      */
     bool zero_page = false;
     if (pages == app.data) {
