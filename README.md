@@ -1,42 +1,69 @@
 ## Avantages
 
-For users:
+### For users
 
-- no more app to install from Ledger Live (and no more app number limitation)
-- mise à jour automatique
-- plus de changement de contexte de transport (déconnexion USB) lors du passage d'une app à une autre
+*No more app to install from Ledger Live (ie. no Ledger Live Manager anymore).*
 
-For app developers:
+Apps aren't installed on the device anymore. When a user want to run an app, this app is *streamed* to the device but isn't stored on it. It means that there's no restriction on the number of apps which can be installed (this concept doesn't exist anymore).
 
-- apps are maintainable without any specific knowledge
-- développement d'app facile
-- plus de limite de taille de stack et de code
-- ajout d'un heap et de malloc
-- ne plus avoir io_exchange et d'exceptions (mécanisme clair pour recevoir des APDU et les boutons)
-- système d'UX correct
-- utilisation de librairies standard
-- toolchain standard, utilisation de Rust de façon transparente
-- plus de format d'APDU, protobuf ou JSON
-- ne plus dépendre des évolutions du firmware
-- mêmes applications pour tous les devices
-- plus d'os_lib_call
-- testing is made easy
+*Automatic update.*
+
+Since apps aren't installed on the device anymore, they are simply fetch from the internet. Once an app is updated, user automatically run the latest version.
+
+*No USB/BLE deconnection.*
+
+Transport (USB, BLE) isn't handled by apps anymore. The USB/BLE stack isn't reset when a new app is launched.
+
+
+### For app developers
+
+*App development is made easy. WAY WAY MORE EASIER.*
+
+Anyone can now develop an app. For real.
+
+*There are no specific knowledge to have anymore.*
+
+No more `PIC()`. No more misaligned instruction. No more exceptions. No more weird linker scripts.
+
+Standard toolchains can be used. Apps can be developed in memory safe language (eg. Rust) as long as the compiler supports the RISC-V target.
+
+*There are no memory constraints anymore.*
+
+Unlimited RAM. Unlimited heap. Unlimited code size. `malloc()` is now available.
+
+*Standard libraries can be used.*
+
+Since there now is a heap and no memory contraints (and `PIC()` doesn't exist), parsing libraries can be used
+
+*No weird APDU format.*
+
+Since standard libraries can be used, JSON or protobuf can be used to encode messages.
+
+*App are secure.*
+
+Standard development practices make CI, tests, fuzzing easy. Code review is now a thing.
+
+*Same app for every devices.*
+
+Since there's nothing specific to the device, the same app can run on Nano S, Nano X and Nano S+.
+
+*Apps can be developed on Nano X.*
+
+No NDA anymore.
+
+*Additional stuff.*
+
+- No `os_lib_call` anymore since there is no memory constraint anymore. Apps making using of this mechanism can simply embed the *library*.
+- No `io_exchange()`.
+- New UX library without `io_exchange()`.
 
 
 ## Limitations
 
-- overhead (especially for BLE?). Performances could be increased by removing the IO task
-- a companion  is always required (Ledger Live Desktop / Mobile)
+*Overhead.*
 
+Especially for BLE? Performances could be increased a bit by removing the IO task.
 
-## How to build a RISC-V app
+*Companinon.*
 
-TODO: create a Dockerfile
-
-`docker pull dockcross/linux-riscv32:latest` + newlib
-
-
-## TODO
-
-- syscalls: access to VM memory
-- RISC-V: use compressed instructions
+A companion  is always required (Ledger Live Desktop / Mobile).
