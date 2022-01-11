@@ -147,7 +147,7 @@ static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
     uint8_t iv[CX_AES_BLOCK_SIZE];
     cx_aes_key_t *key;
 
-    if (iv32 == 0 || iv32 == 1) {
+    if (iv32 == 0) {
         key = &app.static_key.aes;
     } else {
         key = &app.dynamic_key.aes;
