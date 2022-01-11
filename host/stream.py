@@ -228,7 +228,7 @@ class Stream:
         return status_word, data
 
     def handle_recv_buffer(self, data):
-        assert len(data) == 5
+        assert len(data) == 6
 
         counter = int.from_bytes(data[:4], "little")
         maxsize = int.from_bytes(data[4:], "little")
@@ -245,7 +245,13 @@ class Stream:
         else:
             last = 0x00
 
-        status_word, data = exchange(client, 0x00, p1=last, data=buf)
+        # the first byte is in p2
+        if buf:
+            p2 = buf[0]
+            buf = buf[1:]
+        else:
+            p2 = 0x00
+        status_word, data = exchange(client, 0x00, p1=last, p2=p2, data=buf)
         return status_word, data
 
 

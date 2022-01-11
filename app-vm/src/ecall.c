@@ -20,7 +20,7 @@ struct cmd_send_buffer_s {
 
 struct cmd_recv_buffer_s {
     uint32_t counter;
-    uint8_t maxsize;
+    uint16_t maxsize;
     uint16_t cmd;
 } __attribute__((packed));
 
@@ -30,7 +30,7 @@ struct response_s {
     uint8_t p1;
     uint8_t p2;
     uint8_t lc;
-    uint8_t data[255];
+    uint8_t data[PAGE_SIZE - 1];
 } __attribute__((packed));
 
 static void parse_apdu(const struct response_s *response, size_t size) {
@@ -64,13 +64,15 @@ static size_t xrecv(uint32_t addr, size_t size)
 
     while (size > 0) {
         struct response_s *response = (struct response_s *)G_io_apdu_buffer;
-        size_t n;
+        /* an additional byte is stored in p2 to allow entire pages to be
+         * transmitted, hence + 1 */
+        _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(response->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
 
+        size_t n;
         n = PAGE_SIZE - (addr - PAGE_START(addr));
         n = MIN(size, n);
-        n = MIN(sizeof(response->data), n);
 
-        /* retrieve buffer pointer now since it can modify G_io_apdu_buffer */
+        /* 0. retrieve buffer pointer now since it can modify G_io_apdu_buffer */
         uint8_t *buffer = get_buffer(addr, n, true);
 
         /* 1. send "recv" request */
@@ -82,19 +84,20 @@ static size_t xrecv(uint32_t addr, size_t size)
 
         size_t received = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-        /* 2. ensure the data received fits in the buffer */
+        /* 2. ensure that data received fits in the buffer */
 
         parse_apdu(response, received);
         bool stop = (response->p1 == '\x01');
 
-        if (response->lc > n || (response->lc != n && !stop)) {
+        if ((response->lc + 1) > n || ((response->lc + 1) != n && !stop)) {
             fatal("invalid response size\n");
         }
 
-        n = response->lc;
+        n = response->lc + 1;
 
-        /* 3. copies data to the app buffer */
-        memcpy(buffer, response->data, n);
+        /* 3. copies data to the app buffer (the first byte is in p2) */
+        buffer[0] = response->p2;
+        memcpy(buffer + 1, response->data, n - 1);
 
         addr += n;
         size -= n;
