@@ -12,9 +12,15 @@
 #include "merkle.h"
 #include "stream.h"
 
+#ifdef TARGET_NANOX
+#define NPAGE_CODE  30
+#define NPAGE_STACK 20
+#define NPAGE_DATA  10
+#else
 #define NPAGE_CODE  3
 #define NPAGE_STACK 3
 #define NPAGE_DATA  1
+#endif
 
 enum page_prot_e {
     PAGE_PROT_RO,
@@ -35,10 +41,10 @@ struct page_s {
     size_t usage;
 };
 
-struct section {
+struct section_s {
     uint32_t start;
     uint32_t end;
-};
+} __attribute__((packed));
 
 struct key_s {
     cx_aes_key_t aes;
@@ -48,7 +54,7 @@ struct key_s {
 struct app_s {
     struct rv_cpu cpu;
 
-    struct section sections[NUM_SECTIONS];
+    struct section_s sections[NUM_SECTIONS];
 
     struct page_s code[NPAGE_CODE];
     struct page_s stack[NPAGE_STACK];
@@ -66,7 +72,7 @@ struct cmd_app_init_s {
     uint32_t pc;
     uint32_t bss;
 
-    uint32_t section_ranges[2 * NUM_SECTIONS];
+    struct section_s sections[NUM_SECTIONS];
 
     uint8_t merkle_tree_root_hash[CX_SHA256_SIZE];
     uint32_t merkle_tree_size;
@@ -355,10 +361,7 @@ void stream_init_app(uint8_t *buffer)
     init_dynamic_keys();
 
     struct cmd_app_init_s *cmd = (struct cmd_app_init_s *)buffer;
-    for (int i = 0; i < NUM_SECTIONS; i++) {
-        app.sections[i].start = cmd->section_ranges[2 * i];
-        app.sections[i].end = cmd->section_ranges[2 * i + 1];
-    }
+    memcpy(app.sections, cmd->sections, sizeof(app.sections));
 
     uint32_t sp = app.sections[SECTION_STACK].end;
     if (PAGE_START(sp) != sp) {
@@ -455,13 +458,16 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
             pages[i].usage = MIN(npage * 2, pages[i].usage + 1);
             found = &pages[i];
         } else {
-            pages[i].usage = MAX(0, pages[i].usage - 1);
             /* otherwise find the less used page */
-            if (pages[i].usage <= page->usage) {
+            if (pages[i].usage > 0) {
+                pages[i].usage = MAX(1, pages[i].usage - 1);
+            }
+            if (pages[i].usage < page->usage) {
                 page = &pages[i];
             }
         }
     }
+
     if (found != NULL) {
         return found;
     }
