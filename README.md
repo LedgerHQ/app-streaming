@@ -31,6 +31,7 @@
 
 - **Overhead.** Especially for BLE? Performances could be increased a bit by removing the IO task.
 - **Companion.** A companion  is always required (Ledger Live Desktop / Mobile).
+- **Storage.** Outside of the device? Why not, just settings usually.
 
 
 ## How-To
