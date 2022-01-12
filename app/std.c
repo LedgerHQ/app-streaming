@@ -61,3 +61,9 @@ int _write(int file, char * ptr, int len) {
 int _read(int file, char * ptr, int len) {
   return -1;
 }
+
+/* XXX */
+double __trunctfdf2 (long double a)
+{
+    return a;
+}

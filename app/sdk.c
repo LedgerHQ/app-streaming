@@ -52,8 +52,10 @@ void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
 
 }
 
-/* XXX */
-double __trunctfdf2 (long double a)
+void ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
-    return a;
+    asm (
+         "li t0, 6\n"
+         "ecall\n"
+         );
 }

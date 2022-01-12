@@ -210,6 +210,13 @@ static void sys_exit(uint32_t code)
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, sizeof(*cmd));
 }
 
+static void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+{
+#ifdef TARGET_NANOX
+    bagl_hal_draw_rect(color, x, y, width, height);
+#endif
+}
+
 /*
  * Return true if the ecall either exit() or unsupported, false otherwise.
  */
@@ -234,6 +241,9 @@ bool ecall(struct rv_cpu *cpu)
     case 5:
         sys_exit(cpu->regs[10]);
         stop = true;
+        break;
+    case 6:
+        sys_ux_rectangle(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14]);
         break;
     default:
         sys_exit(0xdeaddead);
