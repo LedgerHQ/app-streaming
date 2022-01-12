@@ -24,6 +24,11 @@ struct cmd_recv_buffer_s {
     uint16_t cmd;
 } __attribute__((packed));
 
+struct cmd_exit_s {
+    uint32_t code;
+    uint16_t cmd;
+} __attribute__((packed));
+
 struct response_s {
     uint8_t cla;
     uint8_t ins;
@@ -195,10 +200,23 @@ static void sha256sum(uint32_t data_addr, size_t size, uint32_t digest_addr)
     }
 }
 
-void ecall(struct rv_cpu *cpu)
+static void sys_exit(uint32_t code)
+{
+    struct cmd_exit_s *cmd = (struct cmd_exit_s *)G_io_apdu_buffer;
+
+    cmd->code = code;
+    cmd->cmd = (CMD_EXIT >> 8) | ((CMD_EXIT & 0xff) << 8);
+
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, sizeof(*cmd));
+}
+
+/*
+ * Return true if the ecall either exit() or unsupported, false otherwise.
+ */
+bool ecall(struct rv_cpu *cpu)
 {
     uint32_t nr = cpu->regs[5];
-    uint32_t ret = 0;
+    bool stop = false;
 
     switch (nr) {
     case 1:
@@ -208,15 +226,21 @@ void ecall(struct rv_cpu *cpu)
         xsend(cpu->regs[10], cpu->regs[11]);
         break;
     case 3:
-        ret = xrecv(cpu->regs[10], cpu->regs[11]);
-        cpu->regs[10] = ret;
+        cpu->regs[10] = xrecv(cpu->regs[10], cpu->regs[11]);
         break;
     case 4:
         sha256sum(cpu->regs[10], cpu->regs[11], cpu->regs[12]);
         break;
+    case 5:
+        sys_exit(cpu->regs[10]);
+        stop = true;
+        break;
     default:
-        os_sched_exit(cpu->regs[10]);
+        sys_exit(0xdeaddead);
+        stop = true;
         break;
     }
+
+    return stop;
 }
 

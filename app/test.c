@@ -68,16 +68,6 @@ void test_sha256_2(void)
     uint8_t *p = malloc(2048);
     size_t n = xrecv(p, 1024);
 
-    if (n != 1000) {
-        _exit(5);
-    }
-
-    for (size_t i = 0; i < n; i++) {
-        if (p[i] != 'a') {
-            _exit(3);
-        }
-    }
-
     sha256sum(p, n, hash);
 
     char hexdigest[64];

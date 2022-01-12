@@ -117,7 +117,7 @@ struct rv_cpu {
 
 void rv_cpu_reset(struct rv_cpu *cpu);
 void rv_cpu_dump_regs(struct rv_cpu *cpu);
-void rv_cpu_execute(struct rv_cpu *cpu, u32 inst);
+bool rv_cpu_execute(struct rv_cpu *cpu, u32 inst);
 
 enum rv_op rv_cpu_decode(u32 inst);
 

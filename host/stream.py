@@ -254,6 +254,12 @@ class Stream:
         status_word, data = exchange(client, 0x00, p1=last, p2=p2, data=buf)
         return status_word, data
 
+    def handle_exit(self, data):
+        assert len(data) == 4
+
+        code = int.from_bytes(data[:4], "little")
+        logger.warn(f"app exited with code {code}")
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
@@ -285,6 +291,9 @@ if __name__ == "__main__":
             status_word, data = stream.handle_send_buffer(data)
         elif status_word == 0x6401:
             status_word, data = stream.handle_recv_buffer(data)
+        elif status_word == 0x6501:
+            stream.handle_exit(data)
+            break
         else:
             logger.error(f"unexpected status {status_word:#06x}, {data}")
             assert False

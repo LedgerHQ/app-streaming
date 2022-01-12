@@ -649,10 +649,11 @@ static void debug_cpu(uint32_t pc, uint32_t instruction)
 void stream_run_app(void)
 {
     uint32_t instruction;
+    bool stop;
 
-    while (1) {
+    do {
         instruction = mem_read(app.cpu.pc, sizeof(instruction));
         //debug_cpu(app.cpu.pc, instruction);
-        rv_cpu_execute(&app.cpu, instruction);
-    }
+        stop = rv_cpu_execute(&app.cpu, instruction);
+    } while (!stop);
 }

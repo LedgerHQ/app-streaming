@@ -176,14 +176,18 @@ static inline uint32_t sign_extend_b(uint32_t x) {
 uint32_t mem_read(uint32_t addr, size_t size);
 void mem_write(uint32_t addr, size_t size, uint32_t value);
 
-void rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
+/*
+ * Return true if the CPU has stopped (because the app exited for instance, or
+ * the instruction isn't recognized, false otherwise.)
+ */
+bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
 {
     union rv_inst inst = { .inst = instruction };
     enum rv_op op = rv_cpu_decode(instruction);
     u32 pc_inc = INST_SIZE;
     u32 pc_set = cpu->pc;
+    bool stop = false;
 
-    // Execute
     switch (op) {
         case RV_OP_ADD:
             cpu->regs[inst.rd] = cpu->regs[inst.rs1] + cpu->regs[inst.rs2];
@@ -337,32 +341,22 @@ void rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 4, cpu->regs[inst.rs2]);
             break;
 
-        case RV_OP_FENCE:
-            // Do nothing
-            break;
-
-        case RV_OP_FENCE_TSO:
-            // Do nothing
-            break;
-
-        case RV_OP_PAUSE:
-            // Do nothing
-            break;
-
         case RV_OP_ECALL:
-            //os_sched_exit(1);
-            ecall(cpu);
+            stop = ecall(cpu);
             break;
 
+        case RV_OP_FENCE:
+        case RV_OP_FENCE_TSO:
+        case RV_OP_PAUSE:
         case RV_OP_EBREAK:
-            break;
-
         default:
-            // TODO: Handle unsupported opperations
-            //printf("Operation not supported: %d\n", op);
+            stop = true;
             break;
     }
+
     //! Make sure that no operation can change the x0 register
     cpu->regs[0] = 0;
     cpu->pc = pc_set + pc_inc;
+
+    return stop;
 }

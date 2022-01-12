@@ -67,8 +67,6 @@ static void app_main_(void)
 
         stream_init_app(&G_io_apdu_buffer[OFFSET_CDATA + 3]);
         stream_run_app();
-
-        os_sched_exit(-1);
     }
 }
 

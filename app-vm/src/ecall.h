@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 struct rv_cpu;
 
-void ecall(struct rv_cpu *cpu);
+bool ecall(struct rv_cpu *cpu);
