@@ -31,3 +31,48 @@
 
 - **Overhead.** Especially for BLE? Performances could be increased a bit by removing the IO task.
 - **Companion.** A companion  is always required (Ledger Live Desktop / Mobile).
+
+
+## How-To
+
+### Build a RISC-V app
+
+Build the docker image to have a ready-to-use RISC-V toolchain:
+
+```console
+docker build -t riscv .
+```
+
+Build the RISC-V app using the `docker.sh` script:
+
+```console
+$ ./docker.sh
+[root:/app] # make
+make: Nothing to be done for 'all'.
+[root:/app] #
+```
+
+### Build the RISC-V VM and install it on the Nano device
+
+Like any other Nano apps. Sources are in the `app-vm/` directory.
+
+```console
+cd app-vm/
+make
+make load
+```
+
+### Run the app
+
+Using speculos:
+
+```console
+$ speculos.py --model nanox --display headless app-vm/bin/app.elf &
+$ ./host/stream.py --speculos --verbose --app ./app/test
+```
+
+Or using a real device:
+
+```console
+$ ./host/stream.py --verbose --app ./app/test
+```
