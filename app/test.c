@@ -86,7 +86,7 @@ void test_sha256_2(void)
 
 static void test_ux(void)
 {
-    ux_rectangle(0x00000000, 128, 0, 0, 64);
+    /*ux_rectangle(0x00000000, 128, 0, 0, 64);
     //ux_rectangle(0xffffffff, 0, 35, 128, 32);
 
     size_t last_x, last_y;
@@ -101,7 +101,8 @@ static void test_ux(void)
             last_y = y;
             //xsend("a", 1);
         }
-    }
+        }*/
+    ui_menu_main();
 }
 
 int main(void)

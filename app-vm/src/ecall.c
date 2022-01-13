@@ -210,12 +210,52 @@ static void sys_exit(uint32_t code)
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, sizeof(*cmd));
 }
 
+#ifdef TARGET_NANOX
 static void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
-#ifdef TARGET_NANOX
     bagl_hal_draw_rect(color, x, y, width, height);
-#endif
 }
+
+static void sys_screen_update(void)
+{
+    screen_update();
+}
+
+static void copy_guest_buffer(uint32_t addr, void *buf, size_t size)
+{
+    uint8_t *dst = buf;
+
+    while (size > 0) {
+        size_t n;
+        n = PAGE_SIZE - (addr - PAGE_START(addr));
+        n = MIN(size, n);
+
+        uint8_t *buffer;
+        buffer = get_buffer(addr, n, false);
+        memcpy(dst, buffer, n);
+
+        addr += n;
+        buf += n;
+        size -= n;
+    }
+}
+
+static void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ uint32_t colors_addr, unsigned int bit_per_pixel, uint32_t bitmap_addr, unsigned int bitmap_length_bits)
+{
+    unsigned int colors[2];
+    uint8_t bitmap[512];
+
+    size_t bitmap_length = bitmap_length_bits / 8;
+    if (bitmap_length_bits % 8 != 0) {
+        bitmap_length += 1;
+    }
+
+    copy_guest_buffer(colors_addr, colors, 2 * sizeof(unsigned int));
+    copy_guest_buffer(bitmap_addr, bitmap, bitmap_length);
+
+    bagl_hal_draw_bitmap_within_rect(x, y, width, height, /*color_count, */2, colors, bit_per_pixel, bitmap, bitmap_length_bits);
+}
+#endif
 
 /*
  * Return true if the ecall either exit() or unsupported, false otherwise.
@@ -242,9 +282,17 @@ bool ecall(struct rv_cpu *cpu)
         sys_exit(cpu->regs[10]);
         stop = true;
         break;
+#ifdef TARGET_NANOX
     case 6:
         sys_ux_rectangle(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14]);
         break;
+    case 7:
+        sys_screen_update();
+        break;
+    case 8:
+        sys_ux_bitmap(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14], cpu->regs[15], cpu->regs[16], cpu->regs[17]);
+        break;
+#endif
     default:
         sys_exit(0xdeaddead);
         stop = true;
