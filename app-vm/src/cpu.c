@@ -3,6 +3,7 @@
 #include <inttypes.h>
 
 #include "ecall.h"
+#include "error.h"
 #include "rv.h"
 #include "types.h"
 
@@ -109,6 +110,14 @@ enum rv_op rv_cpu_decode(u32 inst)
                 case 0x40005033: return RV_OP_SRA;
                 case 0x00006033: return RV_OP_OR;
                 case 0x00007033: return RV_OP_AND;
+                case 0x02000033: return RV_OP_MUL;
+                case 0x02001033: return RV_OP_MULH;
+                case 0x02002033: return RV_OP_MULHSU;
+                case 0x02003033: return RV_OP_MULHU;
+                case 0x02004033: return RV_OP_DIV;
+                case 0x02005033: return RV_OP_DIVU;
+                case 0x02006033: return RV_OP_REM;
+                case 0x02007033: return RV_OP_REMU;
                 default: return RV_OP_UNKNOWN;
             }
         case 0x0000000f:
@@ -345,11 +354,44 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             stop = ecall(cpu);
             break;
 
+        case RV_OP_MUL:
+            cpu->regs[inst.rd] = cpu->regs[inst.rs1] * cpu->regs[inst.rs2];
+            break;
+
+        case RV_OP_MULH:
+            cpu->regs[inst.rd] = (u64)((i64)cpu->regs[inst.rs1] * (i64)cpu->regs[inst.rs2]) & 0xffffffff;
+            break;
+
+        case RV_OP_MULHSU:
+            cpu->regs[inst.rd] = (u64)((i64)cpu->regs[inst.rs1] * (u64)cpu->regs[inst.rs2]) & 0xffffffff;
+            break;
+
+        case RV_OP_MULHU:
+            cpu->regs[inst.rd] = (u64)((u64)cpu->regs[inst.rs1] * (u64)cpu->regs[inst.rs2]) & 0xffffffff;
+            break;
+
+        case RV_OP_DIV:
+            cpu->regs[inst.rd] = (i32)cpu->regs[inst.rs1] / (i32)cpu->regs[inst.rs2];
+            break;
+
+        case RV_OP_DIVU:
+            cpu->regs[inst.rd] = cpu->regs[inst.rs1] / cpu->regs[inst.rs2];
+            break;
+
+            /*case RV_OP_REM:
+            cpu->regs[inst.rd] = ;
+            break;*/
+
+        case RV_OP_REMU:
+            cpu->regs[inst.rd] = cpu->regs[inst.rs1] % cpu->regs[inst.rs2];
+            break;
+
         case RV_OP_FENCE:
         case RV_OP_FENCE_TSO:
         case RV_OP_PAUSE:
         case RV_OP_EBREAK:
         default:
+            fatal("instruction not implemented\n");
             stop = true;
             break;
     }

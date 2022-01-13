@@ -49,7 +49,15 @@ enum rv_op {
     RV_OP_FENCE_TSO,
     RV_OP_PAUSE,
     RV_OP_ECALL,
-    RV_OP_EBREAK
+    RV_OP_EBREAK,
+    RV_OP_MUL,
+    RV_OP_MULH,
+    RV_OP_MULHSU,
+    RV_OP_MULHU,
+    RV_OP_DIV,
+    RV_OP_DIVU,
+    RV_OP_REM,
+    RV_OP_REMU
 };
 
 union rv_inst {
