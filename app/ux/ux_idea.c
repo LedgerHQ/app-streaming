@@ -227,7 +227,7 @@ void io_seproxyhal_display(const bagl_element_t *element)
     }
 }
 
-UX_STEP_NOCB(ux_menu_ready_step, pn, {&C_boilerplate_logo, "RISC-V VM"});
+UX_STEP_NOCB(ux_menu_ready_step, pn, {&C_boilerplate_logo, "Fuckin' RISC app"});
 UX_STEP_VALID(ux_menu_exit_step, pb, os_sched_exit(-1), {&C_icon_dashboard_x, "Quit"});
 
 UX_FLOW(ux_menu_main_flow,
@@ -245,10 +245,3 @@ void ui_menu_main(void)
 
     ux_flow_init(0, ux_menu_main_flow, NULL);
 }
-
-/*int main(void)
-{
-    ui_menu_main();
-    return 0;
-}
-*/
