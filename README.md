@@ -65,14 +65,14 @@ make load
 
 ### Run the app
 
-Using speculos:
+Using speculos (2.0.0):
 
 ```console
 $ speculos.py --model nanox --display headless app-vm/bin/app.elf &
 $ ./host/stream.py --speculos --verbose --app ./app/test
 ```
 
-Or using a real device:
+Or using a real device (2.0.2):
 
 ```console
 $ ./host/stream.py --verbose --app ./app/test
