@@ -17,6 +17,7 @@
 ********************************************************************************/
 
 #include "config.h"
+#include "sdk.h"
 #include "ux.h"
 //#include "os_pin.h"
 //#include "os_seed.h"

@@ -18,7 +18,10 @@
 
 #include "config.h"
 #include "bagl.h"
+#include "sdk.h"
+
 #include <string.h>
+
 //#include <stdio.h>
 
 //#include "os.h"
