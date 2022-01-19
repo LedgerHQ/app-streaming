@@ -75,3 +75,14 @@ extern unsigned char const C_icon_up_bitmap[4];
         extern const bagl_icon_details_t C_icon_up;
         #endif // GLYPH_icon_up_BPP
         #endif // HAVE_BAGL
+#ifndef GLYPH_icon_warning_BPP
+        #define GLYPH_icon_warning_WIDTH 14
+        #define GLYPH_icon_warning_HEIGHT 14
+        #define GLYPH_icon_warning_BPP 1
+extern unsigned int const C_icon_warning_colors[];
+extern unsigned char const C_icon_warning_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_warning;
+        #endif // GLYPH_icon_warning_BPP
+        #endif // HAVE_BAGL
