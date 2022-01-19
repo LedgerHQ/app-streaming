@@ -6,7 +6,7 @@ LDFLAGS=-L/usr/local/riscv32-unknown-linux-gnu/lib -Wl,-z,noseparate-code
 
 all: test
 
-test: test.o std.o sdk.o start.o sha256sum.o ux/ux.a
+test: test.o math.o std.o sdk.o start.o sha256sum.o ux/ux.a
 	$(CC) -static -nostdlib -o $@ $^ $(LDFLAGS) -lc
 	#riscv32-unknown-linux-gnu-strip $@
 
