@@ -16,7 +16,7 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#include "glyphs.h"
+#include "default_glyphs.h"
 #include "ux.h"
 //#include "os_utils.h"
 #include <string.h>
