@@ -2,6 +2,7 @@
 
 #include "cx.h"
 #include "os.h"
+#include "os_io_seproxyhal.h"
 
 #include "apdu.h"
 #include "ecall.h"
@@ -9,6 +10,8 @@
 #include "rv.h"
 #include "stream.h"
 #include "types.h"
+
+int saved_apdu_state;
 
 
 struct cmd_send_buffer_s {
@@ -88,6 +91,18 @@ static size_t xrecv(uint32_t addr, size_t size)
         cmd->cmd = (CMD_RECV_BUFFER >> 8) | ((CMD_RECV_BUFFER & 0xff) << 8);
 
         size_t received = io_exchange(CHANNEL_APDU, sizeof(*cmd));
+
+        if (ret == 0 && G_io_app.apdu_state == 0xff) {
+            // restore G_io_app
+            G_io_app.apdu_state = saved_apdu_state;
+            G_io_app.apdu_length = 0;
+            G_io_app.ms = 0;
+            err("ok button pressed\n");
+            /* button */
+            return 0xdeadbe00 | 2;
+        } else {
+            fatal("wtf\n");
+        }
 
         /* 2. ensure that data received fits in the buffer */
 
@@ -274,6 +289,7 @@ bool ecall(struct rv_cpu *cpu)
         break;
     case 3:
         cpu->regs[10] = xrecv(cpu->regs[10], cpu->regs[11]);
+        err("ok\n");
         break;
     case 4:
         sha256sum(cpu->regs[10], cpu->regs[11], cpu->regs[12]);

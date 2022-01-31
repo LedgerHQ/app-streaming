@@ -49,6 +49,8 @@ static bool apdu_parser(command_t *cmd, uint8_t *buf, size_t buf_len) {
     return true;
 }
 
+bool vm_running = false;
+
 static void app_main_(void)
 {
     command_t cmd;
@@ -66,7 +68,14 @@ static void app_main_(void)
         }
 
         stream_init_app(&G_io_apdu_buffer[OFFSET_CDATA + 3]);
+        vm_running = true;
         stream_run_app();
+        vm_running = false;
+
+        PRINTF("app exited\n");
+        os_sched_exit(13);
+
+        ui_menu_main();
     }
 }
 
@@ -83,6 +92,8 @@ void app_main(void) {
                 G_io_apdu_buffer[0] = e >> 8;
                 G_io_apdu_buffer[1] = e & 0xff;
                 io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 2);
+                PRINTF("exception\n");
+                os_sched_exit(12);
             }
             FINALLY {
             }

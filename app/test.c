@@ -104,27 +104,6 @@ void test_sha256_2(void)
     free(p);
 }
 
-static void test_ux(void)
-{
-    /*ux_rectangle(0x00000000, 128, 0, 0, 64);
-    //ux_rectangle(0xffffffff, 0, 35, 128, 32);
-
-    size_t last_x, last_y;
-    last_x = 0;
-    last_y = 0;
-
-    for (size_t y = 0; y < 5; y++) {
-        for (size_t x = 0; x < 128; x++) {
-            ux_rectangle(0x00000000, last_x, last_y, 1, 1);
-            ux_rectangle(0xffffffff, x, y, 1, 1);
-            last_x = x;
-            last_y = y;
-            //xsend("a", 1);
-        }
-        }*/
-    ui_menu_main();
-}
-
 int main(void)
 {
     //test_sha256();
@@ -134,7 +113,12 @@ int main(void)
     //test_malloc();
     //test_sha256_2();
 
-    test_ux();
+    ui_menu_main();
+
+    while (1) {
+        uint8_t buf[8192];
+        size_t n = xrecv(buf, sizeof(buf));
+    }
 
     return 0;
 }

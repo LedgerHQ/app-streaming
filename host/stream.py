@@ -69,7 +69,7 @@ class Stream:
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
     HEAP_SIZE = 0x10000
-    STACK_SIZE = 0x1000
+    STACK_SIZE = 0x10000
 
     def __init__(self, path):
         self.elf = Elf(path)
@@ -229,6 +229,14 @@ class Stream:
 
     def handle_recv_buffer(self, data):
         assert len(data) == 6
+
+        if True:
+            import time
+            time.sleep(10)
+            # XXX: wait for cancel
+            #status_word, data = exchange(client, 0x00, p1=last, p2=p2, data=buf)
+            #status_word, data = exchange(client, 0x00, p1=last, p2=p2, data=buf)
+            #return status_word, data
 
         counter = int.from_bytes(data[:4], "little")
         maxsize = int.from_bytes(data[4:], "little")

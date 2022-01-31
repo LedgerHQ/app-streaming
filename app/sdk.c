@@ -1,4 +1,8 @@
+#include <stdbool.h>
+#include <stdlib.h>
+
 #include "sdk.h"
+#include "ux.h"
 
 int puts(const char *str)
 {
@@ -24,18 +28,59 @@ void xsend(const uint8_t *buffer, size_t size)
          );
 }
 
-size_t xrecv(uint8_t *buffer, size_t size)
+#define BUTTON_MAGIC 0xdeadbe00
+
+static void button_helper(uint8_t magic)
+{
+    /*unsigned int button_mask;
+    unsigned int button_same_mask_counter = 0; // ignored
+
+    button_mask = magic | BUTTON_EVT_RELEASED;
+
+    if (G_ux.stack[0].button_push_callback != NULL) {
+        G_ux.stack[0].button_push_callback(button_mask, button_same_mask_counter);
+        }*/
+    switch(magic) {
+    case 1:
+      ux_flow_prev();
+      break;
+    case 2:
+      ux_flow_next();
+      break;
+    case 3:
+      ux_flow_validate();
+      break;
+  }
+}
+
+size_t xrecv_helper(uint8_t *buffer, size_t size)
 {
     register uint32_t a0 asm ("a0") = (uint32_t)buffer;
     register uint32_t a1 asm ("a1") = (uint32_t)size;
     size_t ret;
 
-    asm (
+    asm volatile (
          "li t0, 3\n"
          "ecall\n"
          "add %0, a0, 0\n"
          : "=r"(ret) : "r"(a0), "r"(a1) : "t0", "memory"
          );
+
+    return ret;
+}
+
+size_t xrecv(uint8_t *buffer, size_t size)
+{
+    bool is_magic_button;
+    size_t ret;
+
+    do {
+        ret = xrecv_helper(buffer, size);
+        is_magic_button = ((ret & BUTTON_MAGIC) == BUTTON_MAGIC);
+        if (is_magic_button) {
+            button_helper(ret & 0xff);
+        }
+    } while (is_magic_button);
 
     return ret;
 }
