@@ -359,9 +359,9 @@ static int sys_wait_button(void)
 {
     int button = io_exchange_asynch_reply();
 
-    char buf[10] = "button x\n";
+    /*char buf[10] = "button x\n";
     buf[7] = '0' + button;
-    err(buf);
+    err(buf);*/
 
     return to_button_mask(button);
 }
@@ -383,7 +383,6 @@ bool ecall(struct rv_cpu *cpu)
         break;
     case 3:
         cpu->regs[10] = xrecv(cpu->regs[10], cpu->regs[11]);
-        err("ok\n");
         break;
     case 4:
         sha256sum(cpu->regs[10], cpu->regs[11], cpu->regs[12]);

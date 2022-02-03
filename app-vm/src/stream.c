@@ -185,9 +185,7 @@ void stream_request_page(struct page_s *page, bool read_only)
 
     cmd->addr = page->addr;
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
-    err("> request page\n");
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
-    err("< ok\n");
 
     struct response_s *response = (struct response_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
