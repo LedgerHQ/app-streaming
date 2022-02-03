@@ -497,7 +497,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     }
 
     page->addr = addr;
-    page->usage = 0;
+    page->usage = 1;
 
     if (!zero_page) {
         stream_request_page(page, !writeable);
