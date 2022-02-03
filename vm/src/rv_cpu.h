@@ -103,7 +103,8 @@ enum rv_op {
     RV_OP_DIV,
     RV_OP_DIVU,
     RV_OP_REM,
-    RV_OP_REMU
+    RV_OP_REMU,
+    RV_OP_C_LW,
 };
 
 union rv_inst {

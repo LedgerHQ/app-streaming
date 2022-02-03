@@ -21,6 +21,34 @@ void rv_cpu_reset(struct rv_cpu *cpu)
 
 enum rv_op rv_cpu_decode(uint32_t inst)
 {
+    /* compressed instructions */
+    switch (inst & 0x3) {
+    case 0:
+        switch (inst & 0xe000) {
+        case 0x4000: return RV_OP_C_LW;
+        case 0xc000: return RV_OP_C_SW;
+        default: return RV_OP_UNKNOWN;
+        }
+        break;
+    case 1:
+        switch (inst & 0xe000) {
+        case 0x0000:
+            if (inst & 0xffff == 0x0001) {
+                return RV_OP_C_NOP;
+            }
+            if (inst & 0x0f80 != 0x0000) {
+                return RV_OP_C_ADDI;
+            }
+            return RV_OP_C_NOP;
+        case 0xc000: return RV_OP_C_SW;
+        default: return RV_OP_UNKNOWN;
+        }
+        break;
+    case 2:
+        break;
+    }
+
+
     switch (inst & 0x0000007f) {
         case 0x00000037: return RV_OP_LUI;
         case 0x00000017: return RV_OP_AUIPC;
@@ -317,6 +345,10 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             } else {
                 success = false;
             }
+            break;
+
+        case RV_OP_C_LW:
+            cpu->regs[inst.rdp] = mem_read(cpu->regs[inst.rs1p] + (i32) imm_i(inst), 4);
             break;
 
         case RV_OP_LBU:
