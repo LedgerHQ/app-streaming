@@ -92,6 +92,7 @@ static size_t xrecv(uint32_t addr, size_t size)
 
         size_t received = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
+#if false
         if (ret == 0 && G_io_app.apdu_state == 0xff) {
             // restore G_io_app
             G_io_app.apdu_state = saved_apdu_state;
@@ -103,6 +104,7 @@ static size_t xrecv(uint32_t addr, size_t size)
         } else {
             fatal("wtf\n");
         }
+#endif
 
         /* 2. ensure that data received fits in the buffer */
 
@@ -272,6 +274,98 @@ static void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height,
 }
 #endif
 
+#define BUTTON_LEFT             (1 << 0)
+#define BUTTON_RIGHT            (1 << 1)
+
+#define BUTTON_EVT_FAST         0x40000000
+#define BUTTON_EVT_RELEASED     0x80000000
+
+#define BUTTON_FAST_THRESHOLD_CS 8 //x100MS
+#define BUTTON_FAST_ACTION_CS    3 //x100MS
+
+static unsigned int g_button_mask;
+static unsigned int g_button_same_mask_counter;
+
+int button_pressed;
+bool wait_for_button;
+
+static int to_button_mask(unsigned int new_button_mask)
+{
+    unsigned int button_mask;
+    unsigned int button_same_mask_counter;
+
+    if (new_button_mask == g_button_mask) {
+        g_button_same_mask_counter++;
+    }
+
+    button_mask = g_button_mask | new_button_mask;
+    button_same_mask_counter = g_button_same_mask_counter;
+
+    if (new_button_mask == 0) {
+        g_button_mask = 0;
+        g_button_same_mask_counter = 0;
+        button_mask |= BUTTON_EVT_RELEASED;
+    }
+    else {
+        g_button_mask = button_mask;
+    }
+
+    if (new_button_mask != g_button_mask) {
+        g_button_same_mask_counter = 0;
+    }
+
+    if (button_same_mask_counter >= BUTTON_FAST_THRESHOLD_CS) {
+        if ((button_same_mask_counter % BUTTON_FAST_ACTION_CS) == 0) {
+            button_mask |= BUTTON_EVT_FAST;
+        }
+
+        button_mask &= ~BUTTON_EVT_RELEASED;
+    }
+
+    if (!(button_mask & BUTTON_EVT_RELEASED)) {
+        return 0;
+    }
+
+    return (button_mask & (BUTTON_LEFT | BUTTON_RIGHT));
+}
+
+/* equivalent to io_exchange with IO_ASYNCH_REPLY */
+static unsigned short io_exchange_asynch_reply(void)
+{
+  G_io_app.apdu_length = 0;
+
+  button_pressed = 0;
+  wait_for_button = true;
+
+  do {
+      io_seproxyhal_general_status();
+
+      size_t rx_len = io_seproxyhal_spi_recv(G_io_seproxyhal_spi_buffer, sizeof(G_io_seproxyhal_spi_buffer), 0);
+      if (rx_len < 3 || rx_len != U2(G_io_seproxyhal_spi_buffer[1],G_io_seproxyhal_spi_buffer[2])+3U) {
+          G_io_app.apdu_state = APDU_IDLE;
+          G_io_app.apdu_length = 0;
+          continue;
+      }
+
+      io_seproxyhal_handle_event();
+  } while (button_pressed == 0);
+
+  wait_for_button = false;
+
+  return button_pressed - 1;
+}
+
+static int sys_wait_button(void)
+{
+    int button = io_exchange_asynch_reply();
+
+    char buf[10] = "button x\n";
+    buf[7] = '0' + button;
+    err(buf);
+
+    return to_button_mask(button);
+}
+
 /*
  * Return true if the ecall either exit() or unsupported, false otherwise.
  */
@@ -309,6 +403,9 @@ bool ecall(struct rv_cpu *cpu)
         sys_ux_bitmap(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14], cpu->regs[15], cpu->regs[16], cpu->regs[17]);
         break;
 #endif
+    case 9:
+        cpu->regs[10] = sys_wait_button();
+        break;
     default:
         sys_exit(0xdeaddead);
         stop = true;

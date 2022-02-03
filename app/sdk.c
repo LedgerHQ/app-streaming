@@ -155,3 +155,17 @@ void bagl_hal_draw_bitmap_within_rect(int x, int y, unsigned int width, unsigned
          :: "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(a6), "r"(a7) : "t0"
                   );
 }
+
+int wait_button(void)
+{
+    int button;
+
+    asm volatile (
+         "li t0, 9\n"
+         "ecall\n"
+         "add %0, a0, 0\n"
+         : "=r"(button) :: "a0", "t0"
+                  );
+
+    return button;
+}

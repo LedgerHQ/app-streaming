@@ -65,13 +65,16 @@ void io_seproxyhal_button_push(button_push_callback_t button_callback, unsigned 
 */
 
 extern int saved_apdu_state;
+extern int button_pressed;
+extern bool wait_for_button;
 
 uint8_t io_event(uint8_t channel __attribute__((unused))) {
     switch (G_io_seproxyhal_spi_buffer[0]) {
         case SEPROXYHAL_TAG_BUTTON_PUSH_EVENT:
-            if (!vm_running) {
+            if (!(vm_running && wait_for_button)) {
                 UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);
             } else {
+                /*
                 //if (G_ux.stack[0].button_push_callback) {
                 //    io_seproxyhal_button_push(G_ux.stack[0].button_push_callback, G_io_seproxyhal_spi_buffer[3]>>1);
                 //}
@@ -83,22 +86,10 @@ uint8_t io_event(uint8_t channel __attribute__((unused))) {
                 G_io_app.apdu_state = 0xff;
                 G_io_app.apdu_length = 0x7fff;
                 //io_seproxyhal_general_status();
+                */
+                button_pressed = 1 + (G_io_seproxyhal_spi_buffer[3] >> 1);
 
-/*
-gdb$ bt 10
-#0  USBD_HID_DataOut_impl (pdev=<optimized out>, epnum=<optimized out>, buffer=0xda7a023a <G_io_seproxyhal_spi_buffer+6> "\001\001\005") at /home/gab/code/ledger/sdk/sdk-balenos-2.0.0/lib_stusb_impl/usbd_impl.c:1002
-#1  0x40005b1c in USBD_LL_DataOutStage (pdev=0xda7a6510 <USBD_Device>, epnum=0x2, pdata=0xda7a023a <G_io_seproxyhal_spi_buffer+6> "\001\001\005") at /home/gab/code/ledger/sdk/sdk-balenos-2.0.0/lib_stusb/STM32_USB_Device_Library/Core/Src/usbd_core.c:315
-#2  0x40003de8 in io_seproxyhal_handle_usb_ep_xfer_event () at /home/gab/code/ledger/sdk/sdk-balenos-2.0.0/src/os_io_seproxyhal.c:201
-#3  0x40003ebe in io_seproxyhal_handle_event () at /home/gab/code/ledger/sdk/sdk-balenos-2.0.0/src/os_io_seproxyhal.c:290
-#4  0x400042e6 in io_exchange (channel=<optimized out>, tx_len=<optimized out>) at /home/gab/code/ledger/sdk/sdk-balenos-2.0.0/src/os_io_seproxyhal.c:1396
-#5  0x40004ae2 in stream_request_page (page=0xda7a0640 <app+156>, read_only=0x1) at src/stream.c:189
-#6  0x4000529c in get_page (addr=0x10600, page_prot=<optimized out>) at src/stream.c:505
-#7  0x400050c0 in mem_read (addr=0x10604, size=0x4) at src/stream.c:549
-#8  0x400054ba in stream_run_app () at src/stream.c:657
-#9  0x40003918 in app_main_ () at src/main.c:72
-missed somewhere probably
-*/
-                return 1;
+                //return 1;
             }
             break;
         case SEPROXYHAL_TAG_STATUS_EVENT:

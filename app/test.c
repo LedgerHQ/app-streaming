@@ -10,12 +10,26 @@
 #include "ux.h"
 
 UX_STEP_NOCB(ux_menu_ready_step, pn, {&C_boilerplate_logo, "Fuckin' RISC app"});
+UX_STEP_NOCB(ux_menu_lol_step, pn, {&C_boilerplate_logo, "lol lol"});
 UX_STEP_VALID(ux_menu_exit_step, pb, exit(0), {&C_icon_dashboard_x, "Quit"});
 
 UX_FLOW(ux_menu_main_flow,
         &ux_menu_ready_step,
+        &ux_menu_lol_step,
         &ux_menu_exit_step,
         FLOW_LOOP);
+
+void ui_button_helper(int button)
+{
+    unsigned int button_mask;
+    unsigned int button_same_mask_counter = 0; // ignored
+
+    button_mask = button | BUTTON_EVT_RELEASED;
+
+    if (G_ux.stack[0].button_push_callback != NULL) {
+        G_ux.stack[0].button_push_callback(button_mask, button_same_mask_counter);
+    }
+}
 
 void ui_menu_main(void)
 {
@@ -114,6 +128,10 @@ int main(void)
     //test_sha256_2();
 
     ui_menu_main();
+    while (1) {
+        int button = wait_button();
+        ui_button_helper(button);
+    }
 
     while (1) {
         uint8_t buf[8192];
