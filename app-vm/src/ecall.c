@@ -357,13 +357,14 @@ static unsigned short io_exchange_asynch_reply(void)
 
 static int sys_wait_button(void)
 {
-    int button = io_exchange_asynch_reply();
+    int button_mask;
 
-    /*char buf[10] = "button x\n";
-    buf[7] = '0' + button;
-    err(buf);*/
+    do {
+        int button = io_exchange_asynch_reply();
+        button_mask = to_button_mask(button);
+    } while (button_mask == 0);
 
-    return to_button_mask(button);
+    return button_mask;
 }
 
 /*
