@@ -628,32 +628,34 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         fatal("invalid mem_write\n");
     }
 
-    char buf[32];
-    memcpy(buf, "[*] write: ", 11);
+    if (0) {
+        char buf[32];
+        memcpy(buf, "[*] write: ", 11);
+    }
 
     switch (size) {
     case 1:
         *(uint8_t *)&page->data[offset] = value & 0xff;
-        u32hex(value & 0xff, &buf[11]);
+        //u32hex(value & 0xff, &buf[11]);
         break;
     case 2:
         *(uint16_t *)&page->data[offset] = value & 0xffff;
-        u32hex(value & 0xffff, &buf[11]);
+        //u32hex(value & 0xffff, &buf[11]);
         break;
     case 4:
     default:
         *(uint32_t *)&page->data[offset] = value;
-        u32hex(value, &buf[11]);
+        //u32hex(value, &buf[11]);
         break;
     }
 
-    if (0) {
+    /*if (0) {
         buf[19] = '@';
         u32hex(addr, &buf[20]);
         buf[28] = '\n';
         buf[29] = '\x00';
         err(buf);
-    }
+        }*/
 }
 
 uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
