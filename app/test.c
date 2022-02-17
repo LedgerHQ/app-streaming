@@ -9,9 +9,13 @@
 #include "sha256.h"
 #include "ux.h"
 
-UX_STEP_NOCB(ux_menu_ready_step, pn, {&C_boilerplate_logo, "Fuckin' RISC app"});
-UX_STEP_NOCB(ux_menu_lol_step, pn, {&C_boilerplate_logo, "lol lol"});
-UX_STEP_VALID(ux_menu_exit_step, pb, exit(0), {&C_icon_dashboard_x, "Quit"});
+//UX_STEP_NOCB(ux_menu_ready_step, pn, {&C_boilerplate_logo, "Fuckin' RISC app"});
+//UX_STEP_NOCB(ux_menu_lol_step, pn, {&C_boilerplate_logo, "lol lol"});
+//UX_STEP_VALID(ux_menu_exit_step, pb, exit(0), {&C_icon_dashboard_x, "Quit"});
+
+UX_STEP_NOCB(ux_menu_ready_step, nn, {"1", "Fuckin' RISC app"});
+UX_STEP_NOCB(ux_menu_lol_step, nn, {"2", "lol"});
+UX_STEP_VALID(ux_menu_exit_step, nn, exit(0), {"3", "Quit"});
 
 UX_FLOW(ux_menu_main_flow,
         &ux_menu_ready_step,
