@@ -59,6 +59,7 @@ struct app_s {
     struct page_s code[NPAGE_CODE];
     struct page_s stack[NPAGE_STACK];
     struct page_s data[NPAGE_DATA];
+    struct page_s *current_code_page;
 
     uint32_t bss_max;
     uint32_t stack_min;
@@ -373,6 +374,7 @@ void stream_init_app(uint8_t *buffer)
 
     app.cpu.pc = cmd->pc;
     app.cpu.regs[2] = sp - 4;
+    app.current_code_page = NULL;
 
     init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
 }
@@ -406,6 +408,37 @@ static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
          * dynamic keys will be used for decryption and HMAC. */
         page->iv = 0;
         stream_commit_page(page, true);
+    }
+}
+
+static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct page_s **result)
+{
+    struct page_s *page = &pages[0];
+    struct page_s *found = NULL;
+
+    for (size_t i = 0; i < npage; i++) {
+        /* return the page if address matches */
+        if (addr == pages[i].addr) {
+            pages[i].usage = MIN(npage * 2, pages[i].usage + 1);
+            found = &pages[i];
+            break;
+        } else {
+            /* otherwise find the less used page */
+            if (pages[i].usage > 0) {
+                pages[i].usage = MAX(1, pages[i].usage - 1);
+            }
+            if (pages[i].usage < page->usage) {
+                page = &pages[i];
+            }
+        }
+    }
+
+    if (found != NULL) {
+        *result = found;
+        return true;
+    } else {
+        *result = page;
+        return false;
     }
 }
 
@@ -450,27 +483,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         pages = NULL;
     }
 
-    page = &pages[0];
-    struct page_s *found = NULL;
-    for (size_t i = 0; i < npage; i++) {
-        /* return the page if address matches */
-        if (addr == pages[i].addr) {
-            pages[i].usage = MIN(npage * 2, pages[i].usage + 1);
-            found = &pages[i];
-            break;
-        } else {
-            /* otherwise find the less used page */
-            if (pages[i].usage > 0) {
-                pages[i].usage = MAX(1, pages[i].usage - 1);
-            }
-            if (pages[i].usage < page->usage) {
-                page = &pages[i];
-            }
-        }
-    }
-
-    if (found != NULL) {
-        return found;
+    if (find_page(addr, pages, npage, &page)) {
+        return page;
     }
 
     /* don't commit page if it never was retrieved (its address is zero) */
@@ -536,6 +550,31 @@ static void check_alignment(uint32_t addr, size_t size)
     if (!same_page(addr, addr + size - 1)) {
         fatal("not on same page\n");
     }
+}
+
+static uint32_t get_instruction(uint32_t addr)
+{
+    struct page_s *page;
+    uint32_t page_addr;
+
+    check_alignment(addr, sizeof(uint32_t));
+    page_addr = PAGE_START(addr);
+
+    if (app.current_code_page != NULL && app.current_code_page->addr == page_addr) {
+        page = app.current_code_page;
+    } else {
+        if (!find_page(page_addr, app.code, NPAGE_CODE, &page)) {
+            page->addr = page_addr;
+            page->usage = 1;
+            stream_request_page(page, true);
+            app.current_code_page = page;
+        }
+    }
+
+    uint32_t offset = addr - page_addr;
+    uint32_t value = *(uint32_t *)&page->data[offset];
+
+    return value;
 }
 
 uint32_t mem_read(uint32_t addr, size_t size)
@@ -653,7 +692,8 @@ void stream_run_app(void)
     bool stop;
 
     do {
-        instruction = mem_read(app.cpu.pc, sizeof(instruction));
+        instruction = get_instruction(app.cpu.pc);
+        //instruction = mem_read(app.cpu.pc, sizeof(instruction));
         //debug_cpu(app.cpu.pc, instruction);
         stop = rv_cpu_execute(&app.cpu, instruction);
     } while (!stop);
