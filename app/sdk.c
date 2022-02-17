@@ -169,3 +169,49 @@ int wait_button(void)
 
     return button;
 }
+
+typedef struct {
+  unsigned char type;
+  unsigned char userid;
+  short x;
+  short y;
+  unsigned short width;
+  unsigned short height;
+  unsigned char stroke;
+  unsigned char radius;
+  unsigned char fill;
+  unsigned int fgcolor;
+  unsigned int bgcolor;
+  unsigned short font_id;
+  unsigned char icon_id;
+} __attribute__((packed)) packed_bagl_component_t;
+
+void bagl_draw_with_context(const bagl_component_t *component, const void *context, unsigned short context_length, unsigned char context_encoding)
+{
+    volatile packed_bagl_component_t packed_component;
+
+    packed_component.type = component->type;
+    packed_component.userid = component->userid;
+    packed_component.x = component->x;
+    packed_component.y = component->y;
+    packed_component.width = component->width;
+    packed_component.height = component->height;
+    packed_component.stroke = component->stroke;
+    packed_component.radius = component->radius;
+    packed_component.fill = component->fill;
+    packed_component.fgcolor = component->fgcolor;
+    packed_component.bgcolor = component->bgcolor;
+    packed_component.font_id = component->font_id;
+    packed_component.icon_id = component->icon_id;
+
+    register uint32_t a0 asm ("a0") = (uint32_t)&packed_component;
+    register uint32_t a1 asm ("a1") = (uint32_t)context;
+    register uint32_t a2 asm ("a2") = (uint32_t)context_length;
+    register uint32_t a3 asm ("a3") = (uint32_t)context_encoding;
+
+    asm volatile (
+         "li t0, 10\n"
+         "ecall\n"
+         :: "r"(a0), "r"(a1), "r"(a2), "r"(a3) : "t0"
+                  );
+}

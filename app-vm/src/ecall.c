@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "bagl.h"
 #include "cx.h"
 #include "os.h"
 #include "os_io_seproxyhal.h"
@@ -367,6 +368,58 @@ static int sys_wait_button(void)
     return button_mask;
 }
 
+typedef struct {
+  unsigned char type;
+  unsigned char userid;
+  short x;
+  short y;
+  unsigned short width;
+  unsigned short height;
+  unsigned char stroke;
+  unsigned char radius;
+  unsigned char fill;
+  unsigned int fgcolor;
+  unsigned int bgcolor;
+  unsigned short font_id;
+  unsigned char icon_id;
+} __attribute__((packed)) packed_bagl_component_t;
+
+static void sys_bagl_draw_with_context(uint32_t component_addr, uint32_t context_addr, size_t context_length, int context_encoding)
+{
+    packed_bagl_component_t packed_component;
+    bagl_component_t component;
+    uint8_t context_buf[64];
+    void *context;
+
+    if (context_length > sizeof(context_buf)) {
+        context_length = sizeof(context_buf);
+    }
+
+    copy_guest_buffer(component_addr, &packed_component, sizeof(packed_component));
+    if (context_addr != 0) {
+        copy_guest_buffer(context_addr, &context_buf, context_length);
+        context = &context_buf;
+    } else {
+        context = NULL;
+    }
+
+    component.type = packed_component.type;
+    component.userid = packed_component.userid;
+    component.x = packed_component.x;
+    component.y = packed_component.y;
+    component.width = packed_component.width;
+    component.height = packed_component.height;
+    component.stroke = packed_component.stroke;
+    component.radius = packed_component.radius;
+    component.fill = packed_component.fill;
+    component.fgcolor = packed_component.fgcolor;
+    component.bgcolor = packed_component.bgcolor;
+    component.font_id = packed_component.font_id;
+    component.icon_id = packed_component.icon_id;
+
+    bagl_draw_with_context(&component, context, context_length, context_encoding);
+}
+
 /*
  * Return true if the ecall either exit() or unsupported, false otherwise.
  */
@@ -405,6 +458,9 @@ bool ecall(struct rv_cpu *cpu)
 #endif
     case 9:
         cpu->regs[10] = sys_wait_button();
+        break;
+    case 10:
+        sys_bagl_draw_with_context(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13]);
         break;
     default:
         sys_exit(0xdeaddead);
