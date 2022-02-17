@@ -13,9 +13,9 @@
 #include "stream.h"
 
 #ifdef TARGET_NANOX
-#define NPAGE_CODE  50
-#define NPAGE_STACK 20
-#define NPAGE_DATA  20
+#define NPAGE_CODE  70
+#define NPAGE_STACK 10
+#define NPAGE_DATA  10
 #else
 #define NPAGE_CODE  3
 #define NPAGE_STACK 3
