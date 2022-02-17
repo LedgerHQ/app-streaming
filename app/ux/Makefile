@@ -11,3 +11,6 @@ ux.a: bagl.o bagl_fonts.o bagl_glyphs.o glyphs.o io_seproxyhal.o ux_flow_engine.
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $^
+
+clean:
+	rm -f *.o *.a

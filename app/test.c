@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "glyphs.h"
 #include "sdk.h"
 #include "sha256.h"
-#include "ux.h"
+
+#include "ux/glyphs.h"
+#include "ux/ux.h"
 
 //UX_STEP_NOCB(ux_menu_ready_step, pn, {&C_boilerplate_logo, "Fuckin' RISC app"});
 //UX_STEP_NOCB(ux_menu_lol_step, pn, {&C_boilerplate_logo, "lol lol"});
