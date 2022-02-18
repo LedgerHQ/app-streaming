@@ -33,7 +33,7 @@ int main(void)
 
     uint8_t digest[32];
 
-    bool use_syscall = true;
+    bool use_syscall = false;
 
     if (use_syscall) {
         sha256sum(p, size, digest);
