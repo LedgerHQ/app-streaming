@@ -22,4 +22,5 @@ link_libraries(c)
 add_subdirectory(sdk)
 add_subdirectory(ux)
 
+add_subdirectory(app-sha256)
 add_subdirectory(app-wip)
