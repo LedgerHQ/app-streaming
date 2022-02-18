@@ -17,7 +17,7 @@ add_link_options(-z noseparate-code)
 
 include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ ./ sdk/)
 link_directories(/usr/local/riscv32-unknown-linux-gnu/lib)
-link_libraries(c)
+link_libraries(c gcc)
 
 add_subdirectory(sdk)
 add_subdirectory(ux)
