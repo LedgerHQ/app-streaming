@@ -48,9 +48,8 @@ Build the RISC-V app using the `docker.sh` script:
 
 ```console
 $ ./docker.sh
-[root:/app] # make
-make: Nothing to be done for 'all'.
-[root:/app] #
+[root:/app] # cmake -Bbuild -H.
+[root:/app] # make -C build/
 ```
 
 ### Build the RISC-V VM and install it on the Nano device
@@ -69,11 +68,11 @@ Using speculos (2.0.0):
 
 ```console
 $ speculos.py --model nanox --display headless app-vm/bin/app.elf &
-$ ./host/stream.py --speculos --verbose --app ./app/test
+$ ./host/stream.py --speculos --verbose --app ./app/build/app-wip/app
 ```
 
 Or using a real device (2.0.2):
 
 ```console
-$ ./host/stream.py --verbose --app ./app/test
+$ ./host/stream.py --verbose --app ./app/build/app-wip/app
 ```

@@ -1,0 +1,14 @@
+add_library(ux
+        bagl.c
+        bagl_fonts.c
+        bagl_glyphs.c
+        glyphs.c
+        io_seproxyhal.c
+        ux_flow_engine.c
+        ux_layout_bb.c
+        ux_layout_nn.c
+        ux_layout_pb.c
+        ux_layout_pn.c
+        ux_layout_utils.c
+        ux_stack.c
+        ../sdk/math.c)

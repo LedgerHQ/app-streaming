@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "sdk.h"
-#include "ux.h"
+#include "ux/ux.h"
 
 int puts(const char *str)
 {
