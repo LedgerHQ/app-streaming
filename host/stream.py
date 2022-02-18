@@ -5,6 +5,7 @@ https://github.com/LedgerHQ/ledgerctl/blob/master/ledgerwallet/client.py
 """
 
 import argparse
+import importlib.util
 import logging
 import os
 import sys
@@ -71,8 +72,9 @@ class Stream:
     HEAP_SIZE = 0x10000
     STACK_SIZE = 0x10000
 
-    def __init__(self, path):
+    def __init__(self, path, plugin_path=None):
         self.elf = Elf(path)
+        self.plugin = Stream.load_plugin(plugin_path)
 
         self.pages = {}
         self.merkletree = MerkleTree()
@@ -95,8 +97,23 @@ class Stream:
 
         self.send_buffer = b""
         self.send_buffer_counter = 0
-        self.recv_buffer = b"a" * 1000
+        self.recv_buffer = b""
         self.recv_buffer_counter = 0
+
+    @staticmethod
+    def load_plugin(plugin_path):
+        if plugin_path:
+            module_name = "plugin"
+            spec = importlib.util.spec_from_file_location(module_name, plugin_path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+        else:
+            import plugin
+
+        from plugin import Plugin
+
+        return Plugin()
 
     def _get_page(self, addr):
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
@@ -221,6 +238,7 @@ class Stream:
 
         if stop:
             logger.info(f"received buffer: {self.send_buffer} (len: {len(self.send_buffer)})")
+            self.plugin.recv(self.send_buffer)
             self.send_buffer = b""
             self.send_buffer_counter = 0
 
@@ -230,13 +248,8 @@ class Stream:
     def handle_recv_buffer(self, data):
         assert len(data) == 6
 
-        if True:
-            import time
-            time.sleep(10)
-            # XXX: wait for cancel
-            #status_word, data = exchange(client, 0x00, p1=last, p2=p2, data=buf)
-            #status_word, data = exchange(client, 0x00, p1=last, p2=p2, data=buf)
-            #return status_word, data
+        if len(self.recv_buffer) == 0:
+            self.recv_buffer = self.plugin.send()
 
         counter = int.from_bytes(data[:4], "little")
         maxsize = int.from_bytes(data[4:], "little")
@@ -246,6 +259,8 @@ class Stream:
 
         buf = self.recv_buffer[:maxsize]
         self.recv_buffer = self.recv_buffer[maxsize:]
+        print(f"buf: {buf}")
+        print(f"buffer: {self.recv_buffer}")
         if len(self.recv_buffer) == 0:
             logger.debug(f"recv buffer last (size: {maxsize}, {len(buf)})")
             self.recv_buffer_counter = 0
@@ -275,6 +290,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="RISC-V vm companion.")
     parser.add_argument("--app", type=str, required=True, help="application path")
+    parser.add_argument("--plugin", type=str, help=".py plugin file")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
     parser.add_argument("--verbose", action="store_true", help="")
 
@@ -285,7 +301,7 @@ if __name__ == "__main__":
 
     import_ledgerwallet(args.speculos)
 
-    stream = Stream(args.app)
+    stream = Stream(args.app, args.plugin)
     client = get_client()
 
     status_word, data = stream.init_app()
