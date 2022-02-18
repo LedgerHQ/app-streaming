@@ -85,6 +85,15 @@ size_t xrecv(uint8_t *buffer, size_t size)
     return ret;
 }
 
+void xrecvall(uint8_t *buffer, size_t size)
+{
+    while (size > 0) {
+        size_t n = xrecv(buffer, size);
+        buffer += n;
+        size -= n;
+    }
+}
+
 void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
 {
     register uint32_t a0 asm ("a0") = (uint32_t)buffer;
