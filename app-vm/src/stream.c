@@ -457,6 +457,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         if (addr == pages[i].addr) {
             pages[i].usage = MIN(npage * 2, pages[i].usage + 1);
             found = &pages[i];
+            break;
         } else {
             /* otherwise find the less used page */
             if (pages[i].usage > 0) {
