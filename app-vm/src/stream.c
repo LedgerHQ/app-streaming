@@ -379,7 +379,7 @@ void stream_init_app(uint8_t *buffer)
 
     init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
 
-    init_lfsr();
+    lfsr_init();
 }
 
 static void u32hex(uint32_t n, char *buf)
@@ -432,7 +432,7 @@ static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct 
         }
     }
 
-    size_t n = get_random() % npage;
+    size_t n = lfsr_get_random() % npage;
     *result = &pages[n];
     return false;
 }

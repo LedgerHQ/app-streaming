@@ -1,34 +1,23 @@
 #include "lfsr.h"
 
-#define POLY_MASK_32 0xB4BCD35C
-#define POLY_MASK_31 0x7A5BC2E3
+static uint16_t lfsr_state;
 
-unsigned int lfsr32, lfsr31;
-
-static int shift_lfsr(unsigned int *lfsr,  unsigned int polymonial_mask)
+/* https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Xorshift_LFSRs */
+uint16_t lfsr_get_random(void)
 {
-    int feedback;
+    uint16_t lfsr = lfsr_state;
 
-    feedback = *lfsr & 1;
+    lfsr ^= lfsr >> 7;
+    lfsr ^= lfsr << 9;
+    lfsr ^= lfsr >> 13;
 
-    *lfsr >>= 1;
-    if (feedback == 1) {
-        *lfsr ^= polymonial_mask;
-    }
+    lfsr_state = lfsr;
 
-    return *lfsr;
+    return lfsr;
 }
 
-int get_random(void)
+void lfsr_init(void)
 {
-    /*this random number generator shifts the 32-bit LFSR twice before XORing
-      it with the 31-bit LFSR. the bottom 16 bits are used for the random number*/
-    shift_lfsr(&lfsr32, POLY_MASK_32);
-    return (shift_lfsr(&lfsr32, POLY_MASK_32) ^ shift_lfsr(&lfsr31, POLY_MASK_31));
-}
-
-void init_lfsr(void)
-{
-    lfsr32 = 0xABCDE; //seed values
-    lfsr31 = 0x23456789;
+    /* Any nonzero start state will work. */
+    lfsr_state = 0xACE1u;
 }
