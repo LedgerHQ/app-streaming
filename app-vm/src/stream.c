@@ -9,6 +9,7 @@
 
 #include "apdu.h"
 #include "error.h"
+#include "lfsr.h"
 #include "merkle.h"
 #include "stream.h"
 
@@ -377,6 +378,8 @@ void stream_init_app(uint8_t *buffer)
     app.current_code_page = NULL;
 
     init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
+
+    init_lfsr();
 }
 
 static void u32hex(uint32_t n, char *buf)
@@ -419,27 +422,19 @@ static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct 
     for (size_t i = 0; i < npage; i++) {
         /* return the page if address matches */
         if (addr == pages[i].addr) {
-            pages[i].usage = MIN(npage * 2, pages[i].usage + 1);
             found = &pages[i];
-            break;
-        } else {
-            /* otherwise find the less used page */
-            if (pages[i].usage > 0) {
-                pages[i].usage = MAX(1, pages[i].usage - 1);
-            }
-            if (pages[i].usage < page->usage) {
-                page = &pages[i];
-            }
+            *result = found;
+            return true;
+        } else if (pages[i].usage == 0) {
+            page = &pages[i];
+            *result = page;
+            return false;
         }
     }
 
-    if (found != NULL) {
-        *result = found;
-        return true;
-    } else {
-        *result = page;
-        return false;
-    }
+    size_t n = get_random() % npage;
+    *result = &pages[n];
+    return false;
 }
 
 static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
