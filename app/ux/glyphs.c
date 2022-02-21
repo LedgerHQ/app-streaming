@@ -57,3 +57,38 @@ unsigned char const C_icon_dashboard_x_bitmap[] = {
 };
 
 const bagl_icon_details_t C_icon_dashboard_x = { GLYPH_icon_dashboard_x_WIDTH, GLYPH_icon_dashboard_x_HEIGHT, 1, C_icon_dashboard_x_colors, C_icon_dashboard_x_bitmap };
+
+
+unsigned int const C_icon_eye_colors[] = {
+  0x00000000,
+  0x00ffffff,
+};
+unsigned char const C_icon_eye_bitmap[] = {
+  0x00, 0x00, 0x00, 0x00, 0x1e, 0xe0, 0x1f, 0x1c, 0x0e, 0x03, 0x63, 0x8c, 0x19, 0x63, 0x0c, 0x0c,
+  0x87, 0x83, 0x7f, 0x80, 0x07, 0x00, 0x00, 0x00, 0x00,
+};
+const bagl_icon_details_t C_icon_eye = { GLYPH_icon_eye_WIDTH, GLYPH_icon_eye_HEIGHT, 1, C_icon_eye_colors, C_icon_eye_bitmap };
+unsigned int const C_icon_validate_colors[] = {
+  0x00000000,
+  0x00ffffff,
+};
+
+unsigned int const C_icon_crossmark_colors[] = {
+  0x00000000,
+  0x00ffffff,
+};
+unsigned char const C_icon_crossmark_bitmap[] = {
+  0x00, 0x80, 0x01, 0xe6, 0xc0, 0x71, 0x38, 0x38, 0x07, 0xfc, 0x00, 0x1e, 0x80, 0x07, 0xf0, 0x03,
+  0xce, 0xc1, 0xe1, 0x38, 0x70, 0x06, 0x18, 0x00, 0x00,
+};
+const bagl_icon_details_t C_icon_crossmark = { GLYPH_icon_crossmark_WIDTH, GLYPH_icon_crossmark_HEIGHT, 1, C_icon_crossmark_colors, C_icon_crossmark_bitmap };
+
+unsigned int const C_icon_validate_14_colors[] = {
+  0x00000000,
+  0x00ffffff,
+};
+unsigned char const C_icon_validate_14_bitmap[] = {
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x38, 0x00, 0x67, 0xe0, 0x38, 0x1c, 0x9c, 0x03,
+  0x7e, 0x00, 0x0f, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00,
+};
+const bagl_icon_details_t C_icon_validate_14 = { GLYPH_icon_validate_14_WIDTH, GLYPH_icon_validate_14_HEIGHT, 1, C_icon_validate_14_colors, C_icon_validate_14_bitmap };
