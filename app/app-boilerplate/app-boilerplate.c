@@ -102,9 +102,9 @@ int main(void)
         /* receive buffer */
         uint8_t buf[MAX_MSG_SIZE];
         size_t msg_len = xrecv(buf, MAX_MSG_SIZE);
-        
+
         /* unpack it */
-        Message *msg = message__unpack(NULL, msg_len, buf);	
+        Message *msg = message__unpack(NULL, msg_len, buf);
         if (msg == NULL) {
             exit(1);
         }

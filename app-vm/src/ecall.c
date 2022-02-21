@@ -253,7 +253,7 @@ static void copy_guest_buffer(uint32_t addr, void *buf, size_t size)
         memcpy(dst, buffer, n);
 
         addr += n;
-        buf = (uint8_t *)buf + n;
+        dst += n;
         size -= n;
     }
 }

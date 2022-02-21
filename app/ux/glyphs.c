@@ -1,5 +1,5 @@
 #include "glyphs.h"
-        
+
 unsigned int const C_icon_left_colors[] = {
   0x00000000,
   0x00ffffff,
@@ -23,7 +23,7 @@ unsigned char const C_icon_right_bitmap[] = {
 const bagl_icon_details_t C_icon_right = { GLYPH_icon_right_WIDTH, GLYPH_icon_right_HEIGHT, 1, C_icon_right_colors, C_icon_right_bitmap };
 
 const bagl_icon_details_t C_boilerplate_logo = { GLYPH_boilerplate_logo_WIDTH, GLYPH_boilerplate_logo_HEIGHT, 1, C_boilerplate_logo_colors, C_boilerplate_logo_bitmap };
-        
+
 unsigned int const C_boilerplate_logo_colors[] = {
   0x00000000,
   0x00ffffff,
@@ -87,6 +87,7 @@ unsigned int const C_icon_validate_14_colors[] = {
   0x00000000,
   0x00ffffff,
 };
+
 unsigned char const C_icon_validate_14_bitmap[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x38, 0x00, 0x67, 0xe0, 0x38, 0x1c, 0x9c, 0x03,
   0x7e, 0x00, 0x0f, 0x80, 0x01, 0x00, 0x00, 0x00, 0x00,
