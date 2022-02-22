@@ -23,7 +23,7 @@ message MessageSignTx {
 
 message ResponseSignTx {
   bool approved = 1;
-  bytes signature = 2; // XXX: optional
+  bytes signature = 2;
 };
 
 message ResponseError {

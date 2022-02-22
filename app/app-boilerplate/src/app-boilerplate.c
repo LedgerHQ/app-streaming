@@ -86,11 +86,7 @@ static void free_response(Response *response)
 static void ui_menu_main(void)
 {
     memset(&G_ux, 0, sizeof(G_ux));
-
-    if (G_ux.stack_count == 0) {
-        ux_stack_push();
-    }
-
+    ux_stack_push();
     ux_flow_init(0, ux_menu_main_flow, NULL);
 }
 
