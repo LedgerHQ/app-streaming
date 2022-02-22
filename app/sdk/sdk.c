@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "ecall.h"
 #include "sdk.h"
 #include "ux/ux.h"
 
@@ -22,9 +23,9 @@ void xsend(const uint8_t *buffer, size_t size)
     register uint32_t a1 asm ("a1") = (uint32_t)size;
 
     asm (
-         "li t0, 2\n"
+         "li t0, %0\n"
          "ecall\n"
-         :: "r"(a0), "r"(a1) : "t0", "memory"
+         :: "i"(ECALL_XSEND), "r"(a0), "r"(a1) : "t0", "memory"
          );
 }
 
@@ -60,10 +61,10 @@ size_t xrecv_helper(uint8_t *buffer, size_t size)
     size_t ret;
 
     asm volatile (
-         "li t0, 3\n"
+         "li t0, %1\n"
          "ecall\n"
          "add %0, a0, 0\n"
-         : "=r"(ret) : "r"(a0), "r"(a1) : "t0", "memory"
+         : "=r"(ret) : "i"(ECALL_XRECV), "r"(a0), "r"(a1) : "t0", "memory"
          );
 
     return ret;
@@ -101,34 +102,19 @@ void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
     register uint32_t a2 asm ("a2") = (uint32_t)digest;
 
     asm (
-         "li t0, 4\n"
+         "li t0, %0\n"
          "ecall\n"
-         :: "r"(a0), "r"(a1), "r"(a2) : "t0", "memory"
+         :: "i"(ECALL_SHA256SUM), "r"(a0), "r"(a1), "r"(a2) : "t0", "memory"
          );
 
-}
-
-void ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
-{
-    register uint32_t a0 asm ("a0") = (uint32_t)color;
-    register uint32_t a1 asm ("a1") = (uint32_t)x;
-    register uint32_t a2 asm ("a2") = (uint32_t)y;
-    register uint32_t a3 asm ("a3") = (uint32_t)width;
-    register uint32_t a4 asm ("a4") = (uint32_t)height;
-
-    asm (
-         "li t0, 6\n"
-         "ecall\n"
-         :: "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4) : "t0"
-         );
 }
 
 void screen_update(void)
 {
     asm (
-         "li t0, 7\n"
+         "li t0, %0\n"
          "ecall\n"
-         ::: "t0"
+         :: "i"(ECALL_SCREEN_UPDATE) : "t0"
         );
 }
 
@@ -141,9 +127,9 @@ void bagl_hal_draw_rect(unsigned int color, int x, int y, unsigned int width, un
     register uint32_t a4 asm ("a4") = (uint32_t)height;
 
     asm (
-         "li t0, 6\n"
+         "li t0, %0\n"
          "ecall\n"
-         :: "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4) : "t0"
+         :: "i"(ECALL_UX_RECTANGLE), "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4) : "t0"
         );
 }
 
@@ -159,9 +145,9 @@ void bagl_hal_draw_bitmap_within_rect(int x, int y, unsigned int width, unsigned
     register uint32_t a7 asm ("a7") = (uint32_t)bitmap_length_bits;
 
     asm volatile (
-         "li t0, 8\n"
+         "li t0, %0\n"
          "ecall\n"
-         :: "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(a6), "r"(a7) : "t0"
+         :: "i"(ECALL_BAGL_DRAW_BITMAP), "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(a6), "r"(a7) : "t0"
                   );
 }
 
@@ -170,10 +156,10 @@ int wait_button(void)
     int button;
 
     asm volatile (
-         "li t0, 9\n"
+         "li t0, %1\n"
          "ecall\n"
          "add %0, a0, 0\n"
-         : "=r"(button) :: "a0", "t0"
+         : "=r"(button) : "i"(ECALL_WAIT_BUTTON) : "a0", "t0"
                   );
 
     return button;
@@ -219,8 +205,8 @@ void bagl_draw_with_context(const bagl_component_t *component, const void *conte
     register uint32_t a3 asm ("a3") = (uint32_t)context_encoding;
 
     asm volatile (
-         "li t0, 10\n"
+         "li t0, %0\n"
          "ecall\n"
-         :: "r"(a0), "r"(a1), "r"(a2), "r"(a3) : "t0"
+         :: "i"(ECALL_BAGL_DRAW), "r"(a0), "r"(a1), "r"(a2), "r"(a3) : "t0"
                   );
 }
