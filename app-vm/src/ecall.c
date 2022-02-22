@@ -12,6 +12,8 @@
 #include "stream.h"
 #include "types.h"
 
+#include "sdk/ecall.h"
+
 int saved_apdu_state;
 
 
@@ -432,34 +434,34 @@ bool ecall(struct rv_cpu *cpu)
     case 1:
         debug_write((char *)cpu->regs[10]);
         break;
-    case 2:
+    case ECALL_XSEND:
         xsend(cpu->regs[10], cpu->regs[11]);
         break;
-    case 3:
+    case ECALL_XRECV:
         cpu->regs[10] = xrecv(cpu->regs[10], cpu->regs[11]);
         break;
-    case 4:
+    case ECALL_SHA256SUM:
         sha256sum(cpu->regs[10], cpu->regs[11], cpu->regs[12]);
         break;
-    case 5:
+    case ECALL_EXIT:
         sys_exit(cpu->regs[10]);
         stop = true;
         break;
 #ifdef TARGET_NANOX
-    case 6:
+    case ECALL_UX_RECTANGLE:
         sys_ux_rectangle(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14]);
         break;
-    case 7:
+    case ECALL_SCREEN_UPDATE:
         sys_screen_update();
         break;
-    case 8:
+    case ECALL_BAGL_DRAW_BITMAP:
         sys_ux_bitmap(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14], cpu->regs[15], cpu->regs[16], cpu->regs[17]);
         break;
 #endif
-    case 9:
+    case ECALL_WAIT_BUTTON:
         cpu->regs[10] = sys_wait_button();
         break;
-    case 10:
+    case ECALL_BAGL_DRAW:
         sys_bagl_draw_with_context(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13]);
         break;
     default:

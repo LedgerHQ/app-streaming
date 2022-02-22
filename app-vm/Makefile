@@ -97,6 +97,7 @@ endif
 
 CC      := $(CLANGPATH)clang
 CFLAGS  += -O3 -Os
+CFLAGS  += -I../app/ # for sdk/ecall.h
 AS      := $(GCCPATH)arm-none-eabi-gcc
 LD      := $(GCCPATH)arm-none-eabi-gcc
 LDFLAGS += -O3 -Os
