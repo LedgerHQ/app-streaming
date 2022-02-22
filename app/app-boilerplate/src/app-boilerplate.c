@@ -3,15 +3,10 @@
 #include <string.h>
 
 #include "app-boilerplate.h"
+#include "ui.h"
 #include "sdk.h"
-#include "ux/glyphs.h"
-#include "ux/ux.h"
 
 #define MAX_MSG_SIZE 1024
-
-UX_STEP_VALID(ux_menu_ready_step, pn, exit(0), {&C_boilerplate_logo, "Boilerplate app"});
-UX_FLOW(ux_menu_main_flow,
-        &ux_menu_ready_step);
 
 static ResponseGetVersion *handle_get_version(MessageGetVersion *msg)
 {
@@ -81,13 +76,6 @@ static void free_response(Response *response)
         default:
             break;
     }
-}
-
-static void ui_menu_main(void)
-{
-    memset(&G_ux, 0, sizeof(G_ux));
-    ux_stack_push();
-    ux_flow_init(0, ux_menu_main_flow, NULL);
 }
 
 int main(void)

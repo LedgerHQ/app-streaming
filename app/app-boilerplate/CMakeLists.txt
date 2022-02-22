@@ -5,6 +5,7 @@ link_directories(/usr/local/lib)
 add_executable(app-boilerplate
                src/app-boilerplate.c
                src/sign_tx.c
+               src/ui.c
                protobuf/message.pb-c.h
                protobuf/message.pb-c.c)
 add_dependencies(app-boilerplate
