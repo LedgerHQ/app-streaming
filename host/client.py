@@ -140,6 +140,8 @@ if __name__ == "__main__":
     if client.plugin.name == "boilerplate":
         client.call("get_version")
         client.call("sign_tx")
+    elif client.plugin.name == "ethereum":
+        client.call("get_pubkey")
     elif client.plugin.name == "sha256":
         client.call("hash1")
         client.call("hash2")

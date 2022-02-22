@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+// apt install protobuf-c-compiler protobuf-compiler
+// protoc-c --c_out=. message.proto && protoc --python_out=. message.proto
+
+message RequestGetVersion {
+};
+
+message ResponseGetVersion {
+  string version = 1;
+};
+
+message RequestGetPubKey {
+  repeated uint32 path = 1;
+  bool confirm = 2;
+  bool get_chain_code = 3;
+};
+
+message ResponseGetPubKey {
+  bool approved = 1;
+  bytes pubkey = 2;
+  bytes address = 3;
+  bytes chain_code = 4;
+};
+
+message RequestSignTx {
+  bytes tx = 1;
+};
+
+message ResponseSignTx {
+  bool approved = 1;
+  bytes signature = 2;
+};
+
+message ResponseError {
+  string error_msg = 1;
+};
+
+message Request {
+  oneof message_oneof {
+    RequestGetVersion get_version = 1;
+    RequestGetPubKey get_pubkey = 2;
+    RequestSignTx sign_tx = 3;
+  };
+}
+
+message Response {
+  oneof message_oneof {
+    ResponseGetVersion get_version = 1;
+    ResponseGetPubKey get_pubkey = 2;
+    ResponseSignTx sign_tx = 3;
+    ResponseError error = 4;
+  };
+}
