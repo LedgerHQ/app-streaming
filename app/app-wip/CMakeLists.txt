@@ -1,4 +1,3 @@
-add_link_options(-static -nostdlib)
 add_executable(app-wip test.c)
 add_dependencies(app-wip sdk ux)
 # XXX: order of target link libraries seems important to avoid the following

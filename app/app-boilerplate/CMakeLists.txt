@@ -1,4 +1,3 @@
-add_link_options(-static -nostdlib)
 include_directories(protobuf/ /usr/local/include/)
 link_directories(/usr/local/lib)
 
