@@ -89,7 +89,7 @@ int main(void)
 
     while (1) {
         uint8_t buf[8192];
-        size_t n = xrecv(buf, sizeof(buf));
+        xrecv(buf, sizeof(buf));
     }
 
     return 0;

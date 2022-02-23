@@ -12,7 +12,7 @@
 #include "stream.h"
 #include "types.h"
 
-#include "sdk/ecall.h"
+#include "sdk/ecall-nr.h"
 
 int saved_apdu_state;
 
