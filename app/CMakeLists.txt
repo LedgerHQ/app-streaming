@@ -26,6 +26,9 @@ if (NOT NATIVE)
 
 else()
   message(STATUS "Building native binaries")
+
+  add_compile_options(-fsanitize=address)
+  add_link_options(-fsanitize=address)
 endif()
 
 include_directories(./ sdk/)
