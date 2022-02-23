@@ -1,5 +1,5 @@
 add_library(sdk
-        ecall-riscv.c
-        sdk.c
-        start.S
-        std.c)
+        risc-v/ecall-riscv.c
+        risc-v/start.S
+        risc-v/std.c
+        sdk.c)
