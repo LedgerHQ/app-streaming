@@ -10,5 +10,4 @@ add_library(ux
         ux_layout_pb.c
         ux_layout_pn.c
         ux_layout_utils.c
-        ux_stack.c
-        ../sdk/math.c)
+        ux_stack.c)
