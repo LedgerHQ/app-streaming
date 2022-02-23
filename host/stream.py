@@ -5,13 +5,13 @@ https://github.com/LedgerHQ/ledgerctl/blob/master/ledgerwallet/client.py
 """
 
 import argparse
-import importlib.util
 import logging
 import os
 import sys
 
 from elf import Elf
 from merkletree import Entry, MerkleTree
+from server import Server
 
 
 class Page:
@@ -72,9 +72,8 @@ class Stream:
     HEAP_SIZE = 0x10000
     STACK_SIZE = 0x10000
 
-    def __init__(self, path, plugin_path=None):
+    def __init__(self, path):
         self.elf = Elf(path)
-        self.plugin = Stream.load_plugin(plugin_path)
 
         self.pages = {}
         self.merkletree = MerkleTree()
@@ -99,21 +98,6 @@ class Stream:
         self.send_buffer_counter = 0
         self.recv_buffer = b""
         self.recv_buffer_counter = 0
-
-    @staticmethod
-    def load_plugin(plugin_path):
-        if plugin_path:
-            module_name = "plugin"
-            spec = importlib.util.spec_from_file_location(module_name, plugin_path)
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[module_name] = module
-            spec.loader.exec_module(module)
-        else:
-            import plugin
-
-        from plugin import Plugin
-
-        return Plugin()
 
     def _get_page(self, addr):
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
@@ -238,7 +222,7 @@ class Stream:
 
         if stop:
             logger.info(f"received buffer: {self.send_buffer} (len: {len(self.send_buffer)})")
-            self.plugin.recv(self.send_buffer)
+            self.server.send_response(self.send_buffer)
             self.send_buffer = b""
             self.send_buffer_counter = 0
 
@@ -249,7 +233,8 @@ class Stream:
         assert len(data) == 6
 
         if len(self.recv_buffer) == 0:
-            self.recv_buffer = self.plugin.send()
+            self.server = Server()
+            self.recv_buffer = self.server.recv_request()
 
         counter = int.from_bytes(data[:4], "little")
         maxsize = int.from_bytes(data[4:], "little")
@@ -290,7 +275,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="RISC-V vm companion.")
     parser.add_argument("--app", type=str, required=True, help="application path")
-    parser.add_argument("--plugin", type=str, help=".py plugin file")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
     parser.add_argument("--verbose", action="store_true", help="")
 
@@ -301,7 +285,7 @@ if __name__ == "__main__":
 
     import_ledgerwallet(args.speculos)
 
-    stream = Stream(args.app, args.plugin)
+    stream = Stream(args.app)
     client = get_client()
 
     status_word, data = stream.init_app()

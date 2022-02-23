@@ -25,8 +25,10 @@ static void hexdump(const uint8_t *in, char *out, size_t size)
 
 int main(void)
 {
-    size_t size;
+    uint32_t size;
     xrecvall((uint8_t *)&size, sizeof(size));
+
+    xsend((uint8_t *)"ok", 2);
 
     uint8_t *p = malloc(size);
     xrecvall(p, size);

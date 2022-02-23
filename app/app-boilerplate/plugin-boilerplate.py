@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 
@@ -8,39 +7,36 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 # apt install python3-protobuf
 from protobuf import message_pb2  # noqa: E402
 
-logger = logging.getLogger("plugin")
-
 
 class Plugin:
     def __init__(self):
-        logger.debug("plugin loaded")
-        self.state = 0
+        self.name = "boilerplate"
 
-    def recv(self, data):
+    def get_version_prepare_request(self):
+        get_version = message_pb2.MessageGetVersion()
+        message = message_pb2.Message()
+        message.get_version.CopyFrom(get_version)
+        assert message.WhichOneof("message_oneof") == "get_version"
+        return message.SerializeToString()
+
+    def get_version_parse_response(self, data):
         response = message_pb2.Response()
         response.ParseFromString(data)
+        assert response.WhichOneof("message_oneof") == "get_version"
+        print(f"version: {response.get_version.version}")
+        return response
 
-        if self.state == 0:
-            assert response.WhichOneof("message_oneof") == "get_version"
-            print(f"version: {response.get_version.version}")
-        elif self.state == 1:
-            assert response.WhichOneof("message_oneof") == "sign_tx"
-            print(f"version: {response.sign_tx.signature.hex()}")
-
-        self.state += 1
-
-    def send(self):
+    def sign_tx_prepare_request(self):
+        sign_tx = message_pb2.MessageSignTx()
+        sign_tx.tx = b"ThisIsAComplicatedTransaction"
         message = message_pb2.Message()
-        if self.state == 0:
-            get_version = message_pb2.MessageGetVersion()
-            message.get_version.CopyFrom(get_version)
-            assert message.WhichOneof("message_oneof") == "get_version"
-        elif self.state == 1:
-            sign_tx = message_pb2.MessageSignTx()
-            sign_tx.tx = b"ThisIsAComplicatedTransaction"
-            message.sign_tx.CopyFrom(sign_tx)
-            assert message.WhichOneof("message_oneof") == "sign_tx"
-        else:
-            assert False
-
+        message.sign_tx.CopyFrom(sign_tx)
+        assert message.WhichOneof("message_oneof") == "sign_tx"
         return message.SerializeToString()
+
+    def sign_tx_parse_response(self, data):
+        response = message_pb2.Response()
+        response.ParseFromString(data)
+        assert response.WhichOneof("message_oneof") == "sign_tx"
+        print(f"signature: {response.sign_tx.signature.hex()}")
+        return response
