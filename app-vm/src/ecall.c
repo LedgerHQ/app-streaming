@@ -52,16 +52,6 @@ static void parse_apdu(const struct response_s *response, size_t size) {
     }
 }
 
-static void debug_write(char *msg)
-{
-  asm volatile (
-     "movs r0, #0x04\n"
-     "movs r1, %0\n"
-     "svc      0xab\n"
-     :: "r"(msg) : "r0", "r1"
-  );
-}
-
 /*
  * Receives at most size bytes.
  *
@@ -431,9 +421,6 @@ bool ecall(struct rv_cpu *cpu)
     bool stop = false;
 
     switch (nr) {
-    case 1:
-        debug_write((char *)cpu->regs[10]);
-        break;
     case ECALL_XSEND:
         xsend(cpu->regs[10], cpu->regs[11]);
         break;
