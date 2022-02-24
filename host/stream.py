@@ -138,6 +138,7 @@ class Stream:
         logger.debug(f"stack: {self.stack_start:#x} - {self.stack_end:#x}")
 
         data = b"\x00" * 3  # for alignment
+        data += b"Ethereum".ljust(32, b"\x00") # XXX TODO: set the correct name
         data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
         data += self.merkletree.root_hash()
         data += len(self.merkletree.entries).to_bytes(4, "little")

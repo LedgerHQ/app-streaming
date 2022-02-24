@@ -13,6 +13,7 @@
 #include "loading.h"
 #include "merkle.h"
 #include "stream.h"
+#include "ui.h"
 
 #ifdef TARGET_NANOX
 #define NPAGE_CODE  70
@@ -72,6 +73,7 @@ struct app_s {
 
 /* this message comes from the client */
 struct cmd_app_init_s {
+    char name[32];
     uint32_t pc;
     uint32_t bss;
 
@@ -384,6 +386,7 @@ void stream_init_app(uint8_t *buffer)
 
     lfsr_init();
     app_loading_stop();
+    set_app_name(cmd->name);
 }
 
 static void u32hex(uint32_t n, char *buf)
