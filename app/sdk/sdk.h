@@ -14,3 +14,5 @@ int wait_button(void);
 
 void app_loading_start(void);
 bool app_loading_stop(void);
+
+__attribute__((noreturn)) void fatal(char *msg);

@@ -36,6 +36,11 @@ struct cmd_exit_s {
     uint16_t cmd;
 } __attribute__((packed));
 
+struct cmd_fatal_s {
+    uint8_t msg[254];
+    uint16_t cmd;
+} __attribute__((packed));
+
 struct response_s {
     uint8_t cla;
     uint8_t ins;
@@ -209,6 +214,40 @@ static void sha256sum(uint32_t data_addr, size_t size, uint32_t digest_addr)
         digest_addr += n;
         size -= n;
     }
+}
+
+static void sys_fatal(uint32_t msg_addr)
+{
+    struct cmd_fatal_s *cmd = (struct cmd_fatal_s *)G_io_apdu_buffer;
+
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd) + 1, "invalid IO_APDU_BUFFER_SIZE");
+
+    /* copy error message, which might be on 2 contiguous pages */
+    size_t max_size = sizeof(cmd->msg);
+
+    uint8_t *p = cmd->msg;
+    size_t n = PAGE_SIZE - (msg_addr - PAGE_START(msg_addr));
+    if (n > max_size) {
+        n = max_size;
+    }
+    copy_guest_buffer(msg_addr, p, n);
+
+    uint8_t *q = memchr(p, '\x00', n);
+    if (q == NULL) {
+        msg_addr += n;
+        p += n;
+        max_size -= n;
+        copy_guest_buffer(msg_addr, p, max_size);
+        q = memchr(p, '\x00', n);
+    }
+
+    if (q != NULL) {
+        memset(q, '\x00', sizeof(cmd->msg) - (q - p));
+    }
+
+    cmd->cmd = (CMD_FATAL >> 8) | ((CMD_FATAL & 0xff) << 8);
+
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, sizeof(*cmd));
 }
 
 void sys_exit(uint32_t code)
@@ -441,6 +480,10 @@ bool ecall(struct rv_cpu *cpu)
     bool stop = false;
 
     switch (nr) {
+    case ECALL_FATAL:
+        sys_fatal(cpu->regs[10]);
+        stop = true;
+        break;
     case ECALL_XSEND:
         xsend(cpu->regs[10], cpu->regs[11]);
         break;

@@ -170,11 +170,26 @@ __attribute__((noreturn)) void ecall_exit(int status)
     while (1);
 }
 
+__attribute__((noreturn)) void ecall_fatal(char *msg)
+{
+    register uint32_t a0 asm ("a0") = (uint32_t)msg;
+    asm volatile (
+        "li t0, %0\n"
+        "ecall\n"
+        :: "i"(ECALL_FATAL), "r"(a0) : "t0"
+    );
+
+    while (1);
+}
+
 void app_loading_start(void) \
     __attribute__((alias("ecall_app_loading_start")));
 
 bool app_loading_stop(void) \
     __attribute__((alias("ecall_app_loading_stop")));
+
+__attribute__((noreturn)) void fatal(char *) \
+    __attribute__((alias("ecall_fatal")));
 
 void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest) \
     __attribute__((alias("ecall_sha256sum")));

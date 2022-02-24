@@ -20,6 +20,7 @@ typedef struct {
 } __attribute__((packed)) packed_bagl_component_t;
 
 __attribute__((noreturn)) void ecall_exit(int status);
+__attribute__((noreturn)) void ecall_fatal(char *msg);
 size_t ecall_xrecv(uint8_t *buffer, size_t size);
 void ecall_bagl_draw_with_context(packed_bagl_component_t *component, const void *context, unsigned short context_length, unsigned char context_encoding);
 void ecall_bagl_hal_draw_bitmap_within_rect(int x, int y, unsigned int width, unsigned int height, const unsigned int * colors, unsigned int bit_per_pixel, const unsigned char * bitmap, unsigned int bitmap_length_bits);

@@ -268,6 +268,15 @@ class Stream:
         code = int.from_bytes(data[:4], "little")
         logger.warn(f"app exited with code {code}")
 
+    def handle_fatal(self, data):
+        assert len(data) == 254
+
+        n = data.find(b"\x00")
+        if n != -1:
+            data = data[:n]
+        code = int.from_bytes(data[:4], "little")
+        logger.warn(f"app encountered a fatal error: {data}")
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
@@ -301,6 +310,9 @@ if __name__ == "__main__":
             status_word, data = stream.handle_recv_buffer(data)
         elif status_word == 0x6501:
             stream.handle_exit(data)
+            break
+        elif status_word == 0x6601:
+            stream.handle_fatal(data)
             break
         else:
             logger.error(f"unexpected status {status_word:#06x}, {data}")

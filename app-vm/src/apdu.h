@@ -16,5 +16,6 @@ enum cmd_stream_e {
     CMD_SEND_BUFFER = 0x6301,
     CMD_RECV_BUFFER = 0x6401,
     CMD_EXIT = 0x6501,
+    CMD_FATAL = 0x6601,
 };
 
