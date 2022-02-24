@@ -44,13 +44,21 @@ static void ui_init(const ux_flow_step_t * const *steps)
 /* return true if the user approved the tx, false otherwise */
 bool ui_sign_tx_validation(void)
 {
+    bool app_loading;
+
     validated = 0;
+
+    app_loading = app_loading_stop();
 
     ui_init(ux_sign_tx_flow);
 
     while (validated == 0) {
         int button = wait_button();
         ui_button_helper(button);
+    }
+
+    if (app_loading) {
+        app_loading_start();
     }
 
     return (validated == 1);

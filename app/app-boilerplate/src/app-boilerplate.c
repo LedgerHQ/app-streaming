@@ -87,6 +87,8 @@ int main(void)
         uint8_t buf[MAX_MSG_SIZE];
         size_t msg_len = xrecv(buf, MAX_MSG_SIZE);
 
+        app_loading_start();
+
         /* unpack it */
         Message *msg = message__unpack(NULL, msg_len, buf);
         if (msg == NULL) {
@@ -108,6 +110,8 @@ int main(void)
         /* pack the response */
         size_t size = response__pack(&response, buf2);
         free_response(&response);
+
+        app_loading_stop();
 
         /* send it */
         xsend(buf2, size);

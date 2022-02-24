@@ -6,6 +6,9 @@
 #include "ui.h"
 #include "sdk.h"
 
+#include <stdlib.h>
+#include <memory.h>
+
 static void set_tx_info(MessageSignTx *msg)
 {
     size_t size = msg->tx.len;
