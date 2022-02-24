@@ -16,6 +16,8 @@ int wait_button(void);
 void app_loading_start(void);
 bool app_loading_stop(void);
 
+void ux_idle(void);
+
 __attribute__((noreturn)) void fatal(char *msg);
 
 static inline void *xmalloc(size_t size)

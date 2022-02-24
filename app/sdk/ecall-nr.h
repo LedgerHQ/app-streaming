@@ -16,6 +16,7 @@
 #define ECALL_BAGL_DRAW        10
 #define ECALL_LOADING_START    11
 #define ECALL_LOADING_STOP     12
+#define ECALL_UX_IDLE          13
 
 #define ECALL_DERIVE_NODE_BIP32     100
 #define ECALL_CX_ECFP_GENERATE_PAIR 101

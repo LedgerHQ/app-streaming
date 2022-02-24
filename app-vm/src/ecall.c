@@ -12,6 +12,7 @@
 #include "rv.h"
 #include "stream.h"
 #include "types.h"
+#include "ui.h"
 
 #include "sdk/ecall-nr.h"
 
@@ -471,6 +472,11 @@ static void sys_bagl_draw_with_context(uint32_t component_addr, uint32_t context
     bagl_draw_with_context(&component, context, context_length, context_encoding);
 }
 
+void sys_ux_idle(void)
+{
+    ui_app_idle();
+}
+
 /*
  * Return true if the ecall either exit() or unsupported, false otherwise.
  */
@@ -519,6 +525,9 @@ bool ecall(struct rv_cpu *cpu)
         break;
     case ECALL_LOADING_STOP:
         cpu->regs[10] = app_loading_stop();
+        break;
+    case ECALL_UX_IDLE:
+        sys_ux_idle();
         break;
     default:
         stop = ecall_bolos(cpu, nr);

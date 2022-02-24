@@ -148,6 +148,7 @@ ECALL0(ecall_wait_button, ECALL_WAIT_BUTTON, int)
 ECALL0(ecall_app_loading_stop, ECALL_LOADING_STOP, bool)
 ECALL0v(ecall_app_loading_start, ECALL_LOADING_START)
 ECALL0v(ecall_screen_update, ECALL_SCREEN_UPDATE)
+ECALL0v(ecall_ux_idle, ECALL_UX_IDLE)
 ECALL2(ecall_xrecv, ECALL_XRECV, size_t, uint8_t *, buffer, size_t, size)
 ECALL2v(ecall_xsend, ECALL_XSEND, const uint8_t *, buffer, size_t, size)
 ECALL3(ecall_ecfp_generate_pair, ECALL_CX_ECFP_GENERATE_PAIR, cx_err_t, cx_curve_t, curve, cx_ecfp_public_key_t *, pubkey, cx_ecfp_private_key_t *, privkey)
@@ -205,6 +206,9 @@ int wait_button(void) \
 
 void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest) \
     __attribute__((alias("ecall_sha3_256")));
+
+void ux_idle(void) \
+    __attribute__((alias("ecall_ux_idle")));
 
 cx_err_t ecfp_generate_pair(cx_curve_t curve, cx_ecfp_public_key_t *pubkey, cx_ecfp_private_key_t *privkey) \
     __attribute__((alias("ecall_ecfp_generate_pair")));
