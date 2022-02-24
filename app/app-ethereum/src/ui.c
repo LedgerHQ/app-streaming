@@ -7,11 +7,6 @@
 
 #include "ui.h"
 
-UX_STEP_VALID(ux_menu_ready_step, pn, exit(0), {&C_boilerplate_logo, "Ethereum app"});
-
-UX_FLOW(ux_menu_main_flow,
-        &ux_menu_ready_step);
-
 static int validated;
 static char g_ux_get_pubkey_full_address[64];
 
@@ -64,12 +59,9 @@ bool ui_get_pubkey_validation(void)
 
     if (app_loading) {
         app_loading_start();
+    } else {
+        ux_idle();
     }
 
     return (validated == 1);
-}
-
-void ui_menu_main(void)
-{
-    ui_init(ux_menu_main_flow);
 }

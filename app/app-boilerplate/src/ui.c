@@ -6,11 +6,6 @@
 
 #include "ui.h"
 
-UX_STEP_VALID(ux_menu_ready_step, pn, exit(0), {&C_boilerplate_logo, "Boilerplate app"});
-
-UX_FLOW(ux_menu_main_flow,
-        &ux_menu_ready_step);
-
 static int validated;
 char g_ux_sign_tx_2_step_tx[16];
 
@@ -59,12 +54,9 @@ bool ui_sign_tx_validation(void)
 
     if (app_loading) {
         app_loading_start();
+    } else {
+        ux_idle();
     }
 
     return (validated == 1);
-}
-
-void ui_menu_main(void)
-{
-    ui_init(ux_menu_main_flow);
 }

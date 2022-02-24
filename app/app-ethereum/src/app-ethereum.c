@@ -94,7 +94,7 @@ static void free_response(Response *response)
 
 int main(void)
 {
-    ui_menu_main();
+    ux_idle();
 
     while (1) {
         /* receive buffer */
@@ -132,7 +132,7 @@ int main(void)
         xsend(buf2, size);
         free(buf2);
 
-        ui_menu_main();
+        ux_idle();
     }
 
     return 0;
