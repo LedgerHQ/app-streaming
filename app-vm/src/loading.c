@@ -3,10 +3,14 @@
 #include "loading.h"
 #include "ux.h"
 
-static size_t app_loading_counter;
-static bool app_loading;
+#define HOST_EXCHANGES_THRESHOLD 5
+#define INSTRUCTIONS_THRESHOLD 500
 
 #define ARRAYLEN(array) (sizeof(array) / sizeof(array[0]))
+
+static size_t app_loading_counter;
+static size_t host_exchanges_counter;
+static bool app_loading;
 
 typedef struct ux_layout_p_params_s {
     const bagl_icon_details_t* icon;
@@ -78,6 +82,7 @@ void app_loading_start(void)
 {
     app_loading = true;
     app_loading_counter = 0;
+    host_exchanges_counter = 0;
 
     memset(&G_ux, 0, sizeof(G_ux));
     ux_stack_push();
@@ -94,13 +99,32 @@ bool app_loading_stop(void)
     }
 }
 
-void app_loading_update_ui(void)
+void app_loading_update_ui(bool host_exchange)
 {
     if (!app_loading) {
         return;
     }
 
-    ux_flow_next();
+    bool update_ui = true;
+
+    /* UI updates slow down the app. Don't update the UI for each exchange with
+     * the host. */
+    if (host_exchange) {
+        host_exchanges_counter++;
+
+        if (host_exchanges_counter % HOST_EXCHANGES_THRESHOLD != 0) {
+            update_ui = false;
+        }
+    } else {
+        if (app_loading_counter % INSTRUCTIONS_THRESHOLD != 0) {
+            update_ui = false;
+        }
+    }
+
+    if (update_ui) {
+        ux_flow_next();
+    }
+
 }
 
 void app_loading_inc_counter(void)
@@ -110,8 +134,5 @@ void app_loading_inc_counter(void)
     }
 
     app_loading_counter++;
-
-    if (app_loading_counter % 1000 == 0) {
-        app_loading_update_ui();
-    }
+    app_loading_update_ui(false);
 }

@@ -186,6 +186,8 @@ void stream_request_page(struct page_s *page, bool read_only)
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
 
+    app_loading_update_ui(true);
+
     /* 1. retrieve page data */
 
     cmd->addr = page->addr;
@@ -269,7 +271,7 @@ void stream_commit_page(struct page_s *page, bool insert)
     cx_hmac_sha256_t hmac_sha256_ctx;
     size_t size;
 
-    app_loading_update_ui();
+    app_loading_update_ui(true);
 
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd1), "invalid IO_APDU_BUFFER_SIZE");
 
@@ -488,8 +490,6 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     if (find_page(addr, pages, npage, &page)) {
         return page;
     }
-
-    app_loading_update_ui();
 
     /* don't commit page if it never was retrieved (its address is zero) */
     if (writeable && page->addr != 0) {
