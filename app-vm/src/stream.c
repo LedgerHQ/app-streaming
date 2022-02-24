@@ -10,6 +10,7 @@
 #include "apdu.h"
 #include "error.h"
 #include "lfsr.h"
+#include "loading.h"
 #include "merkle.h"
 #include "stream.h"
 
@@ -266,6 +267,8 @@ void stream_commit_page(struct page_s *page, bool insert)
     cx_hmac_sha256_t hmac_sha256_ctx;
     size_t size;
 
+    app_loading_update_ui();
+
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd1), "invalid IO_APDU_BUFFER_SIZE");
 
     /* 1. encryption */
@@ -380,6 +383,7 @@ void stream_init_app(uint8_t *buffer)
     init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
 
     lfsr_init();
+    app_loading_stop();
 }
 
 static void u32hex(uint32_t n, char *buf)
@@ -481,6 +485,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     if (find_page(addr, pages, npage, &page)) {
         return page;
     }
+
+    app_loading_update_ui();
 
     /* don't commit page if it never was retrieved (its address is zero) */
     if (writeable && page->addr != 0) {
@@ -682,7 +688,6 @@ static void debug_cpu(uint32_t pc, uint32_t instruction)
     err(buf);
 }
 
-
 void stream_run_app(void)
 {
     uint32_t instruction;
@@ -693,5 +698,6 @@ void stream_run_app(void)
         //instruction = mem_read(app.cpu.pc, sizeof(instruction));
         //debug_cpu(app.cpu.pc, instruction);
         stop = rv_cpu_execute(&app.cpu, instruction);
+        app_loading_inc_counter();
     } while (!stop);
 }

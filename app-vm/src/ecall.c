@@ -8,6 +8,7 @@
 #include "apdu.h"
 #include "ecall.h"
 #include "error.h"
+#include "loading.h"
 #include "rv.h"
 #include "stream.h"
 #include "types.h"
@@ -470,6 +471,12 @@ bool ecall(struct rv_cpu *cpu)
     case ECALL_BAGL_DRAW:
         sys_bagl_draw_with_context(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13]);
         break;
+    case ECALL_LOADING_START:
+        app_loading_start();
+        break;
+    case ECALL_LOADING_STOP:
+        cpu->regs[10] = app_loading_stop();
+        break;
     default:
         stop = ecall_bolos(cpu, nr);
         break;
@@ -477,4 +484,3 @@ bool ecall(struct rv_cpu *cpu)
 
     return stop;
 }
-

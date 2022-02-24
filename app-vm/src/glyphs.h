@@ -31,6 +31,94 @@ extern unsigned char const C_icon_dashboard_x_bitmap[25];
         extern const bagl_icon_details_t C_icon_dashboard_x;
         #endif // GLYPH_icon_dashboard_x_BPP
         #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_1_BPP
+        #define GLYPH_icon_loading_1_WIDTH 14
+        #define GLYPH_icon_loading_1_HEIGHT 14
+        #define GLYPH_icon_loading_1_BPP 1
+extern unsigned int const C_icon_loading_1_colors[];
+extern unsigned char const C_icon_loading_1_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_1;
+        #endif // GLYPH_icon_loading_1_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_2_BPP
+        #define GLYPH_icon_loading_2_WIDTH 14
+        #define GLYPH_icon_loading_2_HEIGHT 14
+        #define GLYPH_icon_loading_2_BPP 1
+extern unsigned int const C_icon_loading_2_colors[];
+extern unsigned char const C_icon_loading_2_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_2;
+        #endif // GLYPH_icon_loading_2_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_3_BPP
+        #define GLYPH_icon_loading_3_WIDTH 14
+        #define GLYPH_icon_loading_3_HEIGHT 14
+        #define GLYPH_icon_loading_3_BPP 1
+extern unsigned int const C_icon_loading_3_colors[];
+extern unsigned char const C_icon_loading_3_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_3;
+        #endif // GLYPH_icon_loading_3_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_4_BPP
+        #define GLYPH_icon_loading_4_WIDTH 14
+        #define GLYPH_icon_loading_4_HEIGHT 14
+        #define GLYPH_icon_loading_4_BPP 1
+extern unsigned int const C_icon_loading_4_colors[];
+extern unsigned char const C_icon_loading_4_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_4;
+        #endif // GLYPH_icon_loading_4_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_5_BPP
+        #define GLYPH_icon_loading_5_WIDTH 14
+        #define GLYPH_icon_loading_5_HEIGHT 14
+        #define GLYPH_icon_loading_5_BPP 1
+extern unsigned int const C_icon_loading_5_colors[];
+extern unsigned char const C_icon_loading_5_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_5;
+        #endif // GLYPH_icon_loading_5_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_6_BPP
+        #define GLYPH_icon_loading_6_WIDTH 14
+        #define GLYPH_icon_loading_6_HEIGHT 14
+        #define GLYPH_icon_loading_6_BPP 1
+extern unsigned int const C_icon_loading_6_colors[];
+extern unsigned char const C_icon_loading_6_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_6;
+        #endif // GLYPH_icon_loading_6_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_7_BPP
+        #define GLYPH_icon_loading_7_WIDTH 14
+        #define GLYPH_icon_loading_7_HEIGHT 14
+        #define GLYPH_icon_loading_7_BPP 1
+extern unsigned int const C_icon_loading_7_colors[];
+extern unsigned char const C_icon_loading_7_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_7;
+        #endif // GLYPH_icon_loading_7_BPP
+        #endif // HAVE_BAGL
+#ifndef GLYPH_icon_loading_8_BPP
+        #define GLYPH_icon_loading_8_WIDTH 14
+        #define GLYPH_icon_loading_8_HEIGHT 14
+        #define GLYPH_icon_loading_8_BPP 1
+extern unsigned int const C_icon_loading_8_colors[];
+extern unsigned char const C_icon_loading_8_bitmap[25];
+#ifdef HAVE_BAGL
+        #include "bagl.h"
+        extern const bagl_icon_details_t C_icon_loading_8;
+        #endif // GLYPH_icon_loading_8_BPP
+        #endif // HAVE_BAGL
 #ifndef GLYPH_icon_down_BPP
         #define GLYPH_icon_down_WIDTH 7
         #define GLYPH_icon_down_HEIGHT 4
