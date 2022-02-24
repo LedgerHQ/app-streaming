@@ -1,5 +1,5 @@
 # ****************************************************************************
-#    Ledger App Boilerplate
+#    Ledger App RISC-V VM
 #    (c) 2020 Ledger SAS.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,7 @@ endif
 APP_LOAD_PARAMS += --path "44'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
-APPNAME      = "Boilerplate"
+APPNAME      = "RISC-V VM"
 APPVERSION_M = 1
 APPVERSION_N = 0
 APPVERSION_P = 1
