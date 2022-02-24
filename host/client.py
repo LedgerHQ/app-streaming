@@ -61,7 +61,7 @@ class Client:
         data = b""
         while size > 0:
             chunk = s.recv(size)
-            if chunk is None:
+            if not chunk:
                 raise Exception("Server: Connection closed with client")
             data += chunk
             size -= len(chunk)
@@ -72,7 +72,7 @@ class Client:
         data = b""
         while size > 0:
             chunk = fp.read(size)
-            if chunk is None:
+            if not chunk:
                 raise Exception("Server: Connection closed with client")
             data += chunk
             size -= len(chunk)
