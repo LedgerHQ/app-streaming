@@ -1,3 +1,4 @@
+#include "crypto.h"
 #include "ecall.h"
 #include "ecall-nr.h"
 
@@ -64,6 +65,21 @@
         );                                                              \
     }
 
+#define ECALL3(_name, _id, _ret_type, _type0, _arg0, _type1, _arg1, _type2, _arg2) \
+    _ret_type _name(_type0 _arg0, _type1 _arg1, _type2 _arg2)           \
+    {                                                                   \
+        register uint32_t a0 asm ("a0") = (uint32_t)_arg0;              \
+        register uint32_t a1 asm ("a1") = (uint32_t)_arg1;              \
+        register uint32_t a2 asm ("a2") = (uint32_t)_arg2;              \
+        _ret_type ret;                                                  \
+        asm (                                                           \
+             "li t0, %1\n"                                              \
+             "ecall\n"                                                  \
+             : "=r"(ret) : "i"(_id), "r"(a0), "r"(a1), "r"(a2) : "t0", "memory" \
+        );                                                              \
+        return ret;                                                     \
+    }
+
 #define ECALL4v(_name, _id, _type0, _arg0, _type1, _arg1, _type2, _arg2, _type3, _arg3) \
     void _name(_type0 _arg0, _type1 _arg1, _type2 _arg2, _type3 _arg3)  \
     {                                                                   \
@@ -93,6 +109,23 @@
         );                                                              \
     }
 
+#define ECALL5(_name, _id, _ret_type, _type0, _arg0, _type1, _arg1, _type2, _arg2, _type3, _arg3, _type4, _arg4) \
+    _ret_type _name(_type0 _arg0, _type1 _arg1, _type2 _arg2, _type3 _arg3, _type4 _arg4) \
+    {                                                                   \
+        register uint32_t a0 asm ("a0") = (uint32_t)_arg0;              \
+        register uint32_t a1 asm ("a1") = (uint32_t)_arg1;              \
+        register uint32_t a2 asm ("a2") = (uint32_t)_arg2;              \
+        register uint32_t a3 asm ("a3") = (uint32_t)_arg3;              \
+        register uint32_t a4 asm ("a4") = (uint32_t)_arg4;              \
+        _ret_type ret;                                                  \
+        asm (                                                           \
+             "li t0, %1\n"                                              \
+             "ecall\n"                                                  \
+             : "=r"(ret) : "i"(_id), "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4) : "t0", "memory" \
+        );                                                              \
+        return ret;                                                     \
+    }
+
 #define ECALL8v(_name, _id, _type0, _arg0, _type1, _arg1, _type2, _arg2, _type3, _arg3, _type4, _arg4, _type5, _arg5, _type6, _arg6, _type7, _arg7) \
     void _name(_type0 _arg0, _type1 _arg1, _type2 _arg2, _type3 _arg3, _type4 _arg4, _type5 _arg5, _type6 _arg6, _type7 _arg7) \
     {                                                                   \
@@ -115,8 +148,11 @@ ECALL0(ecall_wait_button, ECALL_WAIT_BUTTON, int)
 ECALL0v(ecall_screen_update, ECALL_SCREEN_UPDATE)
 ECALL2(ecall_xrecv, ECALL_XRECV, size_t, uint8_t *, buffer, size_t, size)
 ECALL2v(ecall_xsend, ECALL_XSEND, const uint8_t *, buffer, size_t, size)
+ECALL3(ecall_ecfp_generate_pair, ECALL_CX_ECFP_GENERATE_PAIR, cx_err_t, cx_curve_t, curve, cx_ecfp_public_key_t *, pubkey, cx_ecfp_private_key_t *, privkey)
 ECALL3v(ecall_sha256sum, ECALL_SHA256SUM, const uint8_t *, buffer, size_t, size, uint8_t *, digest)
+ECALL3v(ecall_sha3_256, ECALL_CX_SHA3_256, const uint8_t *, buffer, size_t, size, uint8_t *, digest)
 ECALL4v(ecall_bagl_draw_with_context, ECALL_BAGL_DRAW, packed_bagl_component_t *,component, const void *, context, unsigned short, context_length, unsigned char, context_encoding)
+ECALL5(ecall_derive_node_bip32, ECALL_DERIVE_NODE_BIP32, cx_err_t, cx_curve_t, curve, const unsigned int *, path, size_t, path_count, uint8_t *, private_key, uint8_t *, chain)
 ECALL5v(ecall_bagl_hal_draw_rect, ECALL_UX_RECTANGLE, unsigned int, color, int, x, int, y, unsigned int, width, unsigned int, height)
 ECALL8v(ecall_bagl_hal_draw_bitmap_within_rect, ECALL_BAGL_DRAW_BITMAP, int, x, int, y, unsigned int, width, unsigned int, height, const unsigned int *, colors, unsigned int, bit_per_pixel, const unsigned char *, bitmap, unsigned int, bitmap_length_bits)
 
@@ -143,3 +179,12 @@ void xsend(const uint8_t *buffer, size_t size) \
 
 int wait_button(void) \
     __attribute__((alias("ecall_wait_button")));
+
+void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest) \
+    __attribute__((alias("ecall_sha3_256")));
+
+cx_err_t ecfp_generate_pair(cx_curve_t curve, cx_ecfp_public_key_t *pubkey, cx_ecfp_private_key_t *privkey) \
+    __attribute__((alias("ecall_ecfp_generate_pair")));
+
+cx_err_t derive_node_bip32(cx_curve_t curve, const unsigned int *path, size_t path_count, uint8_t *private_key, uint8_t *chain) \
+    __attribute__((alias("ecall_derive_node_bip32")));

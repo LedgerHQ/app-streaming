@@ -210,7 +210,7 @@ static void sha256sum(uint32_t data_addr, size_t size, uint32_t digest_addr)
     }
 }
 
-static void sys_exit(uint32_t code)
+void sys_exit(uint32_t code)
 {
     struct cmd_exit_s *cmd = (struct cmd_exit_s *)G_io_apdu_buffer;
 
@@ -231,7 +231,7 @@ static void sys_screen_update(void)
     screen_update();
 }
 
-static void copy_guest_buffer(uint32_t addr, void *buf, size_t size)
+void copy_guest_buffer(uint32_t addr, void *buf, size_t size)
 {
     uint8_t *dst = buf;
 
@@ -243,6 +243,25 @@ static void copy_guest_buffer(uint32_t addr, void *buf, size_t size)
         uint8_t *buffer;
         buffer = get_buffer(addr, n, false);
         memcpy(dst, buffer, n);
+
+        addr += n;
+        dst += n;
+        size -= n;
+    }
+}
+
+void copy_host_buffer(uint32_t addr, void *buf, size_t size)
+{
+    uint8_t *dst = buf;
+
+    while (size > 0) {
+        size_t n;
+        n = PAGE_SIZE - (addr - PAGE_START(addr));
+        n = MIN(size, n);
+
+        uint8_t *buffer;
+        buffer = get_buffer(addr, n, true);
+        memcpy(buffer, dst, n);
 
         addr += n;
         dst += n;
@@ -452,8 +471,7 @@ bool ecall(struct rv_cpu *cpu)
         sys_bagl_draw_with_context(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13]);
         break;
     default:
-        sys_exit(0xdeaddead);
-        stop = true;
+        stop = ecall_bolos(cpu, nr);
         break;
     }
 

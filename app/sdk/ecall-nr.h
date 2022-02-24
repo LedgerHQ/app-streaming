@@ -13,3 +13,7 @@
 #define ECALL_BAGL_DRAW_BITMAP 8
 #define ECALL_WAIT_BUTTON      9
 #define ECALL_BAGL_DRAW        10
+
+#define ECALL_DERIVE_NODE_BIP32     100
+#define ECALL_CX_ECFP_GENERATE_PAIR 101
+#define ECALL_CX_SHA3_256           102
