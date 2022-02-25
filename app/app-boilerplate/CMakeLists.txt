@@ -11,6 +11,6 @@ add_dependencies(app-boilerplate
                  sdk
                  ux)
 target_link_libraries(app-boilerplate PRIVATE
+                      protobuf-c
                       sdk
-                      ux
-                      protobuf-c)
+                      ux)

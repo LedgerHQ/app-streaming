@@ -26,7 +26,7 @@ if (NOT NATIVE)
 
   include_directories(/usr/local/riscv32-unknown-linux-gnu/include/)
   link_directories(/usr/local/riscv32-unknown-linux-gnu/lib)
-  link_libraries(c gcc)
+  link_libraries(c)
 
 else()
   message(STATUS "Building native binaries")
