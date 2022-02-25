@@ -44,6 +44,11 @@ Build the docker image to have a ready-to-use RISC-V toolchain:
 docker build -t riscv .
 ```
 
+Retrieve nanopb git submodule:
+```console
+git submodule update --init
+```
+
 Build the RISC-V app using the `docker.sh` script:
 
 ```console

@@ -35,6 +35,9 @@ else()
   add_link_options(-fsanitize=address)
 endif()
 
+# Compute the absolute path of nanopb/ and store it in the variable NANOPB_PATH
+file(REAL_PATH nanopb/ NANOPB_PATH)
+
 include_directories(./ sdk/)
 
 add_subdirectory(sdk)
