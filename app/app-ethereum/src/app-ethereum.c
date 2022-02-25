@@ -14,7 +14,7 @@
 
 #define MAX_REQ_SIZE 1024
 
-static char *handle_get_version(RequestGetVersion *req, ResponseGetVersion *response)
+static const char *handle_get_version(const RequestGetVersion *req, ResponseGetVersion *response)
 {
     strncpy(response->version, "version 1.33.7", sizeof(response->version));
     return NULL;
@@ -29,7 +29,7 @@ static void set_error(Response *response, const char *msg)
     error->error_msg[sizeof(error->error_msg) - 1] = '\x00';
 }
 
-static void handle_req(Request *req, Response *response)
+static void handle_req(const Request *req, Response *response)
 {
     const char *error;
 
@@ -61,7 +61,7 @@ int main(void)
         Request req;
 
         uint8_t buf[MAX_REQ_SIZE];
-        size_t req_len = xrecv(buf, sizeof(buf));
+        const size_t req_len = xrecv(buf, sizeof(buf));
 
         app_loading_start();
 

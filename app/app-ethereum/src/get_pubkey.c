@@ -10,9 +10,9 @@
 
 #define CHAIN_CODE_SIZE 32
 
-static char *derive_pubkey(const uint32_t *path, size_t path_count, cx_ecfp_public_key_t *pubkey, uint8_t *chain_code)
+static const char *derive_pubkey(const uint32_t *path, size_t path_count, cx_ecfp_public_key_t *pubkey, uint8_t *chain_code)
 {
-    char *error = NULL;
+    const char *error = NULL;
 
     uint8_t privkey_data[32];
     if (derive_node_bip32(CX_CURVE_256K1, path, path_count, privkey_data, chain_code) != CX_OK) {
@@ -34,13 +34,11 @@ static char *derive_pubkey(const uint32_t *path, size_t path_count, cx_ecfp_publ
     return error;
 }
 
-char *handle_get_pubkey(RequestGetPubKey *req, ResponseGetPubKey *response)
+const char *handle_get_pubkey(const RequestGetPubKey *req, ResponseGetPubKey *response)
 {
-    char *error = NULL;
-
     cx_ecfp_public_key_t pubkey;
     uint8_t chain_code[CHAIN_CODE_SIZE];
-    error = derive_pubkey(req->path, req->path_count, &pubkey, chain_code);
+    const char *error = derive_pubkey(req->path, req->path_count, &pubkey, chain_code);
     if (error != NULL) {
         goto end;
     }

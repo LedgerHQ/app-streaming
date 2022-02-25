@@ -8,6 +8,6 @@
 
 #include "message.pb.h"
 
-char *handle_get_pubkey(RequestGetPubKey *req, ResponseGetPubKey *response);
+const char *handle_get_pubkey(const RequestGetPubKey *req, ResponseGetPubKey *response);
 
 void getEthAddressStringFromKey(cx_ecfp_public_key_t *publicKey, char *out, uint64_t chainId);
