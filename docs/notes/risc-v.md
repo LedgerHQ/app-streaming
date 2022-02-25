@@ -11,6 +11,8 @@
 - [“C” Standard Extension for Compressed Instructions, Version 2.0](https://five-embeddev.com/riscv-isa-manual/latest/c.html]
 - https://riscv.org/wp-content/uploads/2015/11/riscv-compressed-spec-v1.9.pdf
 - https://github.com/riscv/riscv-opcodes/blob/master/opcodes-rvc
+- https://hackmd.io/@kksweet8845/rv32emu
+- https://github.com/riscv-software-src/riscv-tests
 
 ```
   # RV32I    Base Integer Instruction Set, 32-bit

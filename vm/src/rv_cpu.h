@@ -15,6 +15,7 @@ typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
+#define SUPPORT_RISCV_C
 #define RV_REG_COUNT (32)
 
 enum {
@@ -104,7 +105,46 @@ enum rv_op {
     RV_OP_DIVU,
     RV_OP_REM,
     RV_OP_REMU,
+#ifdef SUPPORT_RISCV_C
+    RV_OP_C_ADDI4SPN,
+    RV_OP_C_FLD,
     RV_OP_C_LW,
+    RV_OP_C_FLW,
+    RV_OP_C_FSD,
+    RV_OP_C_SW,
+    RV_OP_C_FSW,
+    RV_OP_C_NOP,
+    RV_OP_C_ADDI,
+    RV_OP_C_JAL,
+    RV_OP_C_ADDIW,
+    RV_OP_C_LI,
+    RV_OP_C_ADDI16SP,
+    RV_OP_C_LUI,
+    RV_OP_C_SRLI,
+    RV_OP_C_SRAI,
+    RV_OP_C_SRAI64,
+    RV_OP_C_ANDI,
+    RV_OP_C_SUB,
+    RV_OP_C_XOR,
+    RV_OP_C_OR,
+    RV_OP_C_AND,
+    RV_OP_C_J,
+    RV_OP_C_JR,
+    RV_OP_C_BEQZ,
+    RV_OP_C_BNEZ,
+    RV_OP_C_SLLI,
+    RV_OP_C_SLLI64,
+    RV_OP_C_FLDSP,
+    RV_OP_C_LWSP,
+    RV_OP_C_FLWSP,
+    RV_OP_C_MV,
+    RV_OP_C_EBREAK,
+    RV_OP_C_JALR,
+    RV_OP_C_ADD,
+    RV_OP_C_FSDSP,
+    RV_OP_C_SWSP,
+    RV_OP_C_FSWSP,
+#endif
 };
 
 union rv_inst {
@@ -163,6 +203,61 @@ union rv_inst {
         u32 i10_1  : 10;
         i32 i20    : 1; // Sign extension
     } j;
+#ifdef SUPPORT_RISCV_C
+    struct {
+        u32 opcode : 2;
+        u32 rs2    : 5;
+        u32 rs1    : 5;
+        u32 funct4 : 4;
+    } cr;
+    struct {
+        u32 opcode : 2;
+        u32 imm1   : 5;
+        u32 rs1    : 5;
+        u32 imm2   : 5;
+        u32 funct3 : 3;
+    } ci;
+    struct {
+        u32 opcode : 2;
+        u32 rs2    : 5;
+        u32 imm2   : 6;
+        u32 funct3 : 3;
+    } css;
+    struct {
+        u32 opcode : 2;
+        u32 rdp    : 3;
+        u32 imm    : 8;
+        u32 funct3 : 3;
+    } ciw;
+    struct {
+        u32 opcode : 2;
+        u32 rdp    : 3;
+        u32 imm1   : 2;
+        u32 rsp    : 3;
+        u32 imm2   : 3;
+        u32 funct3 : 3;
+    } cl;
+    struct {
+        u32 opcode : 2;
+        u32 rs2p   : 3;
+        u32 imm1   : 2;
+        u32 rs1p   : 3;
+        u32 imm2   : 3;
+        u32 funct3 : 3;
+    } cs;
+    struct {
+        u32 opcode : 2;
+        u32 offset1: 5;
+        u32 rs1p   : 3;
+        u32 offset2: 3;
+        u32 funct3 : 3;
+    } cb;
+    struct {
+        u32 opcode : 2;
+        u32 target : 11;
+        u32 funct3 : 3;
+    } cj;
+#endif
 };
 
 struct rv_cpu {
