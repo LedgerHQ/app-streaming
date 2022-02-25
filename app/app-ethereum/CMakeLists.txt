@@ -1,5 +1,4 @@
-include_directories(protobuf/ /usr/local/include/ ../nanopb)
-link_directories(/usr/local/lib)
+include_directories(protobuf/ ${NANOPB_PATH})
 
 add_executable(app-ethereum
                src/app-ethereum.c
