@@ -2,93 +2,53 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <pb_decode.h>
+#include <pb_encode.h>
+#include <pb_common.h>
+
+#include "message.pb.h"
+
 #include "app-ethereum.h"
 #include "ui.h"
 #include "sdk.h"
 
 #define MAX_REQ_SIZE 1024
 
-static ResponseGetVersion *handle_get_version(RequestGetVersion *req)
+static char *handle_get_version(RequestGetVersion *req, ResponseGetVersion *response)
 {
-    ALLOC_RESPONSE(ResponseGetVersion, RESPONSE_GET_VERSION__INIT);
-
-    response->version = strdup("version 1.33.7");
-
-    return response;
+    strncpy(response->version, "version 1.33.7", sizeof(response->version));
+    return NULL;
 }
 
-static ResponseError *handle_error(void)
+static void set_error(Response *response, const char *msg)
 {
-    ALLOC_RESPONSE(ResponseError, RESPONSE_ERROR__INIT);
+    response->which_message_oneof = Response_error_tag;
 
-    response->error_msg = strdup("invalid message");
-
-    return response;
+    ResponseError *error = &response->message_oneof.error;
+    strncpy(error->error_msg, msg, sizeof(error->error_msg));
+    error->error_msg[sizeof(error->error_msg) - 1] = '\x00';
 }
 
 static void handle_req(Request *req, Response *response)
 {
-    switch (req->message_oneof_case) {
-        case REQUEST__MESSAGE_ONEOF_GET_VERSION:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_GET_VERSION;
-            response->get_version = handle_get_version(req->get_version);
-            break;
+    const char *error;
 
-        case REQUEST__MESSAGE_ONEOF_GET_PUBKEY:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_GET_PUBKEY;
-            response->get_pubkey = handle_get_pubkey(req->get_pubkey);
-            if (response->get_pubkey == NULL) {
-                response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_ERROR;
-                response->error = handle_error();
-            }
-            break;
-
-        case REQUEST__MESSAGE_ONEOF_SIGN_TX:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_SIGN_TX;
-            response->sign_tx = handle_sign_tx(req->sign_tx);
-            break;
-
-        default:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_ERROR;
-            response->error = handle_error();
-            break;
+    switch (req->which_message_oneof) {
+    case Request_get_version_tag:
+        response->which_message_oneof = Response_get_version_tag;
+        error = handle_get_version(&req->message_oneof.get_version, &response->message_oneof.get_version);
+        break;
+    case Request_get_pubkey_tag:
+        response->which_message_oneof = Response_get_pubkey_tag;
+        error = handle_get_pubkey(&req->message_oneof.get_pubkey, &response->message_oneof.get_pubkey);
+        break;
+    default:
+        error = "invalid request tag";
+        break;
     }
-}
 
-static void free_response(Response *response)
-{
-    switch (response->message_oneof_case) {
-        case RESPONSE__MESSAGE_ONEOF_GET_VERSION:
-            free(response->get_version->version);
-            free(response->get_version);
-            break;
-
-        case RESPONSE__MESSAGE_ONEOF_GET_PUBKEY:
-            if (response->get_pubkey->has_pubkey) {
-                free(response->get_pubkey->pubkey.data);
-            }
-            if (response->get_pubkey->has_address) {
-                free(response->get_pubkey->address.data);
-            }
-            if (response->get_pubkey->has_chain_code) {
-                free(response->get_pubkey->chain_code.data);
-            }
-            free(response->get_pubkey);
-            break;
-
-        case RESPONSE__MESSAGE_ONEOF_SIGN_TX:
-            free(response->sign_tx->signature.data);
-            free(response->sign_tx);
-            break;
-
-        case RESPONSE__MESSAGE_ONEOF_ERROR:
-            free(response->error->error_msg);
-            free(response->error);
-            break;
-
-        case RESPONSE__MESSAGE_ONEOF__NOT_SET:
-        default:
-            break;
+    if (error != NULL) {
+        set_error(response, error);
     }
 }
 
@@ -97,40 +57,29 @@ int main(void)
     ux_idle();
 
     while (1) {
-        /* receive buffer */
+        Response response;
+        Request req;
+
         uint8_t buf[MAX_REQ_SIZE];
-        size_t req_len = xrecv(buf, MAX_REQ_SIZE);
+        size_t req_len = xrecv(buf, sizeof(buf));
 
         app_loading_start();
 
-        /* unpack it */
-        Request *req = request__unpack(NULL, req_len, buf);
-        if (req == NULL) {
-            fatal("invalid request");
+        pb_istream_t istream = pb_istream_from_buffer(buf, req_len);
+        if (pb_decode(&istream, Request_fields, &req)) {
+            handle_req(&req, &response);
+        } else {
+            set_error(&response, PB_GET_ERROR(&istream));
         }
 
-        /* parse and process the request */
-        Response response = RESPONSE__INIT;
-        handle_req(req, &response);
-        request__free_unpacked(req, NULL);
-
-        if (!protobuf_c_message_check(&response.base)) {
-            fatal("internal error during encoding");
+        pb_ostream_t ostream = pb_ostream_from_buffer(buf, sizeof(buf));
+        if (!pb_encode(&ostream, Response_fields, &response)) {
+            fatal("failed to encode response");
         }
-
-        /* alloc buffer for the response */
-        size_t len = response__get_packed_size(&response);
-        uint8_t *buf2 = xmalloc(len);
-
-        /* pack the response */
-        size_t size = response__pack(&response, buf2);
-        free_response(&response);
 
         app_loading_stop();
 
-        /* send it */
-        xsend(buf2, size);
-        free(buf2);
+        xsend(buf, ostream.bytes_written);
 
         ux_idle();
     }

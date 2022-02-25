@@ -1,26 +1,30 @@
 syntax = "proto3";
 
+import "nanopb.proto";
+
 // apt install protobuf-c-compiler protobuf-compiler
 // protoc-c --c_out=. message.proto && protoc --python_out=. message.proto
+
+// ./nanopb/generator/nanopb_generator.py app-ethereum/protobuf/message.proto
 
 message RequestGetVersion {
 };
 
 message ResponseGetVersion {
-  string version = 1;
+  string version = 1 [(nanopb).max_length = 40];
 };
 
 message RequestGetPubKey {
-  repeated uint32 path = 1;
+  repeated uint32 path = 1 [(nanopb).max_count = 10];
   bool confirm = 2;
   bool get_chain_code = 3;
 };
 
 message ResponseGetPubKey {
   bool approved = 1;
-  bytes pubkey = 2;
-  bytes address = 3;
-  bytes chain_code = 4;
+  bytes pubkey = 2 [(nanopb).max_size = 65, (nanopb).fixed_length = true];
+  string address = 3 [(nanopb).max_length = 40, (nanopb).fixed_length = true];
+  bytes chain_code = 4 [(nanopb).max_size = 32, (nanopb).fixed_length = true];
 };
 
 message RequestSignTx {
@@ -33,7 +37,7 @@ message ResponseSignTx {
 };
 
 message ResponseError {
-  string error_msg = 1;
+  string error_msg = 1 [(nanopb).max_length = 64];
 };
 
 message Request {

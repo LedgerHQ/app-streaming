@@ -30,7 +30,7 @@ class Plugin:
         get_pubkey = message_pb2.RequestGetPubKey()
         # 44'/60'/0/0
         get_pubkey.path.extend([0x8000002c, 0x8000003c, 0, 0])
-        get_pubkey.confirm = True
+        get_pubkey.confirm = False
         get_pubkey.get_chain_code = True
         message = message_pb2.Request()
         message.get_pubkey.CopyFrom(get_pubkey)
