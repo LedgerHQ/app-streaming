@@ -381,7 +381,7 @@ void stream_init_app(uint8_t *buffer)
     app.bss_max = PAGE_START(cmd->bss);
 
     app.cpu.pc = cmd->pc;
-    app.cpu.regs[2] = sp - 4;
+    app.cpu.regs[RV_REG_SP] = sp - 4;
     app.current_code_page = NULL;
 
     init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
@@ -478,7 +478,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         err(buf);
 
         memcpy(buf, "gp: ", 4);
-        u32hex(app.cpu.regs[3], &buf[4]);
+        u32hex(app.cpu.regs[RV_REG_GP], &buf[4]);
         buf[12] = '\n';
         buf[13] = '\x00';
         err(buf);
@@ -698,8 +698,9 @@ void stream_run_app(void)
 
     do {
         instruction = get_instruction(app.cpu.pc);
-        //instruction = mem_read(app.cpu.pc, sizeof(instruction));
-        //debug_cpu(app.cpu.pc, instruction);
+        if (0) {
+            debug_cpu(app.cpu.pc, instruction);
+        }
         stop = rv_cpu_execute(&app.cpu, instruction);
         app_loading_inc_counter();
     } while (!stop);

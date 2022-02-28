@@ -482,49 +482,49 @@ void sys_ux_idle(void)
  */
 bool ecall(struct rv_cpu *cpu)
 {
-    uint32_t nr = cpu->regs[5];
+    uint32_t nr = cpu->regs[RV_REG_T0];
     bool stop = false;
 
     switch (nr) {
     case ECALL_FATAL:
-        sys_fatal(cpu->regs[10]);
+        sys_fatal(cpu->regs[RV_REG_A0]);
         stop = true;
         break;
     case ECALL_XSEND:
-        xsend(cpu->regs[10], cpu->regs[11]);
+        xsend(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1]);
         break;
     case ECALL_XRECV:
-        cpu->regs[10] = xrecv(cpu->regs[10], cpu->regs[11]);
+        cpu->regs[RV_REG_A0] = xrecv(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1]);
         break;
     case ECALL_SHA256SUM:
-        sha256sum(cpu->regs[10], cpu->regs[11], cpu->regs[12]);
+        sha256sum(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
         break;
     case ECALL_EXIT:
-        sys_exit(cpu->regs[10]);
+        sys_exit(cpu->regs[RV_REG_A0]);
         stop = true;
         break;
 #ifdef TARGET_NANOX
     case ECALL_UX_RECTANGLE:
-        sys_ux_rectangle(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14]);
+        sys_ux_rectangle(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
         break;
     case ECALL_SCREEN_UPDATE:
         sys_screen_update();
         break;
     case ECALL_BAGL_DRAW_BITMAP:
-        sys_ux_bitmap(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14], cpu->regs[15], cpu->regs[16], cpu->regs[17]);
+        sys_ux_bitmap(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4], cpu->regs[RV_REG_A5], cpu->regs[RV_REG_A6], cpu->regs[RV_REG_A7]);
         break;
 #endif
     case ECALL_WAIT_BUTTON:
-        cpu->regs[10] = sys_wait_button();
+        cpu->regs[RV_REG_A0] = sys_wait_button();
         break;
     case ECALL_BAGL_DRAW:
-        sys_bagl_draw_with_context(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13]);
+        sys_bagl_draw_with_context(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
         break;
     case ECALL_LOADING_START:
         app_loading_start();
         break;
     case ECALL_LOADING_STOP:
-        cpu->regs[10] = app_loading_stop();
+        cpu->regs[RV_REG_A0] = app_loading_stop();
         break;
     case ECALL_UX_IDLE:
         sys_ux_idle();

@@ -14,30 +14,9 @@ static const u32 MOD_32 = 0x1f;
 
 static const u32 INST_SIZE = 4;
 
-// Register mnemonics as defined in the "Programmer's Handbook"
-static const char *ABI_MNEMONIC[RV_REG_COUNT] = {
-    "zero", "ra", "sp",  "gp",  "tp", "t0", "t1", "t2",
-    "s0",   "s1", "a0",  "a1",  "a2", "a3", "a4", "a5",
-    "a6",   "a7", "s2",  "s3",  "s4", "s5", "s6", "s7",
-    "s8",   "s9", "s10", "s11", "t3", "t4", "t5", "t6"
-};
-
 void rv_cpu_reset(struct rv_cpu *cpu)
 {
     memset(cpu, 0, sizeof(struct rv_cpu));
-}
-
-void rv_cpu_dump_regs(struct rv_cpu *cpu)
-{
-    int i;
-
-    for (i = 0; i < RV_REG_COUNT; i++) {
-        /*printf("%2d: %4s = 0x%08x (%"PRIu32")\n",
-            i,
-            ABI_MNEMONIC[i],
-            cpu->regs[i],
-            cpu->regs[i]);*/
-    }
 }
 
 enum rv_op rv_cpu_decode(u32 inst)
@@ -397,7 +376,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
     }
 
     //! Make sure that no operation can change the x0 register
-    cpu->regs[0] = 0;
+    cpu->regs[RV_REG_ZERO] = 0;
     cpu->pc = pc_set + pc_inc;
 
     return stop;

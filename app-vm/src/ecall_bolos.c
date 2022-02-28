@@ -102,13 +102,13 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
 
     switch (nr) {
     case ECALL_DERIVE_NODE_BIP32:
-        cpu->regs[10] = sys_derive_node_bip32(cpu->regs[10], cpu->regs[11], cpu->regs[12], cpu->regs[13], cpu->regs[14]);
+        cpu->regs[RV_REG_A0] = sys_derive_node_bip32(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
         break;
     case ECALL_CX_ECFP_GENERATE_PAIR:
-        cpu->regs[10] = sys_ecfp_generate_pair(cpu->regs[10], cpu->regs[11], cpu->regs[12]);
+        cpu->regs[RV_REG_A0] = sys_ecfp_generate_pair(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
         break;
     case ECALL_CX_SHA3_256:
-        sys_sha3_256(cpu->regs[10], cpu->regs[11], cpu->regs[12]);
+        sys_sha3_256(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
         break;
     default:
         sys_exit(0xdeaddead);

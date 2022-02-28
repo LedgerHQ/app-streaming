@@ -6,6 +6,41 @@
 
 #define RV_REG_COUNT (32)
 
+enum {
+    RV_REG_ZERO=0,
+    RV_REG_RA,
+    RV_REG_SP,
+    RV_REG_GP,
+    RV_REG_TP,
+    RV_REG_T0,
+    RV_REG_T1,
+    RV_REG_T2,
+    RV_REG_S0,
+    RV_REG_S1,
+    RV_REG_A0,
+    RV_REG_A1,
+    RV_REG_A2,
+    RV_REG_A3,
+    RV_REG_A4,
+    RV_REG_A5,
+    RV_REG_A6,
+    RV_REG_A7,
+    RV_REG_S2,
+    RV_REG_S3,
+    RV_REG_S4,
+    RV_REG_S5,
+    RV_REG_S6,
+    RV_REG_S7,
+    RV_REG_S8,
+    RV_REG_S9,
+    RV_REG_S10,
+    RV_REG_S11,
+    RV_REG_T3,
+    RV_REG_T4,
+    RV_REG_T5,
+    RV_REG_T6,
+};
+
 enum rv_op {
     RV_OP_UNKNOWN,
     RV_OP_LUI,
