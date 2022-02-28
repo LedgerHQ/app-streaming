@@ -13,6 +13,9 @@
 - https://github.com/riscv/riscv-opcodes/blob/master/opcodes-rvc
 - https://hackmd.io/@kksweet8845/rv32emu
 - https://github.com/riscv-software-src/riscv-tests
+- https://cdn2.hubspot.net/hubfs/3020607/SiFive%20-%20RISCV%20101%20(1).pdf
+- https://github.com/stephank/rvsim/blob/main/src/cpu/op.in.rs
+- https://github.com/arrikto/qemu-qemu/blob/master/disas/riscv.c
 
 ```
   # RV32I    Base Integer Instruction Set, 32-bit

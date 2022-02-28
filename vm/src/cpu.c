@@ -21,85 +21,85 @@ void rv_cpu_reset(struct rv_cpu *cpu)
 
 enum rv_op rv_cpu_decode(uint32_t inst)
 {
-    if (inst == 0) {
+    if ((inst & 0x0000ffff) == 0) {
         return RV_OP_UNKNOWN;
     }
 
 #ifdef SUPPORT_RISCV_C
     /* compressed instructions */
-    switch (inst & 0x3) {
-    case 0:
-        switch (inst & 0xe000) {
-        case 0x0000: return RV_OP_C_ADDI4SPN;
-        case 0x1000: return RV_OP_C_FLD;
-        case 0x2000: return RV_OP_C_LW;
-        case 0x3000: return RV_OP_C_FLW;
-        case 0x5000: return RV_OP_C_FSD;
-        case 0x6000: return RV_OP_C_SW;
-        case 0x7000: return RV_OP_C_FSW;
+    switch (inst & 0b11) {
+    case 0b00:
+        switch ((inst >> 13) & 0b111) {
+        case 0b000: return RV_OP_C_ADDI4SPN;
+        case 0b001: return RV_OP_C_FLD;
+        case 0b010: return RV_OP_C_LW;
+        case 0b011: return RV_OP_C_FLW;
+        case 0b101: return RV_OP_C_FSD;
+        case 0b110: return RV_OP_C_SW;
+        case 0b111: return RV_OP_C_FSW;
         default: return RV_OP_UNKNOWN;
         }
         break;
-    case 1:
-        switch (inst & 0xe000) {
-        case 0x0000: return RV_OP_C_ADDI;
-        case 0x1000: return RV_OP_C_JAL;
-        case 0x2000: return RV_OP_C_LI;
-        case 0x3000:
-            switch (inst & 0xf80) {
-            case 0x100: return RV_OP_C_ADDI16SP;
+    case 0b01:
+        switch ((inst >> 13) & 0b111) {
+        case 0b000: return RV_OP_C_ADDI;
+        case 0b001: return RV_OP_C_JAL;
+        case 0b010: return RV_OP_C_LI;
+        case 0b011:
+            switch ((inst >> 7) & 0b11111) {
+            case 0b00010: return RV_OP_C_ADDI16SP;
             default: return RV_OP_C_LUI;
             }
             break;
-        case 0x4000:
-            switch (inst & 0xc00) {
-            case 0x800: return RV_OP_C_ANDI;
-            case 0xc00:
-                switch (inst & 0xc60) {
-                case 0xc00: return RV_OP_C_SUB;
-                case 0xc20: return RV_OP_C_XOR;
-                case 0xc40: return RV_OP_C_OR;
-                case 0xc60: return RV_OP_C_AND;
+        case 0b100:
+            switch ((inst >> 10) & 0b11) {
+            case 0b10: return RV_OP_C_ANDI;
+            case 0b11:
+                switch ((inst >> 5) & 0b11) {
+                case 0b00: return RV_OP_C_SUB;
+                case 0b01: return RV_OP_C_XOR;
+                case 0b10: return RV_OP_C_OR;
+                case 0b11: return RV_OP_C_AND;
                 default: return RV_OP_UNKNOWN;
                 }
             default: return RV_OP_UNKNOWN;
             }
             break;
-        case 0x5000: return RV_OP_C_J;
-        case 0x6000: return RV_OP_C_BEQZ;
-        case 0x7000: return RV_OP_C_BNEZ;
+        case 0b101: return RV_OP_C_J;
+        case 0b110: return RV_OP_C_BEQZ;
+        case 0b111: return RV_OP_C_BNEZ;
         default: return RV_OP_UNKNOWN;
         }
         break;
-    case 2:
-        switch (inst & 0xe000) {
-        case 0x1000: return RV_OP_C_FLDSP;
-        case 0x2000:
-            switch (inst & 0xf80) {
+    case 0b10:
+        switch ((inst >> 13) & 0b111) {
+        case 0b001: return RV_OP_C_FLDSP;
+        case 0b010:
+            switch ((inst >> 7) & 0b11111) {
             case 0: return RV_OP_UNKNOWN;
             default: return RV_OP_C_LWSP;
             }
-        case 0x3000: return RV_OP_C_FLWSP;
-        case 0x4000:
-            switch (inst & 0x1000) {
-            case 0x0000:
-                switch (inst & 0x7c) {
-                case 0x00: return RV_OP_C_JR;
+        case 0b011: return RV_OP_C_FLWSP;
+        case 0b100:
+            switch ((inst >> 12) & 0b1) {
+            case 0b0:
+                switch ((inst >> 2) & 0b11111) {
+                case 0b00000: return RV_OP_C_JR;
                 default: return RV_OP_C_MV;
                 }
-            case 0x1000:
-                switch (inst & 0x7c) {
-                case 0x00:
-                    switch (inst & 0xf80) {
-                    case 0x000: return RV_OP_C_EBREAK;
+            case 0b1:
+                switch ((inst >> 2) & 0b11111) {
+                case 0b00000:
+                    switch ((inst >> 7) & 0b11111) {
+                    case 0b00000: return RV_OP_C_EBREAK;
                     default: return RV_OP_C_JALR;
                     }
                 default: return RV_OP_C_ADD;
                 }
             }
-        case 0x5000: return RV_OP_C_FSDSP;
-        case 0x6000: return RV_OP_C_SWSP;
-        case 0x7000: return RV_OP_C_FSWSP;
+        case 0b101: return RV_OP_C_FSDSP;
+        case 0b110: return RV_OP_C_SWSP;
+        case 0b111: return RV_OP_C_FSWSP;
         default: return RV_OP_UNKNOWN;
         }
         break;
@@ -488,9 +488,9 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             }
             break;
 
-        case RV_OP_C_ADDI4SPN:
-            cpu->regs[inst.rdp] = mem_read(cpu->regs[inst.rs1p] + (i32) imm_i(inst), 4);
-            break;
+        //case RV_OP_C_ADDI4SPN:
+            //cpu->regs[inst.rdp] = mem_read(cpu->regs[inst.rs1p] + (i32) imm_i(inst), 4);
+            //break;
 
         case RV_OP_FENCE:
         case RV_OP_FENCE_TSO:
