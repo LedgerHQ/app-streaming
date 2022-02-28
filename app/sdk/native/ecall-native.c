@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "ecall.h"
+#include "ecall-common.h"
 #include "sdk/sdk.h"
 
 static void readall(int fd, void *buf, size_t count)
@@ -102,14 +103,28 @@ int ecall_wait_button(void)
     return 1;
 }
 
-void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest) \
-    __attribute__((alias("ecall_sha256sum")));
+__attribute__((noreturn)) void ecall_fatal(char *msg)
+{
+    fprintf(stderr, "fatal error: %s\n", msg);
+    exit(1);
+}
 
-void screen_update(void) \
-    __attribute__((alias("ecall_screen_update")));
+static bool app_loading;
 
-void xsend(const uint8_t *buffer, size_t size) \
-    __attribute__((alias("ecall_xsend")));
+void ecall_app_loading_start(void)
+{
+    app_loading = true;
+}
 
-int wait_button(void) \
-    __attribute__((alias("ecall_wait_button")));
+bool ecall_app_loading_stop(void)
+{
+    bool prev = app_loading;
+
+    app_loading = false;
+
+    return prev;
+}
+
+void ecall_ux_idle(void)
+{
+}
