@@ -4,11 +4,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-typedef uint32_t cx_err_t;
+#include "speculos.h"
 
-typedef enum cx_curve_e {
-    CX_CURVE_SECP256K1 = 0x21,
-} cx_curve_t;
+typedef uint32_t cx_err_t;
 
 #define CX_CURVE_256K1 CX_CURVE_SECP256K1
 
@@ -29,18 +27,6 @@ typedef enum cx_curve_e {
 #define CX_EC_INFINITE_POINT 0xFFFFFF41
 #define CX_EC_INVALID_POINT 0xFFFFFFA2
 #define CX_EC_INVALID_CURVE 0xFFFFFFA3
-
-typedef struct cx_ecfp_256_public_key_s {
-  cx_curve_t curve;
-  size_t W_len;
-  uint8_t W[65];
-} cx_ecfp_public_key_t;
-
-typedef struct cx_ecfp_256_private_key_s {
-  cx_curve_t curve;
-  size_t d_len;
-  uint8_t d[32];
-} cx_ecfp_private_key_t;
 
 void ecfp_init_private_key(cx_curve_t curve, const uint8_t *raw_key, size_t key_len, cx_ecfp_private_key_t *key);
 cx_err_t derive_node_bip32(cx_curve_t curve, const unsigned int *path, size_t path_count, uint8_t *private_key, uint8_t *chain);

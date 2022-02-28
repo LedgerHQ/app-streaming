@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "crypto.h"
 #include "ecall.h"
 #include "ecall-common.h"
 #include "sdk/sdk.h"
@@ -127,4 +128,27 @@ bool ecall_app_loading_stop(void)
 
 void ecall_ux_idle(void)
 {
+}
+
+void ecall_sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
+{
+    cx_sha3_t ctx;
+
+    cx_keccak_init(&ctx, 256);
+    sys_cx_hash((cx_hash_t *)&ctx, CX_LAST, buffer, size, digest, 32);
+}
+
+cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve, cx_ecfp_public_key_t *pubkey, cx_ecfp_private_key_t *privkey)
+{
+    bool keep_private = (privkey != NULL);
+    sys_cx_ecfp_generate_pair(curve, pubkey, privkey, keep_private);
+    /* XXX */
+    return CX_OK;
+}
+
+cx_err_t ecall_derive_node_bip32(cx_curve_t curve, const unsigned int *path, size_t path_count, uint8_t *private_key, uint8_t *chain)
+{
+    sys_os_perso_derive_node_bip32(curve, path, path_count, private_key, chain);
+    /* XXX */
+    return CX_OK;
 }

@@ -24,15 +24,23 @@ if (NOT NATIVE)
   add_compile_options(-march=rv32g -Wall)
   add_link_options(-z noseparate-code -static -nostdlib)
 
-  include_directories(/usr/local/riscv32-unknown-linux-gnu/include/)
+  include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ sdk/risc-v/)
   link_directories(/usr/local/riscv32-unknown-linux-gnu/lib)
   link_libraries(c)
 
 else()
   message(STATUS "Building native binaries")
 
+  if(NOT DEFINED ENV{SPECULOS_DIR})
+    message(FATAL_ERROR "Please set SPECULOS_DIR environment variable")
+  endif()
+
+  set(SPECULOS_DIR "$ENV{SPECULOS_DIR}" CACHE INTERNAL "Copied from environment variable")
+  include_directories(sdk/native/ ${SPECULOS_DIR}/src/ ${SPECULOS_DIR}/src/bolos/)
+
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
+  link_libraries(crypto)
 endif()
 
 # Compute the absolute path of nanopb/ and store it in the variable NANOPB_PATH
