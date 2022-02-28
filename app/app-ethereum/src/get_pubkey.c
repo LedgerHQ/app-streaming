@@ -43,7 +43,7 @@ const char *handle_get_pubkey(const RequestGetPubKey *req, ResponseGetPubKey *re
         goto end;
     }
 
-    char address[40];
+    char address[41];
     uint64_t chainId = 30; /* XXX */
     getEthAddressStringFromKey(&pubkey, address, chainId);
 
@@ -55,8 +55,8 @@ const char *handle_get_pubkey(const RequestGetPubKey *req, ResponseGetPubKey *re
     }
 
     if (response->approved) {
-        memcpy(response->pubkey, &pubkey.W, 65);
-        memcpy(response->address, address, 40);
+        memcpy(response->pubkey, &pubkey.W, sizeof(response->pubkey));
+        memcpy(response->address, address, sizeof(response->address));
 
         if (req->get_chain_code) {
             memcpy(response->chain_code, chain_code, CHAIN_CODE_SIZE);
