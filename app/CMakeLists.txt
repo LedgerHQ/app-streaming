@@ -36,7 +36,11 @@ else()
 endif()
 
 # Compute the absolute path of nanopb/ and store it in the variable NANOPB_PATH
-file(REAL_PATH nanopb/ NANOPB_PATH)
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.19.0")
+  file(REAL_PATH nanopb/ NANOPB_PATH)
+else()
+  get_filename_component(NANOPB_PATH nanopb/ REALPATH)
+endif()
 
 include_directories(./ sdk/)
 
