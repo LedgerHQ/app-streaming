@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -50,7 +51,7 @@ static void getEthAddressStringFromBinary(uint8_t *hash_address, char *out, uint
     if (chain_id == 30 || chain_id == 31) {
         /* EIP-1191 */
         uint8_t tmp[20 + 2 + ADDRESS_SIZE + 1];
-        size_t offset = snprintf((char *)tmp, sizeof(tmp), "%lld0x", chain_id);
+        size_t offset = snprintf((char *)tmp, sizeof(tmp), "%" PRIu64 "0x", chain_id);
         hexdump(hash_address, &tmp[offset], 20);
         sha3_256(tmp, offset + ADDRESS_SIZE, hash_checksum);
     } else {
