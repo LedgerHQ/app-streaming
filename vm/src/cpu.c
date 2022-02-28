@@ -21,22 +21,22 @@ void rv_cpu_reset(struct rv_cpu *cpu)
 
 enum rv_op rv_cpu_decode(uint32_t inst)
 {
+#ifdef SUPPORT_RISCV_C
     if ((inst & 0x0000ffff) == 0) {
         return RV_OP_UNKNOWN;
     }
 
-#ifdef SUPPORT_RISCV_C
     /* compressed instructions */
     switch (inst & 0b11) {
     case 0b00:
         switch ((inst >> 13) & 0b111) {
         case 0b000: return RV_OP_C_ADDI4SPN;
-        case 0b001: return RV_OP_C_FLD;
+        //case 0b001: return RV_OP_C_FLD;
         case 0b010: return RV_OP_C_LW;
-        case 0b011: return RV_OP_C_FLW;
-        case 0b101: return RV_OP_C_FSD;
+        //case 0b011: return RV_OP_C_FLW;
+        //case 0b101: return RV_OP_C_FSD;
         case 0b110: return RV_OP_C_SW;
-        case 0b111: return RV_OP_C_FSW;
+        //case 0b111: return RV_OP_C_FSW;
         default: return RV_OP_UNKNOWN;
         }
         break;
@@ -258,6 +258,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
     uint32_t pc_inc = INST_SIZE;
     uint32_t pc_set = cpu->pc;
     bool success = true;
+    uint32_t addr;
     uint32_t value;
 
     switch (op) {
@@ -488,9 +489,27 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             }
             break;
 
-        //case RV_OP_C_ADDI4SPN:
-            //cpu->regs[inst.rdp] = mem_read(cpu->regs[inst.rs1p] + (i32) imm_i(inst), 4);
-            //break;
+#ifdef SUPPORT_RISCV_C
+        case RV_OP_C_ADDI4SPN:
+            cpu->regs[rp(inst.c.iw.rdp)] = cpu->regs[rp(8+inst.c.iw.rdp)] + cpu->regs[2] + (i32)c_nzuimm(inst.c.inst);
+        break;
+
+        case RV_OP_C_LW:
+            addr = cpu->regs[rp(inst.c.l.rsp)] + (i32)cl_offset(inst.c.inst);
+            cpu->regs[rp(inst.c.l.rdp)] = mem_read(addr, 4);
+        break;
+
+        case RV_OP_C_SW:
+            addr = cpu->regs[rp(inst.c.s.rs1p)] + (i32)cs_offset(inst.c.inst);
+            value = cpu->regs[rp(inst.c.s.rs2p)];
+            mem_write(addr, 4, value);
+        break;
+
+        case RV_OP_C_ADDI:
+            value = sext(get_field1(inst.c.inst, 2, 0, 4) | get_field1(inst.c.inst, 12, 5, 5), 6);
+            cpu->regs[inst.c.i.rd] += (i32)value;
+            break;
+#endif
 
         case RV_OP_FENCE:
         case RV_OP_FENCE_TSO:

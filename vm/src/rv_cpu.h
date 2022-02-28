@@ -18,40 +18,58 @@ typedef int64_t i64;
 #define SUPPORT_RISCV_C
 #define RV_REG_COUNT (32)
 
-enum {
-    RV_REG_ZERO=0,
-    RV_REG_RA,
-    RV_REG_SP,
-    RV_REG_GP,
-    RV_REG_TP,
-    RV_REG_T0,
-    RV_REG_T1,
-    RV_REG_T2,
-    RV_REG_S0,
-    RV_REG_S1,
-    RV_REG_A0,
-    RV_REG_A1,
-    RV_REG_A2,
-    RV_REG_A3,
-    RV_REG_A4,
-    RV_REG_A5,
-    RV_REG_A6,
-    RV_REG_A7,
-    RV_REG_S2,
-    RV_REG_S3,
-    RV_REG_S4,
-    RV_REG_S5,
-    RV_REG_S6,
-    RV_REG_S7,
-    RV_REG_S8,
-    RV_REG_S9,
-    RV_REG_S10,
-    RV_REG_S11,
-    RV_REG_T3,
-    RV_REG_T4,
-    RV_REG_T5,
-    RV_REG_T6,
-};
+#ifdef SUPPORT_RISCV_C
+/* from tinyemu/riscv_cpu.c */
+static inline uint32_t get_field1(uint32_t val, int src_pos,
+                                  int dst_pos, int dst_pos_max)
+{
+    int mask;
+    //_Static_assert(dst_pos_max >= dst_pos, "dst_pos_max < dst_pos");
+    mask = ((1 << (dst_pos_max - dst_pos + 1)) - 1) << dst_pos;
+    if (dst_pos >= src_pos)
+        return (val << (dst_pos - src_pos)) & mask;
+    else
+        return (val >> (src_pos - dst_pos)) & mask;
+}
+
+static inline uint32_t c_nzuimm(uint32_t insn)
+{
+    return get_field1(insn, 11, 4, 5) |
+        get_field1(insn, 7, 6, 9) |
+        get_field1(insn, 6, 2, 2) |
+        get_field1(insn, 5, 3, 3);
+}
+
+static inline uint32_t cl_offset(uint32_t insn)
+{
+    return get_field1(insn, 5, 6, 6) |
+        get_field1(insn, 6, 2, 2) |
+        get_field1(insn, 10, 5, 3);
+}
+
+static inline uint32_t cs_offset(uint32_t insn)
+{
+    return get_field1(insn, 5, 6, 6) |
+        get_field1(insn, 6, 2, 2) |
+        get_field1(insn, 10, 3, 5);
+}
+
+static inline uint32_t ci_imm(uint32_t insn)
+{
+    return get_field1(insn, 2, 0, 4) |
+        get_field1(insn, 12, 5, 5);
+}
+
+static inline uint8_t rp(uint8_t r)
+{
+    return 8 + r;
+}
+
+static inline int32_t sext(int32_t val, int n)
+{
+    return (val << (32 - n)) >> (32 - n);
+}
+#endif
 
 enum rv_op {
     RV_OP_UNKNOWN,
@@ -205,58 +223,64 @@ union rv_inst {
     } j;
 #ifdef SUPPORT_RISCV_C
     struct {
-        u32 opcode : 2;
-        u32 rs2    : 5;
-        u32 rs1    : 5;
-        u32 funct4 : 4;
-    } cr;
-    struct {
-        u32 opcode : 2;
-        u32 imm1   : 5;
-        u32 rs1    : 5;
-        u32 imm2   : 5;
-        u32 funct3 : 3;
-    } ci;
-    struct {
-        u32 opcode : 2;
-        u32 rs2    : 5;
-        u32 imm2   : 6;
-        u32 funct3 : 3;
-    } css;
-    struct {
-        u32 opcode : 2;
-        u32 rdp    : 3;
-        u32 imm    : 8;
-        u32 funct3 : 3;
-    } ciw;
-    struct {
-        u32 opcode : 2;
-        u32 rdp    : 3;
-        u32 imm1   : 2;
-        u32 rsp    : 3;
-        u32 imm2   : 3;
-        u32 funct3 : 3;
-    } cl;
-    struct {
-        u32 opcode : 2;
-        u32 rs2p   : 3;
-        u32 imm1   : 2;
-        u32 rs1p   : 3;
-        u32 imm2   : 3;
-        u32 funct3 : 3;
-    } cs;
-    struct {
-        u32 opcode : 2;
-        u32 offset1: 5;
-        u32 rs1p   : 3;
-        u32 offset2: 3;
-        u32 funct3 : 3;
-    } cb;
-    struct {
-        u32 opcode : 2;
-        u32 target : 11;
-        u32 funct3 : 3;
-    } cj;
+        union {
+            u16 inst;
+            struct {
+                u32 opcode : 2;
+                u32 rs2    : 5;
+                u32 rs1    : 5;
+                u32 funct4 : 4;
+            } r;
+            struct {
+                u32 opcode : 2;
+                u32 imm1   : 5;
+                u32 rd     : 5;
+                u32 imm2   : 5;
+                u32 funct3 : 3;
+            } i;
+            struct {
+                u32 opcode : 2;
+                u32 rs2    : 5;
+                u32 imm2   : 6;
+                u32 funct3 : 3;
+            } ss;
+            struct {
+                u32 opcode : 2;
+                u32 rdp    : 3;
+                u32 imm    : 8;
+                u32 funct3 : 3;
+            } iw;
+            struct {
+                u32 opcode : 2;
+                u32 rdp    : 3;
+                u32 imm1   : 2;
+                u32 rsp    : 3;
+                u32 imm2   : 3;
+                u32 funct3 : 3;
+            } l;
+            struct {
+                u32 opcode : 2;
+                u32 rs2p   : 3;
+                u32 imm1   : 2;
+                u32 rs1p   : 3;
+                u32 imm2   : 3;
+                u32 funct3 : 3;
+            } s;
+            struct {
+                u32 opcode : 2;
+                u32 offset1: 5;
+                u32 rs1p   : 3;
+                u32 offset2: 3;
+                u32 funct3 : 3;
+            } b;
+            struct {
+                u32 opcode : 2;
+                u32 target : 11;
+                u32 funct3 : 3;
+            } j;
+        };
+        u16 next;
+    } c;
 #endif
 };
 
