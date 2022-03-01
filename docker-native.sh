@@ -12,5 +12,6 @@ docker run --network host \
     -w /app \
     -v ${SCRIPT_DIR}/app/:/app/ \
     -v ${SCRIPT_DIR}/host/:/host/:ro \
+    -v ${HOME}/code/speculos/:/speculos/:ro \
     --rm -it native \
     bash
