@@ -45,7 +45,8 @@ class Plugin:
 
     def sign_tx_prepare_request(self):
         sign_tx = message_pb2.RequestSignTx()
-        sign_tx.tx = b"ThisIsAComplicatedTransaction"
+        sign_tx.raw_tx = bytes.fromhex("f080843b9aca0083015f90946b477781b0e68031109f21887e6b5afeaaeb002b808c5468616e6b732c206d616e21038080")
+        sign_tx.chain_id = 1
         message = message_pb2.Request()
         message.sign_tx.CopyFrom(sign_tx)
         assert message.WhichOneof("message_oneof") == "sign_tx"

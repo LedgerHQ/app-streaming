@@ -141,7 +141,8 @@ if __name__ == "__main__":
         client.call("get_version")
         client.call("sign_tx")
     elif client.plugin.name == "ethereum":
-        client.call("get_pubkey")
+        #client.call("get_pubkey")
+        client.call("sign_tx")
     elif client.plugin.name == "sha256":
         client.call("hash1")
         client.call("hash2")

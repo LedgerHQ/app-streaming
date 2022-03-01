@@ -14,16 +14,20 @@ typedef struct _RequestGetVersion {
     char dummy_field;
 } RequestGetVersion;
 
-typedef struct _RequestSignTx { 
-    pb_callback_t tx; 
-} RequestSignTx;
-
 typedef struct _RequestGetPubKey { 
     pb_size_t path_count;
     uint32_t path[10]; 
     bool confirm; 
     bool get_chain_code; 
 } RequestGetPubKey;
+
+typedef PB_BYTES_ARRAY_T(1024) RequestSignTx_raw_tx_t;
+typedef struct _RequestSignTx { 
+    pb_size_t path_count;
+    uint32_t path[10]; 
+    RequestSignTx_raw_tx_t raw_tx; 
+    uint64_t chain_id; 
+} RequestSignTx;
 
 typedef struct _ResponseError { 
     char error_msg[65]; 
@@ -40,9 +44,10 @@ typedef struct _ResponseGetVersion {
     char version[41]; 
 } ResponseGetVersion;
 
+typedef PB_BYTES_ARRAY_T(100) ResponseSignTx_signature_t;
 typedef struct _ResponseSignTx { 
     bool approved; 
-    pb_callback_t signature; 
+    ResponseSignTx_signature_t signature; 
 } ResponseSignTx;
 
 typedef struct _Request { 
@@ -74,8 +79,8 @@ extern "C" {
 #define ResponseGetVersion_init_default          {""}
 #define RequestGetPubKey_init_default            {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0}
 #define ResponseGetPubKey_init_default           {0, {0}, "", {0}}
-#define RequestSignTx_init_default               {{{NULL}, NULL}}
-#define ResponseSignTx_init_default              {0, {{NULL}, NULL}}
+#define RequestSignTx_init_default               {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}, 0}
+#define ResponseSignTx_init_default              {0, {0, {0}}}
 #define ResponseError_init_default               {""}
 #define Request_init_default                     {0, {RequestGetVersion_init_default}}
 #define Response_init_default                    {0, {ResponseGetVersion_init_default}}
@@ -83,17 +88,19 @@ extern "C" {
 #define ResponseGetVersion_init_zero             {""}
 #define RequestGetPubKey_init_zero               {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0}
 #define ResponseGetPubKey_init_zero              {0, {0}, "", {0}}
-#define RequestSignTx_init_zero                  {{{NULL}, NULL}}
-#define ResponseSignTx_init_zero                 {0, {{NULL}, NULL}}
+#define RequestSignTx_init_zero                  {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}, 0}
+#define ResponseSignTx_init_zero                 {0, {0, {0}}}
 #define ResponseError_init_zero                  {""}
 #define Request_init_zero                        {0, {RequestGetVersion_init_zero}}
 #define Response_init_zero                       {0, {ResponseGetVersion_init_zero}}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define RequestSignTx_tx_tag                     1
 #define RequestGetPubKey_path_tag                1
 #define RequestGetPubKey_confirm_tag             2
 #define RequestGetPubKey_get_chain_code_tag      3
+#define RequestSignTx_path_tag                   1
+#define RequestSignTx_raw_tx_tag                 2
+#define RequestSignTx_chain_id_tag               3
 #define ResponseError_error_msg_tag              1
 #define ResponseGetPubKey_approved_tag           1
 #define ResponseGetPubKey_pubkey_tag             2
@@ -137,14 +144,16 @@ X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, chain_code,        4)
 #define ResponseGetPubKey_DEFAULT NULL
 
 #define RequestSignTx_FIELDLIST(X, a) \
-X(a, CALLBACK, SINGULAR, BYTES,    tx,                1)
-#define RequestSignTx_CALLBACK pb_default_field_callback
+X(a, STATIC,   REPEATED, UINT32,   path,              1) \
+X(a, STATIC,   SINGULAR, BYTES,    raw_tx,            2) \
+X(a, STATIC,   SINGULAR, UINT64,   chain_id,          3)
+#define RequestSignTx_CALLBACK NULL
 #define RequestSignTx_DEFAULT NULL
 
 #define ResponseSignTx_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, BOOL,     approved,          1) \
-X(a, CALLBACK, SINGULAR, BYTES,    signature,         2)
-#define ResponseSignTx_CALLBACK pb_default_field_callback
+X(a, STATIC,   SINGULAR, BYTES,    signature,         2)
+#define ResponseSignTx_CALLBACK NULL
 #define ResponseSignTx_DEFAULT NULL
 
 #define ResponseError_FIELDLIST(X, a) \
@@ -196,15 +205,15 @@ extern const pb_msgdesc_t Response_msg;
 #define Response_fields &Response_msg
 
 /* Maximum encoded size of messages (where known) */
-/* RequestSignTx_size depends on runtime parameters */
-/* ResponseSignTx_size depends on runtime parameters */
-/* Request_size depends on runtime parameters */
-/* Response_size depends on runtime parameters */
 #define RequestGetPubKey_size                    64
 #define RequestGetVersion_size                   0
+#define RequestSignTx_size                       1098
+#define Request_size                             1101
 #define ResponseError_size                       66
 #define ResponseGetPubKey_size                   145
 #define ResponseGetVersion_size                  42
+#define ResponseSignTx_size                      104
+#define Response_size                            148
 
 #ifdef __cplusplus
 } /* extern "C" */

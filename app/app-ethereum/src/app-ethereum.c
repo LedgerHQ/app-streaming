@@ -42,6 +42,10 @@ static void handle_req(const Request *req, Response *response)
         response->which_message_oneof = Response_get_pubkey_tag;
         error = handle_get_pubkey(&req->message_oneof.get_pubkey, &response->message_oneof.get_pubkey);
         break;
+    case Request_sign_tx_tag:
+        response->which_message_oneof = Response_sign_tx_tag;
+        error = handle_sign_tx(&req->message_oneof.sign_tx, &response->message_oneof.sign_tx);
+        break;
     default:
         error = "invalid request tag";
         break;

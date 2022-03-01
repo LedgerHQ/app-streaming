@@ -18,7 +18,7 @@ PB_BIND(RequestGetPubKey, RequestGetPubKey, AUTO)
 PB_BIND(ResponseGetPubKey, ResponseGetPubKey, AUTO)
 
 
-PB_BIND(RequestSignTx, RequestSignTx, AUTO)
+PB_BIND(RequestSignTx, RequestSignTx, 2)
 
 
 PB_BIND(ResponseSignTx, ResponseSignTx, AUTO)
@@ -27,7 +27,7 @@ PB_BIND(ResponseSignTx, ResponseSignTx, AUTO)
 PB_BIND(ResponseError, ResponseError, AUTO)
 
 
-PB_BIND(Request, Request, AUTO)
+PB_BIND(Request, Request, 2)
 
 
 PB_BIND(Response, Response, AUTO)
