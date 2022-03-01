@@ -27,6 +27,8 @@
 //#include "os_io_seproxyhal.h"
 #include <string.h>
 
+#include "sdk/sdk.h"
+
 #define ARRAYLEN(array) (sizeof(array) / sizeof(array[0]))
 
 
@@ -222,7 +224,7 @@ const bagl_element_t *ux_stack_display_element_callback(const bagl_element_t *el
       if (!el) {
         return 0;
       }
-      if ((unsigned int)el != 1) {
+      if ((ptrdiff_t)el != 1) {
         element = el;
       }
     }
@@ -233,7 +235,7 @@ const bagl_element_t *ux_stack_display_element_callback(const bagl_element_t *el
         return 0;
       }
       // legacy forvery old ux on blue and nano s
-      if ((unsigned int)el != 1) {
+      if ((ptrdiff_t)el != 1) {
         element = el;
       }
     }
@@ -276,7 +278,7 @@ void ux_stack_display_elements(ux_stack_slot_t *slot) {
           }
         } else {
           // legacy support
-          if ((unsigned int)el != 1) {
+          if ((ptrdiff_t)el != 1) {
             element = el;
           }
           io_seproxyhal_display(element);

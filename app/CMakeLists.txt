@@ -21,7 +21,7 @@ if (NOT NATIVE)
     message(STATUS "Using default compiler ${CMAKE_C_COMPILER}")
   endif ()
 
-  add_compile_options(-march=rv32g -Wall)
+  add_compile_options(-march=rv32g)
   add_link_options(-z noseparate-code -static -nostdlib)
 
   include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ sdk/risc-v/)
@@ -43,6 +43,8 @@ else()
   link_libraries(crypto)
 endif()
 
+add_compile_options(-Werror)
+
 # Compute the absolute path of nanopb/ and store it in the variable NANOPB_PATH
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.19.0")
   file(REAL_PATH nanopb/ NANOPB_PATH)
@@ -50,7 +52,9 @@ else()
   get_filename_component(NANOPB_PATH nanopb/ REALPATH)
 endif()
 
-include_directories(./ sdk/)
+# Make sure to include sdk/ first to prevent ${SPECULOS_DIR}/src/sdk.h
+# being included instead of sdk/sdk.h.
+include_directories(BEFORE ./ sdk/)
 
 add_subdirectory(sdk)
 add_subdirectory(ux)

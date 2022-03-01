@@ -33,7 +33,7 @@
 #include "bagl_font_rom.inc"
 
 const bagl_font_t fontNONE = {
-	-1UL, /* last font id */
+	-1, /* last font id */
 	 0 , /* font bit per pixels */
    0 , /* font height in pixels   */
    0 , /* baseline distance from top */

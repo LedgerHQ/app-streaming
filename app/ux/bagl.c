@@ -26,8 +26,6 @@
 
 //#include "os.h"
 
-#define PIC(x) (x)
-
 // --------------------------------------------------------------------------------------
 // API
 // -------------------------------------------------------------------------------------- 
@@ -69,9 +67,9 @@ void bagl_draw_glyph(const bagl_component_t* component, const bagl_icon_details_
                                    icon_details->width, 
                                    icon_details->height, 
                                    1<<(icon_details->bpp),
-                                   (unsigned int*)PIC((unsigned int)icon_details->colors),
+                                   icon_details->colors,
                                    icon_details->bpp, 
-                                   (unsigned char*)PIC((unsigned int)icon_details->bitmap), 
+                                   icon_details->bitmap,
                                    icon_details->bpp*(icon_details->width*icon_details->height));
 }
 
