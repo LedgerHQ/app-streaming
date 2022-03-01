@@ -59,10 +59,10 @@ $ ./docker.sh
 
 ### Build the RISC-V VM and install it on the Nano device
 
-Like any other Nano apps. Sources are in the `app-vm/` directory.
+Like any other Nano apps. Sources are in the `vm/` directory.
 
 ```console
-cd app-vm/
+cd vm/
 make
 make load
 ```
@@ -72,7 +72,7 @@ make load
 Using speculos (2.0.0):
 
 ```console
-$ speculos.py --model nanox --display headless app-vm/bin/app.elf &
+$ speculos.py --model nanox --display headless vm/bin/app.elf &
 $ ./host/stream.py --speculos --verbose --app ./app/build/app-wip/app
 ```
 
