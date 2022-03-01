@@ -27,4 +27,6 @@ RUN cd /tmp/ && \
   cd .. && \
   rm -r openssl-1.1.1k/ openssl-1.1.1k.tar.gz
 
+RUN apt-get -yq install libcmocka-dev
+
 ENTRYPOINT /bin/bash
