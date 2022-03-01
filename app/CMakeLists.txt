@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(RISC-V-apps C ASM)
 
+include(CTest)
+
 option(NATIVE "Build for the host machine instead of RISC-V" OFF)
 
 #set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
@@ -41,6 +43,8 @@ else()
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
   link_libraries(crypto)
+
+  enable_testing()
 endif()
 
 add_compile_options(-Werror)

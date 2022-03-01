@@ -17,3 +17,7 @@ add_dependencies(app-ethereum
 target_link_libraries(app-ethereum PRIVATE
                       sdk
                       ux)
+
+if (NATIVE)
+  add_subdirectory(tests)
+endif()
