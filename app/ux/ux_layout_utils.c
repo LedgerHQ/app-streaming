@@ -24,7 +24,7 @@
 #include <string.h>
 
 static unsigned int ux_layout_ticker_callback(unsigned int unused) {
-  UNUSED(unused);
+  UX_UNUSED(unused);
   // when the callback is called, then the slot is forcefully the top of stack
   G_ux.stack[G_ux.stack_count-1].ticker_interval = 0;
   G_ux.stack[G_ux.stack_count-1].ticker_value = 0;

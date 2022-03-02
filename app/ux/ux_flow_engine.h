@@ -4,7 +4,7 @@
 
 #include "ux_layouts.h"
 
-#define UNUSED(x) (void)x
+#define UX_UNUSED(x) (void)x
 
 // forward definition
 typedef struct ux_flow_step_s ux_flow_step_t;
@@ -116,7 +116,7 @@ void ux_flow_uninit(unsigned int stack_slot);
  * Define a flow step with a specific step init function
  */
 #define UX_STEP_INIT(stepname, validate_flow, error_flow, ...) \
-	void stepname ##_init (unsigned int stack_slot) { UNUSED(stack_slot); __VA_ARGS__; } \
+	void stepname ##_init (unsigned int stack_slot) { UX_UNUSED(stack_slot); __VA_ARGS__; } \
 	const ux_flow_step_t stepname = { \
 	  stepname ##  _init, \
 	  NULL, \
@@ -242,7 +242,7 @@ void ux_flow_uninit(unsigned int stack_slot);
  * Macro that defines a fake flow of a single step to perform code execution upon validate/error next etc
  */
 #define UX_FLOW_CALL(flow_name, code) \
-void flow_name ## init (unsigned int stack_slot) { UNUSED(stack_slot);code; } \
+void flow_name ## init (unsigned int stack_slot) { UX_UNUSED(stack_slot);code; } \
 const ux_flow_step_t flow_name ## _step = { flow_name ## init, NULL, NULL, NULL}; \
 const ux_flow_step_t* const flow_name []= { &flow_name ## _step, FLOW_END_STEP, };
 

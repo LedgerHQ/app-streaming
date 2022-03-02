@@ -266,7 +266,7 @@ void ux_flow_validate(void) {
 }
 
 void ux_flow_error(unsigned int error) {
-	UNUSED(error);
+	UX_UNUSED(error);
 
   	unsigned int top_stack_slot = G_ux.stack_count - 1;
 
@@ -321,7 +321,7 @@ void ux_flow_uninit(unsigned int stack_slot) {
 }
 
 unsigned int ux_flow_button_callback(unsigned int button_mask, unsigned int button_mask_counter) {
-  UNUSED(button_mask_counter);
+  UX_UNUSED(button_mask_counter);
   switch(button_mask) {
     case BUTTON_EVT_RELEASED|BUTTON_LEFT:
       ux_flow_prev();
