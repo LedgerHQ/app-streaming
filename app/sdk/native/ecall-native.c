@@ -174,3 +174,13 @@ size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key, const int mode, const 
 
     return ret;
 }
+
+void ecall_mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
+{
+    sys_cx_math_mult(r, a, b, len);
+}
+
+void ecall_multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len)
+{
+    sys_cx_math_multm(r, a, b, m, len);
+}

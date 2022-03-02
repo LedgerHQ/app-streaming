@@ -43,3 +43,9 @@ cx_err_t derive_node_bip32(cx_curve_t curve, const unsigned int *path, size_t pa
 
 size_t ecdsa_sign(const cx_ecfp_private_key_t *key, const int mode, const cx_md_t hash_id, const uint8_t * hash, uint8_t *sig, size_t sig_len) \
     __attribute__((alias("ecall_ecdsa_sign")));
+
+void mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len) \
+    __attribute__((alias("ecall_mult")));
+
+void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len) \
+    __attribute__((alias("ecall_multm")));

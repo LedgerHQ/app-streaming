@@ -33,3 +33,5 @@ cx_err_t derive_node_bip32(cx_curve_t curve, const unsigned int *path, size_t pa
 cx_err_t ecfp_generate_pair(cx_curve_t curve, cx_ecfp_public_key_t *pubkey, cx_ecfp_private_key_t *privkey);
 void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest);
 size_t ecdsa_sign(const cx_ecfp_private_key_t *key, const int mode, const cx_md_t hash_id, const uint8_t * hash, uint8_t *sig, size_t sig_len);
+void mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len);
+void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len);

@@ -22,3 +22,5 @@
 #define ECALL_CX_ECFP_GENERATE_PAIR 101
 #define ECALL_CX_SHA3_256           102
 #define ECALL_ECDSA_SIGN            103
+#define ECALL_MULT                  104
+#define ECALL_MULTM                 105

@@ -125,6 +125,41 @@ static size_t sys_ecdsa_sign(const uint32_t key_addr, const int mode,
     return ret;
 }
 
+static void sys_mult(uint32_t r_addr, uint32_t a_addr, uint32_t b_addr, size_t len)
+{
+    uint8_t r[64], a[32], b[32];
+
+    /* XXX: return an error? */
+    if (len > sizeof(a)) {
+        fatal("invalid size for mult");
+    }
+
+    copy_guest_buffer(a_addr, a, len);
+    copy_guest_buffer(b_addr, b, len);
+
+    cx_math_mult(r, a, b, len);
+
+    copy_host_buffer(r_addr, r, len * 2);
+}
+
+static void sys_multm(uint32_t r_addr, uint32_t a_addr, uint32_t b_addr, uint32_t m_addr, size_t len)
+{
+    uint8_t r[64], a[32], b[32], m[32];
+
+    /* XXX: return an error? */
+    if (len > sizeof(a)) {
+        fatal("invalid size for multm");
+    }
+
+    copy_guest_buffer(a_addr, a, len);
+    copy_guest_buffer(b_addr, b, len);
+    copy_guest_buffer(m_addr, m, len);
+
+    cx_math_multm(r, a, b, m, len);
+
+    copy_host_buffer(r_addr, r, len * 2);
+}
+
 /*
  * XXX - Disclaimer: these ECALLs aren't stable, probably buggy.
  *       The API is a WIP.
@@ -145,6 +180,12 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
         break;
     case ECALL_ECDSA_SIGN:
         cpu->regs[RV_REG_A0] = sys_ecdsa_sign(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4], cpu->regs[RV_REG_A5]);
+        break;
+    case ECALL_MULT:
+        sys_mult(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
+        break;
+    case ECALL_MULTM:
+        sys_multm(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
         break;
     default:
         sys_exit(0xdeaddead);
