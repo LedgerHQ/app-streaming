@@ -1,5 +1,4 @@
 #include <limits.h>
-
 int
 __clzsi2 (int val)
 {
@@ -120,10 +119,4 @@ long long __lshrdi3(long long u, word_type b)
 	}
 
 	return w.ll;
-}
-
-/* XXX */
-double __trunctfdf2(long double a)
-{
-    return 0;
 }
