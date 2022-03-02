@@ -126,6 +126,24 @@
         return ret;                                                     \
     }
 
+#define ECALL6(_name, _id, _ret_type, _type0, _arg0, _type1, _arg1, _type2, _arg2, _type3, _arg3, _type4, _arg4, _type5, _arg5) \
+    _ret_type _name(_type0 _arg0, _type1 _arg1, _type2 _arg2, _type3 _arg3, _type4 _arg4, _type5 _arg5) \
+    {                                                                   \
+        register uint32_t a0 asm ("a0") = (uint32_t)_arg0;              \
+        register uint32_t a1 asm ("a1") = (uint32_t)_arg1;              \
+        register uint32_t a2 asm ("a2") = (uint32_t)_arg2;              \
+        register uint32_t a3 asm ("a3") = (uint32_t)_arg3;              \
+        register uint32_t a4 asm ("a4") = (uint32_t)_arg4;              \
+        register uint32_t a5 asm ("a5") = (uint32_t)_arg5;              \
+        _ret_type ret;                                                  \
+        asm (                                                           \
+             "li t0, %1\n"                                              \
+             "ecall\n"                                                  \
+             : "=r"(ret) : "i"(_id), "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5) : "t0", "memory" \
+        );                                                              \
+        return ret;                                                     \
+    }
+
 #define ECALL8v(_name, _id, _type0, _arg0, _type1, _arg1, _type2, _arg2, _type3, _arg3, _type4, _arg4, _type5, _arg5, _type6, _arg6, _type7, _arg7) \
     void _name(_type0 _arg0, _type1 _arg1, _type2 _arg2, _type3 _arg3, _type4 _arg4, _type5 _arg5, _type6 _arg6, _type7 _arg7) \
     {                                                                   \
@@ -157,6 +175,7 @@ ECALL3v(ecall_sha3_256, ECALL_CX_SHA3_256, const uint8_t *, buffer, size_t, size
 ECALL4v(ecall_bagl_draw_with_context, ECALL_BAGL_DRAW, packed_bagl_component_t *,component, const void *, context, unsigned short, context_length, unsigned char, context_encoding)
 ECALL5(ecall_derive_node_bip32, ECALL_DERIVE_NODE_BIP32, cx_err_t, cx_curve_t, curve, const unsigned int *, path, size_t, path_count, uint8_t *, private_key, uint8_t *, chain)
 ECALL5v(ecall_bagl_hal_draw_rect, ECALL_UX_RECTANGLE, unsigned int, color, int, x, int, y, unsigned int, width, unsigned int, height)
+ECALL6(ecall_ecdsa_sign, ECALL_ECDSA_SIGN, size_t, const cx_ecfp_private_key_t *, key, const int, mode, const cx_md_t, hash_id, const uint8_t *, hash, uint8_t *, sig, size_t, sig_len)
 ECALL8v(ecall_bagl_hal_draw_bitmap_within_rect, ECALL_BAGL_DRAW_BITMAP, int, x, int, y, unsigned int, width, unsigned int, height, const unsigned int *, colors, unsigned int, bit_per_pixel, const unsigned char *, bitmap, unsigned int, bitmap_length_bits)
 
 __attribute__((noreturn)) void ecall_exit(int status)

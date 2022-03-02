@@ -40,3 +40,6 @@ cx_err_t ecfp_generate_pair(cx_curve_t curve, cx_ecfp_public_key_t *pubkey, cx_e
 
 cx_err_t derive_node_bip32(cx_curve_t curve, const unsigned int *path, size_t path_count, uint8_t *private_key, uint8_t *chain) \
     __attribute__((alias("ecall_derive_node_bip32")));
+
+size_t ecdsa_sign(const cx_ecfp_private_key_t *key, const int mode, const cx_md_t hash_id, const uint8_t * hash, uint8_t *sig, size_t sig_len) \
+    __attribute__((alias("ecall_ecdsa_sign")));

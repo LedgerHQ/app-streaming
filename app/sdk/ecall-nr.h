@@ -21,3 +21,4 @@
 #define ECALL_DERIVE_NODE_BIP32     100
 #define ECALL_CX_ECFP_GENERATE_PAIR 101
 #define ECALL_CX_SHA3_256           102
+#define ECALL_ECDSA_SIGN            103

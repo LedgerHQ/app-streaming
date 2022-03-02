@@ -152,3 +152,25 @@ cx_err_t ecall_derive_node_bip32(cx_curve_t curve, const unsigned int *path, siz
     /* XXX */
     return CX_OK;
 }
+
+size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key, const int mode, const cx_md_t hash_id, const uint8_t * hash, uint8_t *sig, size_t sig_len)
+{
+    unsigned int *info = NULL;
+    size_t hash_len, ret;
+
+    switch (hash_id) {
+    case CX_SHA224: hash_len = CX_SHA224_SIZE; break;
+    case CX_SHA256: hash_len = CX_SHA256_SIZE; break;
+    case CX_SHA384: hash_len = CX_SHA384_SIZE; break;
+    case CX_SHA512: hash_len = CX_SHA512_SIZE; break;
+    case CX_RIPEMD160: hash_len = CX_RIPEMD160_SIZE; break;
+    default: return 0;
+    }
+
+    ret = sys_cx_ecdsa_sign(key, mode, hash_id, hash, hash_len, sig, sig_len, info);
+    if (ret == 0) {
+        return 0;
+    }
+
+    return ret;
+}

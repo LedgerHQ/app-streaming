@@ -92,6 +92,39 @@ static void sys_sha3_256(uint32_t buffer_addr, size_t size, const uint32_t diges
     copy_host_buffer(digest_addr, digest, sizeof(digest));
 }
 
+static size_t sys_ecdsa_sign(const uint32_t key_addr, const int mode,
+                             const cx_md_t hash_id, const uint32_t hash_addr,
+                             uint32_t sig_addr, size_t sig_len)
+{
+    cx_ecfp_private_key_t key;
+    uint8_t hash[CX_SHA512_SIZE];
+    size_t hash_len;
+    uint8_t sig[100];
+    size_t ret;
+    unsigned int *info = NULL;
+
+    switch (hash_id) {
+    case CX_SHA224: hash_len = CX_SHA224_SIZE; break;
+    case CX_SHA256: hash_len = CX_SHA256_SIZE; break;
+    case CX_SHA384: hash_len = CX_SHA384_SIZE; break;
+    case CX_SHA512: hash_len = CX_SHA512_SIZE; break;
+    case CX_RIPEMD160: hash_len = CX_RIPEMD160_SIZE; break;
+    default: return 0;
+    }
+
+    copy_guest_buffer(key_addr, (void *)&key, sizeof(key));
+    copy_guest_buffer(hash_addr, hash, hash_len);
+
+    ret = cx_ecdsa_sign(&key, mode, hash_id, hash, hash_len, sig, sizeof(sig), info);
+    if (ret == 0 || ret > sig_len) {
+        return 0;
+    }
+
+    copy_host_buffer(sig_addr, sig, ret);
+
+    return ret;
+}
+
 /*
  * XXX - Disclaimer: these ECALLs aren't stable, probably buggy.
  *       The API is a WIP.
@@ -109,6 +142,9 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
         break;
     case ECALL_CX_SHA3_256:
         sys_sha3_256(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        break;
+    case ECALL_ECDSA_SIGN:
+        cpu->regs[RV_REG_A0] = sys_ecdsa_sign(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4], cpu->regs[RV_REG_A5]);
         break;
     default:
         sys_exit(0xdeaddead);
