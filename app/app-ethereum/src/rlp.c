@@ -80,8 +80,18 @@ static size_t rlp_decode_bytes(const uint8_t *data, const size_t size, uint8_t *
     return 1 + length_size + string_size;
 }
 
+static void convertUint256BE(const uint8_t *data, const size_t length, uint256_t *target)
+{
+    uint8_t tmp[INT256_LENGTH];
+
+    memset(tmp, 0, sizeof(tmp) - length);
+    memcpy(tmp + sizeof(tmp) - length, data, length);
+
+    readu256BE(tmp, target);
+}
+
 /* return 0 on error */
-static size_t rlp_decode_uint256(const uint8_t *data, const size_t size, txInt256_t *result)
+static size_t rlp_decode_uint256(const uint8_t *data, const size_t size, uint256_t *result)
 {
     size_t length_size, string_size;
 
@@ -92,18 +102,17 @@ static size_t rlp_decode_uint256(const uint8_t *data, const size_t size, txInt25
     if (data[0] < 0x80) {
         length_size = 0;
         string_size = 1;
-        result->value[0] = data[0];
+        convertUint256BE(data, 1, result);
     } else {
         length_size = 0;
         string_size = data[0] - 0x80;
 
-        if (string_size > sizeof(result->value))  {
+        if (string_size > INT256_LENGTH)  {
             return 0;
         }
-        memcpy(result->value, &data[1], string_size);
-    }
 
-    result->length = string_size;
+        convertUint256BE(&data[1], string_size, result);
+    }
 
     return 1 + length_size + string_size;
 }

@@ -99,12 +99,12 @@ void ui_set_tx_network_name(uint64_t chain_id)
     set_network_name(chain_id, g_ux_sign_tx_network_name, sizeof(g_ux_sign_tx_network_name));
 }
 
-void ui_set_tx_fees(uint64_t chain_id, const txInt256_t *gas_price, const txInt256_t *gas_limit)
+void ui_set_tx_fees(uint64_t chain_id, const uint256_t *gas_price, const uint256_t *gas_limit)
 {
     compute_fees(chain_id, gas_price, gas_limit, g_ux_sign_tx_max_fee, sizeof(g_ux_sign_tx_max_fee));
 }
 
-void ui_set_tx_amount(uint64_t chain_id, const txInt256_t *amount)
+void ui_set_tx_amount(uint64_t chain_id, const uint256_t *amount)
 {
     compute_amount(chain_id, amount, g_ux_sign_tx_amount, sizeof(g_ux_sign_tx_amount));
 }

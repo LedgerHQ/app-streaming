@@ -135,25 +135,9 @@ void set_network_name(const uint64_t chain_id, char *name, size_t size)
     }
 }
 
-static void convertUint256BE(const uint8_t *data, const size_t length, uint256_t *target)
+static void computeFees(const uint256_t *gasPrice, const uint256_t *gasLimit, uint256_t *output)
 {
-    uint8_t tmp[INT256_LENGTH];
-
-    memset(tmp, 0, sizeof(tmp) - length);
-    memcpy(tmp + sizeof(tmp) - length, data, length);
-
-    readu256BE(tmp, target);
-}
-
-static void computeFees(const txInt256_t *BEgasPrice, const txInt256_t *BEgasLimit, uint256_t *output)
-{
-    uint256_t gasPrice = {0};
-    uint256_t gasLimit = {0};
-
-    convertUint256BE(BEgasPrice->value, BEgasPrice->length, &gasPrice);
-    convertUint256BE(BEgasLimit->value, BEgasLimit->length, &gasLimit);
-
-    mul256(&gasPrice, &gasLimit, output);
+    mul256((uint256_t *)gasPrice, (uint256_t *)gasLimit, output);
 }
 
 static bool adjustDecimals(char *src,
@@ -235,17 +219,14 @@ static void value_to_string(const char *feeTicker, const uint256_t *rawFee, char
     displayBuffer[displayBufferSize - 1] = '\x00';
 }
 
-void compute_amount(uint64_t chain_id, const txInt256_t *amount, char *out_buffer, size_t out_buffer_size)
+void compute_amount(uint64_t chain_id, const uint256_t *amount, char *out_buffer, size_t out_buffer_size)
 {
     const char *ticker = get_network_ticker(chain_id);
 
-    uint256_t amount_u256 = {0};
-    convertUint256BE(amount->value, amount->length, &amount_u256);
-
-    value_to_string(ticker, &amount_u256, out_buffer, out_buffer_size);
+    value_to_string(ticker, amount, out_buffer, out_buffer_size);
 }
 
-void compute_fees(uint64_t chain_id, const txInt256_t *gas_price, const txInt256_t *gas_limit, char *buffer, const size_t size)
+void compute_fees(uint64_t chain_id, const uint256_t *gas_price, const uint256_t *gas_limit, char *buffer, const size_t size)
 {
     const char *feeTicker = get_network_ticker(chain_id);
     uint256_t rawFee = {0};

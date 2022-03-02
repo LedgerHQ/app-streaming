@@ -7,11 +7,11 @@
 #include "uint256.h"
 
 struct tx_s {
-    txInt256_t nonce;
-    txInt256_t gas_price;
-    txInt256_t gas_limit;
+    uint256_t nonce;
+    uint256_t gas_price;
+    uint256_t gas_limit;
     uint8_t *to;
-    txInt256_t value;
+    uint256_t value;
     uint8_t *data;
     size_t data_size;
     uint64_t chain_id;
