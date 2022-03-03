@@ -1,6 +1,6 @@
-#include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,19 +9,15 @@
 #include "ux/glyphs.h"
 #include "ux/ux.h"
 
-UX_STEP_NOCB(ux_menu_ready_step, pn, {&C_boilerplate_logo, "Fuckin' RISC app"});
-UX_STEP_NOCB(ux_menu_lol_step, pn, {&C_boilerplate_logo, "lol lol"});
-UX_STEP_VALID(ux_menu_exit_step, pb, exit(0), {&C_icon_dashboard_x, "Quit"});
+UX_STEP_NOCB(ux_menu_ready_step, pn, { &C_boilerplate_logo, "Fuckin' RISC app" });
+UX_STEP_NOCB(ux_menu_lol_step, pn, { &C_boilerplate_logo, "lol lol" });
+UX_STEP_VALID(ux_menu_exit_step, pb, exit(0), { &C_icon_dashboard_x, "Quit" });
 
-//UX_STEP_NOCB(ux_menu_ready_step, nn, {"1", "Fuckin' RISC app"});
-//UX_STEP_NOCB(ux_menu_lol_step, nn, {"2", "lol"});
-//UX_STEP_VALID(ux_menu_exit_step, nn, exit(0), {"3", "Quit"});
+// UX_STEP_NOCB(ux_menu_ready_step, nn, {"1", "Fuckin' RISC app"});
+// UX_STEP_NOCB(ux_menu_lol_step, nn, {"2", "lol"});
+// UX_STEP_VALID(ux_menu_exit_step, nn, exit(0), {"3", "Quit"});
 
-UX_FLOW(ux_menu_main_flow,
-        &ux_menu_ready_step,
-        &ux_menu_lol_step,
-        &ux_menu_exit_step,
-        FLOW_LOOP);
+UX_FLOW(ux_menu_main_flow, &ux_menu_ready_step, &ux_menu_lol_step, &ux_menu_exit_step, FLOW_LOOP);
 
 void ui_button_helper(int button)
 {
@@ -65,12 +61,12 @@ void test_malloc(void)
 
 int main(void)
 {
-    //test_sha256();
-    //printf("BLAH\n");
-    //puts("BLAH %s\n");
-    //xsend((uint8_t *)"hello\n", 5);
-    //test_malloc();
-    //test_sha256_2();
+    // test_sha256();
+    // printf("BLAH\n");
+    // puts("BLAH %s\n");
+    // xsend((uint8_t *)"hello\n", 5);
+    // test_malloc();
+    // test_sha256_2();
 
     ui_menu_main();
     /*for (int i = 0; i < 10; i++) {
@@ -79,12 +75,12 @@ int main(void)
         xsend(buf, sizeof(buf));
     }*/
 
-    //for (int i = 0; i < 10; i++) {
+    // for (int i = 0; i < 10; i++) {
     while (1) {
         int button = wait_button();
-        //uint8_t buf[2] = { '0' + i++, '\x00' };
+        // uint8_t buf[2] = { '0' + i++, '\x00' };
         ui_button_helper(button);
-        //xsend(buf, sizeof(buf));
+        // xsend(buf, sizeof(buf));
     }
 
     while (1) {

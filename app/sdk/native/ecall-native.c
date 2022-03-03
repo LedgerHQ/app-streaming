@@ -5,10 +5,10 @@
 #include <unistd.h>
 
 #include "crypto.h"
-#include "ecall.h"
 #include "ecall-common.h"
-#include "uint256-native.h"
+#include "ecall.h"
 #include "sdk/sdk.h"
+#include "uint256-native.h"
 
 static void readall(int fd, void *buf, size_t count)
 {
@@ -65,7 +65,6 @@ void ecall_xsend(const uint8_t *buffer, size_t size)
     writeall(buffer, size);
 }
 
-
 size_t ecall_xrecv(uint8_t *buffer, size_t size)
 {
     uint32_t n;
@@ -91,11 +90,21 @@ void ecall_screen_update(void)
 {
 }
 
-void ecall_bagl_draw_with_context(packed_bagl_component_t *component, const void *context, unsigned short context_length, unsigned char context_encoding)
+void ecall_bagl_draw_with_context(packed_bagl_component_t *component,
+                                  const void *context,
+                                  unsigned short context_length,
+                                  unsigned char context_encoding)
 {
 }
 
-void ecall_bagl_hal_draw_bitmap_within_rect(int x, int y, unsigned int width, unsigned int height, const unsigned int * colors, unsigned int bit_per_pixel, const unsigned char * bitmap, unsigned int bitmap_length_bits)
+void ecall_bagl_hal_draw_bitmap_within_rect(int x,
+                                            int y,
+                                            unsigned int width,
+                                            unsigned int height,
+                                            const unsigned int *colors,
+                                            unsigned int bit_per_pixel,
+                                            const unsigned char *bitmap,
+                                            unsigned int bitmap_length_bits)
 {
 }
 
@@ -139,7 +148,9 @@ void ecall_sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
     sys_cx_hash((cx_hash_t *)&ctx, CX_LAST, buffer, size, digest, 32);
 }
 
-cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve, cx_ecfp_public_key_t *pubkey, cx_ecfp_private_key_t *privkey)
+cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve,
+                                  cx_ecfp_public_key_t *pubkey,
+                                  cx_ecfp_private_key_t *privkey)
 {
     bool keep_private = (privkey != NULL);
     sys_cx_ecfp_generate_pair(curve, pubkey, privkey, keep_private);
@@ -147,25 +158,45 @@ cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve, cx_ecfp_public_key_t *pubkey
     return CX_OK;
 }
 
-cx_err_t ecall_derive_node_bip32(cx_curve_t curve, const unsigned int *path, size_t path_count, uint8_t *private_key, uint8_t *chain)
+cx_err_t ecall_derive_node_bip32(cx_curve_t curve,
+                                 const unsigned int *path,
+                                 size_t path_count,
+                                 uint8_t *private_key,
+                                 uint8_t *chain)
 {
     sys_os_perso_derive_node_bip32(curve, path, path_count, private_key, chain);
     /* XXX */
     return CX_OK;
 }
 
-size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key, const int mode, const cx_md_t hash_id, const uint8_t * hash, uint8_t *sig, size_t sig_len)
+size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,
+                        const int mode,
+                        const cx_md_t hash_id,
+                        const uint8_t *hash,
+                        uint8_t *sig,
+                        size_t sig_len)
 {
     unsigned int *info = NULL;
     size_t hash_len, ret;
 
     switch (hash_id) {
-    case CX_SHA224: hash_len = CX_SHA224_SIZE; break;
-    case CX_SHA256: hash_len = CX_SHA256_SIZE; break;
-    case CX_SHA384: hash_len = CX_SHA384_SIZE; break;
-    case CX_SHA512: hash_len = CX_SHA512_SIZE; break;
-    case CX_RIPEMD160: hash_len = CX_RIPEMD160_SIZE; break;
-    default: return 0;
+    case CX_SHA224:
+        hash_len = CX_SHA224_SIZE;
+        break;
+    case CX_SHA256:
+        hash_len = CX_SHA256_SIZE;
+        break;
+    case CX_SHA384:
+        hash_len = CX_SHA384_SIZE;
+        break;
+    case CX_SHA512:
+        hash_len = CX_SHA512_SIZE;
+        break;
+    case CX_RIPEMD160:
+        hash_len = CX_RIPEMD160_SIZE;
+        break;
+    default:
+        return 0;
     }
 
     ret = sys_cx_ecdsa_sign(key, mode, hash_id, hash, hash_len, sig, sig_len, info);

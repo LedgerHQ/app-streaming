@@ -3,9 +3,9 @@
  */
 
 #include <stdbool.h>
-#include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,8 +18,8 @@ static void hexdump(const uint8_t *in, char *out, size_t size)
 
     for (size_t i = 0; i < size; i++) {
         uint8_t c = in[i];
-        out[i*2] = hex[(c >> 4) & 0xf];
-        out[i*2+1] = hex[c & 0xf];
+        out[i * 2] = hex[(c >> 4) & 0xf];
+        out[i * 2 + 1] = hex[c & 0xf];
     }
 }
 

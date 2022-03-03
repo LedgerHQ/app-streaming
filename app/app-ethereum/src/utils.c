@@ -81,22 +81,23 @@ typedef struct network_info_s {
 } network_info_t;
 
 static const network_info_t NETWORK_MAPPING[] = {
-    {.chain_id = 1, .name = "Ethereum", .ticker = "ETH"},
-    {.chain_id = 3, .name = "Ropsten", .ticker = "ETH"},
-    {.chain_id = 4, .name = "Rinkeby", .ticker = "ETH"},
-    {.chain_id = 5, .name = "Goerli", .ticker = "ETH"},
-    {.chain_id = 10, .name = "Optimism", .ticker = "ETH"},
-    {.chain_id = 42, .name = "Kovan", .ticker = "ETH"},
-    {.chain_id = 56, .name = "BSC", .ticker = "BNB"},
-    {.chain_id = 100, .name = "xDai", .ticker = "xDAI"},
-    {.chain_id = 137, .name = "Polygon", .ticker = "MATIC"},
-    {.chain_id = 250, .name = "Fantom", .ticker = "FTM"},
-    {.chain_id = 42161, .name = "Arbitrum", .ticker = "AETH"},
-    {.chain_id = 42220, .name = "Celo", .ticker = "CELO"},
-    {.chain_id = 43114, .name = "Avalanche", .ticker = "AVAX"},
-    {.chain_id = 44787, .name = "Celo Alfajores", .ticker = "aCELO"},
-    {.chain_id = 62320, .name = "Celo Baklava", .ticker = "bCELO"},
-    {.chain_id = 11297108109, .name = "Palm Network", .ticker = "PALM"}};
+    { .chain_id = 1, .name = "Ethereum", .ticker = "ETH" },
+    { .chain_id = 3, .name = "Ropsten", .ticker = "ETH" },
+    { .chain_id = 4, .name = "Rinkeby", .ticker = "ETH" },
+    { .chain_id = 5, .name = "Goerli", .ticker = "ETH" },
+    { .chain_id = 10, .name = "Optimism", .ticker = "ETH" },
+    { .chain_id = 42, .name = "Kovan", .ticker = "ETH" },
+    { .chain_id = 56, .name = "BSC", .ticker = "BNB" },
+    { .chain_id = 100, .name = "xDai", .ticker = "xDAI" },
+    { .chain_id = 137, .name = "Polygon", .ticker = "MATIC" },
+    { .chain_id = 250, .name = "Fantom", .ticker = "FTM" },
+    { .chain_id = 42161, .name = "Arbitrum", .ticker = "AETH" },
+    { .chain_id = 42220, .name = "Celo", .ticker = "CELO" },
+    { .chain_id = 43114, .name = "Avalanche", .ticker = "AVAX" },
+    { .chain_id = 44787, .name = "Celo Alfajores", .ticker = "aCELO" },
+    { .chain_id = 62320, .name = "Celo Baklava", .ticker = "bCELO" },
+    { .chain_id = 11297108109, .name = "Palm Network", .ticker = "PALM" }
+};
 
 static const network_info_t *get_network(uint64_t chain_id)
 {
@@ -144,7 +145,8 @@ static bool adjustDecimals(char *src,
                            uint32_t srcLength,
                            char *target,
                            uint32_t targetLength,
-                           uint8_t decimals) {
+                           uint8_t decimals)
+{
     uint32_t startOffset;
     uint32_t lastZeroOffset = 0;
     uint32_t offset = 0;
@@ -207,7 +209,10 @@ static bool adjustDecimals(char *src,
     return true;
 }
 
-static void value_to_string(const char *feeTicker, const uint256_t *rawFee, char *displayBuffer, const size_t displayBufferSize)
+static void value_to_string(const char *feeTicker,
+                            const uint256_t *rawFee,
+                            char *displayBuffer,
+                            const size_t displayBufferSize)
 {
     char buf[100];
     char buf2[100];
@@ -219,17 +224,24 @@ static void value_to_string(const char *feeTicker, const uint256_t *rawFee, char
     displayBuffer[displayBufferSize - 1] = '\x00';
 }
 
-void compute_amount(uint64_t chain_id, const uint256_t *amount, char *out_buffer, size_t out_buffer_size)
+void compute_amount(uint64_t chain_id,
+                    const uint256_t *amount,
+                    char *out_buffer,
+                    size_t out_buffer_size)
 {
     const char *ticker = get_network_ticker(chain_id);
 
     value_to_string(ticker, amount, out_buffer, out_buffer_size);
 }
 
-void compute_fees(uint64_t chain_id, const uint256_t *gas_price, const uint256_t *gas_limit, char *buffer, const size_t size)
+void compute_fees(uint64_t chain_id,
+                  const uint256_t *gas_price,
+                  const uint256_t *gas_limit,
+                  char *buffer,
+                  const size_t size)
 {
     const char *feeTicker = get_network_ticker(chain_id);
-    uint256_t rawFee = {0};
+    uint256_t rawFee = { 0 };
     computeFees(gas_price, gas_limit, &rawFee);
     value_to_string(feeTicker, &rawFee, buffer, size);
 }

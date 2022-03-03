@@ -5,7 +5,6 @@
 #include "sdk.h"
 #include "ux/ux.h"
 
-
 #define BUTTON_MAGIC 0xdeadbe00
 
 static void button_helper(uint8_t magic)
@@ -18,17 +17,17 @@ static void button_helper(uint8_t magic)
     if (G_ux.stack[0].button_push_callback != NULL) {
         G_ux.stack[0].button_push_callback(button_mask, button_same_mask_counter);
         }*/
-    switch(magic) {
+    switch (magic) {
     case 1:
-      ux_flow_prev();
-      break;
+        ux_flow_prev();
+        break;
     case 2:
-      ux_flow_next();
-      break;
+        ux_flow_next();
+        break;
     case 3:
-      ux_flow_validate();
-      break;
-  }
+        ux_flow_validate();
+        break;
+    }
 }
 
 size_t xrecv(uint8_t *buffer, size_t size)
@@ -56,7 +55,10 @@ void xrecvall(uint8_t *buffer, size_t size)
     }
 }
 
-void bagl_draw_with_context(const bagl_component_t *component, const void *context, unsigned short context_length, unsigned char context_encoding)
+void bagl_draw_with_context(const bagl_component_t *component,
+                            const void *context,
+                            unsigned short context_length,
+                            unsigned char context_encoding)
 {
     packed_bagl_component_t packed_component;
 
@@ -77,8 +79,17 @@ void bagl_draw_with_context(const bagl_component_t *component, const void *conte
     ecall_bagl_draw_with_context(&packed_component, context, context_length, context_encoding);
 }
 
-void bagl_hal_draw_bitmap_within_rect(int x, int y, unsigned int width, unsigned int height, unsigned int color_count, const unsigned int * colors, unsigned int bit_per_pixel, const unsigned char * bitmap, unsigned int bitmap_length_bits)
+void bagl_hal_draw_bitmap_within_rect(int x,
+                                      int y,
+                                      unsigned int width,
+                                      unsigned int height,
+                                      unsigned int color_count,
+                                      const unsigned int *colors,
+                                      unsigned int bit_per_pixel,
+                                      const unsigned char *bitmap,
+                                      unsigned int bitmap_length_bits)
 {
     /* don't pass color_count since it's always 2 */
-    ecall_bagl_hal_draw_bitmap_within_rect(x, y, width, height, colors, bit_per_pixel, bitmap, bitmap_length_bits);
+    ecall_bagl_hal_draw_bitmap_within_rect(x, y, width, height, colors, bit_per_pixel, bitmap,
+                                           bitmap_length_bits);
 }

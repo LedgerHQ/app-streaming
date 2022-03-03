@@ -11,10 +11,10 @@
 static int validated;
 static char g_ux_get_pubkey_full_address[64];
 
-UX_STEP_NOCB(ux_get_pubkey_1_step, pnn, {&C_icon_eye, "Verify", "address"});
-UX_STEP_NOCB(ux_get_pubkey_2_step, nn, {"Address:", g_ux_get_pubkey_full_address});
-UX_STEP_CB(ux_get_pubkey_3_step, pb, validated = 1, {&C_icon_validate_14, "Approve"});
-UX_STEP_CB(ux_get_pubkey_4_step, pb, validated = -1, {&C_icon_crossmark, "Reject"});
+UX_STEP_NOCB(ux_get_pubkey_1_step, pnn, { &C_icon_eye, "Verify", "address" });
+UX_STEP_NOCB(ux_get_pubkey_2_step, nn, { "Address:", g_ux_get_pubkey_full_address });
+UX_STEP_CB(ux_get_pubkey_3_step, pb, validated = 1, { &C_icon_validate_14, "Approve" });
+UX_STEP_CB(ux_get_pubkey_4_step, pb, validated = -1, { &C_icon_crossmark, "Reject" });
 
 UX_FLOW(ux_get_pubkey_flow,
         &ux_get_pubkey_1_step,
@@ -27,13 +27,13 @@ static char g_ux_sign_tx_full_address[41];
 static char g_ux_sign_tx_max_fee[50];
 static char g_ux_sign_tx_network_name[79];
 
-UX_STEP_NOCB(ux_sign_tx_1_step, pnn, {&C_icon_eye, "Review", "transaction"});
-UX_STEP_NOCB(ux_sign_tx_2_step, nn, {"Amount", g_ux_sign_tx_amount});
-UX_STEP_NOCB(ux_sign_tx_3_step, nn, {"Address", g_ux_sign_tx_full_address});
-UX_STEP_NOCB(ux_sign_tx_4_step, nn, {"Max Fees", g_ux_sign_tx_max_fee});
-UX_STEP_NOCB(ux_sign_tx_5_step, nn, {"Network", g_ux_sign_tx_network_name});
-UX_STEP_CB(ux_sign_tx_6_step, pbb, validated = 1, {&C_icon_validate_14, "Accept", "and send"});
-UX_STEP_CB(ux_sign_tx_7_step, pb, validated = -1, {&C_icon_crossmark, "Reject"});
+UX_STEP_NOCB(ux_sign_tx_1_step, pnn, { &C_icon_eye, "Review", "transaction" });
+UX_STEP_NOCB(ux_sign_tx_2_step, nn, { "Amount", g_ux_sign_tx_amount });
+UX_STEP_NOCB(ux_sign_tx_3_step, nn, { "Address", g_ux_sign_tx_full_address });
+UX_STEP_NOCB(ux_sign_tx_4_step, nn, { "Max Fees", g_ux_sign_tx_max_fee });
+UX_STEP_NOCB(ux_sign_tx_5_step, nn, { "Network", g_ux_sign_tx_network_name });
+UX_STEP_CB(ux_sign_tx_6_step, pbb, validated = 1, { &C_icon_validate_14, "Accept", "and send" });
+UX_STEP_CB(ux_sign_tx_7_step, pb, validated = -1, { &C_icon_crossmark, "Reject" });
 
 UX_FLOW(ux_sign_tx_flow,
         &ux_sign_tx_1_step,
@@ -53,7 +53,7 @@ static void ui_button_helper(int button)
     }
 }
 
-static void ui_init(const ux_flow_step_t * const *steps)
+static void ui_init(const ux_flow_step_t *const *steps)
 {
     memset(&G_ux, 0, sizeof(G_ux));
     ux_stack_push();
@@ -62,8 +62,8 @@ static void ui_init(const ux_flow_step_t * const *steps)
 
 void ui_set_pubkey_address(char *address)
 {
-    snprintf(g_ux_get_pubkey_full_address, sizeof(g_ux_get_pubkey_full_address),
-             "0x%.*s", 40, address);
+    snprintf(g_ux_get_pubkey_full_address, sizeof(g_ux_get_pubkey_full_address), "0x%.*s", 40,
+             address);
 }
 
 /* return true if the user approved the tx, false otherwise */
@@ -101,7 +101,8 @@ void ui_set_tx_network_name(uint64_t chain_id)
 
 void ui_set_tx_fees(uint64_t chain_id, const uint256_t *gas_price, const uint256_t *gas_limit)
 {
-    compute_fees(chain_id, gas_price, gas_limit, g_ux_sign_tx_max_fee, sizeof(g_ux_sign_tx_max_fee));
+    compute_fees(chain_id, gas_price, gas_limit, g_ux_sign_tx_max_fee,
+                 sizeof(g_ux_sign_tx_max_fee));
 }
 
 void ui_set_tx_amount(uint64_t chain_id, const uint256_t *amount)

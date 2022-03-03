@@ -38,7 +38,10 @@ static size_t rlp_decode_int(const uint8_t *data, const size_t size, uint64_t *r
 }
 
 /* return 0 on error */
-static size_t rlp_decode_bytes(const uint8_t *data, const size_t size, uint8_t **result, size_t *result_size)
+static size_t rlp_decode_bytes(const uint8_t *data,
+                               const size_t size,
+                               uint8_t **result,
+                               size_t *result_size)
 {
     size_t length_size, string_size;
 
@@ -60,7 +63,7 @@ static size_t rlp_decode_bytes(const uint8_t *data, const size_t size, uint8_t *
         string_size = rlp_decode_fixed_int(&data[1], length_size);
     }
 
-    if (1 + length_size + string_size > size)  {
+    if (1 + length_size + string_size > size) {
         return 0;
     }
 
@@ -107,7 +110,7 @@ static size_t rlp_decode_uint256(const uint8_t *data, const size_t size, uint256
         length_size = 0;
         string_size = data[0] - 0x80;
 
-        if (string_size > INT256_LENGTH)  {
+        if (string_size > INT256_LENGTH) {
             return 0;
         }
 
@@ -116,7 +119,6 @@ static size_t rlp_decode_uint256(const uint8_t *data, const size_t size, uint256
 
     return 1 + length_size + string_size;
 }
-
 
 bool rlp_decode_list(const uint8_t *data, const size_t size, struct tx_s *tx)
 {

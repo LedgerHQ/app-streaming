@@ -2,15 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <pb_common.h>
 #include <pb_decode.h>
 #include <pb_encode.h>
-#include <pb_common.h>
 
 #include "message.pb.h"
 
 #include "app-ethereum.h"
-#include "ui.h"
 #include "sdk.h"
+#include "ui.h"
 
 #define MAX_REQ_SIZE 1024
 
@@ -36,11 +36,13 @@ static void handle_req(const Request *req, Response *response)
     switch (req->which_message_oneof) {
     case Request_get_version_tag:
         response->which_message_oneof = Response_get_version_tag;
-        error = handle_get_version(&req->message_oneof.get_version, &response->message_oneof.get_version);
+        error = handle_get_version(&req->message_oneof.get_version,
+                                   &response->message_oneof.get_version);
         break;
     case Request_get_pubkey_tag:
         response->which_message_oneof = Response_get_pubkey_tag;
-        error = handle_get_pubkey(&req->message_oneof.get_pubkey, &response->message_oneof.get_pubkey);
+        error = handle_get_pubkey(&req->message_oneof.get_pubkey,
+                                  &response->message_oneof.get_pubkey);
         break;
     case Request_sign_tx_tag:
         response->which_message_oneof = Response_sign_tx_tag;

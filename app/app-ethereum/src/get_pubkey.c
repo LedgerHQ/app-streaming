@@ -5,12 +5,15 @@
 
 #include "app-ethereum.h"
 #include "crypto.h"
-#include "ui.h"
 #include "sdk.h"
+#include "ui.h"
 
 #define CHAIN_CODE_SIZE 32
 
-static const char *derive_pubkey(const uint32_t *path, size_t path_count, cx_ecfp_public_key_t *pubkey, uint8_t *chain_code)
+static const char *derive_pubkey(const uint32_t *path,
+                                 size_t path_count,
+                                 cx_ecfp_public_key_t *pubkey,
+                                 uint8_t *chain_code)
 {
     const char *error = NULL;
 
@@ -27,7 +30,7 @@ static const char *derive_pubkey(const uint32_t *path, size_t path_count, cx_ecf
         goto end;
     }
 
- end:
+end:
     explicit_bzero(privkey_data, sizeof(privkey_data));
     explicit_bzero(&privkey, sizeof(privkey));
 
@@ -63,6 +66,6 @@ const char *handle_get_pubkey(const RequestGetPubKey *req, ResponseGetPubKey *re
         }
     }
 
- end:
+end:
     return error;
 }

@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "app-boilerplate.h"
-#include "ui.h"
 #include "sdk.h"
+#include "ui.h"
 
 #define MAX_MSG_SIZE 1024
 
@@ -29,52 +29,52 @@ static ResponseError *handle_error(void)
 static void handle_msg(Message *msg, Response *response)
 {
     switch (msg->message_oneof_case) {
-        case MESSAGE__MESSAGE_ONEOF_GET_VERSION:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_GET_VERSION;
-            response->get_version = handle_get_version(msg->get_version);
-            break;
+    case MESSAGE__MESSAGE_ONEOF_GET_VERSION:
+        response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_GET_VERSION;
+        response->get_version = handle_get_version(msg->get_version);
+        break;
 
-        case MESSAGE__MESSAGE_ONEOF_GET_PUBKEY:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_GET_PUBKEY;
-            break;
+    case MESSAGE__MESSAGE_ONEOF_GET_PUBKEY:
+        response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_GET_PUBKEY;
+        break;
 
-        case MESSAGE__MESSAGE_ONEOF_SIGN_TX:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_SIGN_TX;
-            response->sign_tx = handle_sign_tx(msg->sign_tx);
-            break;
+    case MESSAGE__MESSAGE_ONEOF_SIGN_TX:
+        response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_SIGN_TX;
+        response->sign_tx = handle_sign_tx(msg->sign_tx);
+        break;
 
-        default:
-            response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_ERROR;
-            response->error = handle_error();
-            break;
+    default:
+        response->message_oneof_case = RESPONSE__MESSAGE_ONEOF_ERROR;
+        response->error = handle_error();
+        break;
     }
 }
 
 static void free_response(Response *response)
 {
     switch (response->message_oneof_case) {
-        case RESPONSE__MESSAGE_ONEOF_GET_VERSION:
-            free(response->get_version->version);
-            free(response->get_version);
-            break;
+    case RESPONSE__MESSAGE_ONEOF_GET_VERSION:
+        free(response->get_version->version);
+        free(response->get_version);
+        break;
 
-        case RESPONSE__MESSAGE_ONEOF_GET_PUBKEY:
-            free(response->get_pubkey);
-            break;
+    case RESPONSE__MESSAGE_ONEOF_GET_PUBKEY:
+        free(response->get_pubkey);
+        break;
 
-        case RESPONSE__MESSAGE_ONEOF_SIGN_TX:
-            free(response->sign_tx->signature.data);
-            free(response->sign_tx);
-            break;
+    case RESPONSE__MESSAGE_ONEOF_SIGN_TX:
+        free(response->sign_tx->signature.data);
+        free(response->sign_tx);
+        break;
 
-        case RESPONSE__MESSAGE_ONEOF_ERROR:
-            free(response->error->error_msg);
-            free(response->error);
-            break;
+    case RESPONSE__MESSAGE_ONEOF_ERROR:
+        free(response->error->error_msg);
+        free(response->error);
+        break;
 
-        case RESPONSE__MESSAGE_ONEOF__NOT_SET:
-        default:
-            break;
+    case RESPONSE__MESSAGE_ONEOF__NOT_SET:
+    default:
+        break;
     }
 }
 

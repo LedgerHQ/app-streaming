@@ -3,11 +3,11 @@
 #include <string.h>
 
 #include "app-boilerplate.h"
-#include "ui.h"
 #include "sdk.h"
+#include "ui.h"
 
-#include <stdlib.h>
 #include <memory.h>
+#include <stdlib.h>
 
 static void set_tx_info(MessageSignTx *msg)
 {
@@ -40,4 +40,3 @@ ResponseSignTx *handle_sign_tx(MessageSignTx *msg)
 
     return response;
 }
-

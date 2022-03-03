@@ -9,10 +9,10 @@
 static int validated;
 char g_ux_sign_tx_2_step_tx[16];
 
-UX_STEP_NOCB(ux_sign_tx_1_step, pn, {&C_icon_eye, "Confirm signature?"});
-UX_STEP_NOCB(ux_sign_tx_2_step, nn, {"Data:", g_ux_sign_tx_2_step_tx});
-UX_STEP_CB(ux_sign_tx_3_step, pn, validated = 1, {&C_icon_validate_14, "Approve"});
-UX_STEP_CB(ux_sign_tx_4_step, pn, validated = -1, {&C_icon_crossmark, "Reject"});
+UX_STEP_NOCB(ux_sign_tx_1_step, pn, { &C_icon_eye, "Confirm signature?" });
+UX_STEP_NOCB(ux_sign_tx_2_step, nn, { "Data:", g_ux_sign_tx_2_step_tx });
+UX_STEP_CB(ux_sign_tx_3_step, pn, validated = 1, { &C_icon_validate_14, "Approve" });
+UX_STEP_CB(ux_sign_tx_4_step, pn, validated = -1, { &C_icon_crossmark, "Reject" });
 
 UX_FLOW(ux_sign_tx_flow,
         &ux_sign_tx_1_step,
@@ -29,7 +29,7 @@ static void ui_button_helper(int button)
     }
 }
 
-static void ui_init(const ux_flow_step_t * const *steps)
+static void ui_init(const ux_flow_step_t *const *steps)
 {
     memset(&G_ux, 0, sizeof(G_ux));
     ux_stack_push();

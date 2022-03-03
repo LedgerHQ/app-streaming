@@ -8,7 +8,10 @@
 #include "sdk.h"
 #include "ui.h"
 
-static const char *sign(const uint32_t *path, const size_t path_count, const uint8_t *hash, ResponseSignTx_signature_t *signature)
+static const char *sign(const uint32_t *path,
+                        const size_t path_count,
+                        const uint8_t *hash,
+                        ResponseSignTx_signature_t *signature)
 {
     const char *error = NULL;
 
@@ -21,13 +24,14 @@ static const char *sign(const uint32_t *path, const size_t path_count, const uin
     cx_ecfp_private_key_t privkey;
     ecfp_init_private_key(CX_CURVE_256K1, privkey_data, sizeof(privkey_data), &privkey);
 
-    signature->size = ecdsa_sign(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256, hash, signature->bytes, sizeof(signature->bytes));
+    signature->size = ecdsa_sign(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256, hash,
+                                 signature->bytes, sizeof(signature->bytes));
     if (signature->size == 0) {
         error = "ecdsa_sign failed";
         goto end;
     }
 
- end:
+end:
     explicit_bzero(privkey_data, sizeof(privkey_data));
     explicit_bzero(&privkey, sizeof(privkey));
 
@@ -64,7 +68,7 @@ const char *handle_sign_tx(const RequestSignTx *req, ResponseSignTx *response)
         goto end;
     }
 
- end:
+end:
     free(tx.to);
     free(tx.data);
 
