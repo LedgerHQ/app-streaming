@@ -112,17 +112,17 @@ static size_t rlp_decode_uint256(const uint8_t *data, const size_t size, uint256
         string_size = 1;
         convertUint256BE(data, 1, result);
     } else {
-        length_size = 0;
+        length_size = 1;
         string_size = data[0] - 0x80;
 
-        if (string_size > INT256_LENGTH) {
+        if (length_size + string_size > size || string_size > INT256_LENGTH) {
             return 0;
         }
 
         convertUint256BE(&data[1], string_size, result);
     }
 
-    return 1 + length_size + string_size;
+    return length_size + string_size;
 }
 
 bool rlp_decode_list(const uint8_t *data, const size_t size, struct tx_s *tx)
