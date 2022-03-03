@@ -72,5 +72,5 @@ end:
     free(tx.to);
     free(tx.data);
 
-    return NULL;
+    return error;
 }
