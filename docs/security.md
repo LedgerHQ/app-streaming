@@ -49,10 +49,20 @@ The nodes of these merkle tree are made of 8 bytes of data associated to a page:
 When the VM receives a writeable page from the host, the merkle tree is used to ensure that the node made of the associated address and counter is actually part of the tree. It guarantees that the counter associated to the page is valid.
 
 
-## Key management
+## Key management (to be discussed)
 
 Once an app is built, pages are encrypted and authenticated using `KeyAES1` and `KeyHMAC1`. Several options are available:
 
 - A unique key could be shared by all apps and all Nanos.
 - A key derived for each app could be shared by all Nanos.
 - A key derived for each app and each Nano could be generated depending on the Nano ID when the user retrieve an app.
+
+If an attacker manages to compromise BOLOS, he might retrieve the key used to authenticate app pages (`KeyHMAC1`) and create malicious apps. In order to prevent that scenario a new authentication key should be generated for **each** Nano and **each** app.
+
+1. The host (Ledger Live or Python client) asks the Nano an ECDSA public key `pub1`, generated and signed (`sig1`) by BOLOS.
+2. `pub1` and `sig1` are sent to a Ledger HSM which verifies the signature.
+3. This Ledger HSM:
+    - Generates a new and random `KeyAES1` and `KeyHMAC1`
+    - Authenticates the app pages using `KeyHMAC1`
+    - Encrypts a manifesto which contains `KeyAES1` and `KeyHMAC1` using `pub1`
+    - Sends the encrypted manifesto and the app to the host
