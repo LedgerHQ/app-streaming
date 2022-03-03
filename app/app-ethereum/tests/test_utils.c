@@ -21,14 +21,14 @@ static void test_utils(void **state __attribute__((unused)))
     char buf[256];
     uint64_t chain_id = 3;
 
-    convertUint256BE("\x01", 1, &amount);
+    convertUint256BE((const uint8_t *)"\x01", 1, &amount);
 
     compute_amount(chain_id, &amount, buf, sizeof(buf));
     assert_string_equal(buf, "ETH 0.000000000000000001");
 
     uint256_t gas_limit, gas_price;
-    convertUint256BE("\x3b\x9a\xca\x00", 4, &gas_price);
-    convertUint256BE("\x01\x5f\x90", 3, &gas_limit);
+    convertUint256BE((const uint8_t *)"\x3b\x9a\xca\x00", 4, &gas_price);
+    convertUint256BE((const uint8_t *)"\x01\x5f\x90", 3, &gas_limit);
 
     compute_fees(chain_id, &gas_price, &gas_limit, buf, sizeof(buf));
     assert_string_equal(buf, "ETH 0.00009");

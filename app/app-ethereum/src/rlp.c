@@ -220,4 +220,6 @@ bool rlp_decode_list(const uint8_t *data, const size_t size, struct tx_s *tx)
     if (rem_size != 0) {
         return false;
     }
+
+    return true;
 }
