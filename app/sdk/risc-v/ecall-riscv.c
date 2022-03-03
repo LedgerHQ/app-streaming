@@ -2,6 +2,8 @@
 #include "ecall-nr.h"
 #include "ecall-common.h"
 
+/* clang-format off */
+
 #define ECALL0v(_name, _id)                                             \
     void _name(void)                                                    \
     {                                                                   \
@@ -220,3 +222,5 @@ __attribute__((noreturn)) void ecall_fatal(char *msg)
 
     while (1);
 }
+
+/* clang-format on */
