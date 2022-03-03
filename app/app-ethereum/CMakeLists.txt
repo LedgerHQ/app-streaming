@@ -4,6 +4,8 @@ add_executable(app-ethereum
                src/app-ethereum.c
                src/get_pubkey.c
                src/rlp.c
+               src/sign.c
+               src/sign_message.c
                src/sign_tx.c
                src/ui.c
                src/utils.c

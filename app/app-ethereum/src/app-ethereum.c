@@ -48,6 +48,11 @@ static void handle_req(const Request *req, Response *response)
         response->which_message_oneof = Response_sign_tx_tag;
         error = handle_sign_tx(&req->message_oneof.sign_tx, &response->message_oneof.sign_tx);
         break;
+    case Request_sign_msg_tag:
+        response->which_message_oneof = Response_sign_msg_tag;
+        error = handle_sign_message(&req->message_oneof.sign_msg,
+                                    &response->message_oneof.sign_msg);
+        break;
     default:
         error = "invalid request tag";
         break;

@@ -3,6 +3,18 @@ set(CMAKE_C_COMPILER /usr/bin/clang)
 
 include_directories(../src/)
 
+add_executable(test_sign_msg
+  test_sign_msg.c
+  ../src/sign.c
+  ../src/sign_message.c)
+
+add_dependencies(test_sign_msg
+  sdk)
+
+target_link_libraries(test_sign_msg PRIVATE
+  cmocka
+  sdk)
+
 add_executable(test_pubkey
   test_pubkey.c
   ../src/utils.c)

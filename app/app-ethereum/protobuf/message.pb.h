@@ -21,6 +21,13 @@ typedef struct _RequestGetPubKey {
     bool get_chain_code; 
 } RequestGetPubKey;
 
+typedef PB_BYTES_ARRAY_T(1024) RequestSignMsg_message_t;
+typedef struct _RequestSignMsg { 
+    pb_size_t path_count;
+    uint32_t path[10]; 
+    RequestSignMsg_message_t message; 
+} RequestSignMsg;
+
 typedef PB_BYTES_ARRAY_T(1024) RequestSignTx_raw_tx_t;
 typedef struct _RequestSignTx { 
     pb_size_t path_count;
@@ -44,6 +51,12 @@ typedef struct _ResponseGetVersion {
     char version[41]; 
 } ResponseGetVersion;
 
+typedef PB_BYTES_ARRAY_T(100) ResponseSignMsg_signature_t;
+typedef struct _ResponseSignMsg { 
+    bool approved; 
+    ResponseSignMsg_signature_t signature; 
+} ResponseSignMsg;
+
 typedef PB_BYTES_ARRAY_T(100) ResponseSignTx_signature_t;
 typedef struct _ResponseSignTx { 
     bool approved; 
@@ -56,6 +69,7 @@ typedef struct _Request {
         RequestGetVersion get_version;
         RequestGetPubKey get_pubkey;
         RequestSignTx sign_tx;
+        RequestSignMsg sign_msg;
     } message_oneof; 
 } Request;
 
@@ -65,6 +79,7 @@ typedef struct _Response {
         ResponseGetVersion get_version;
         ResponseGetPubKey get_pubkey;
         ResponseSignTx sign_tx;
+        ResponseSignMsg sign_msg;
         ResponseError error;
     } message_oneof; 
 } Response;
@@ -81,6 +96,8 @@ extern "C" {
 #define ResponseGetPubKey_init_default           {0, {0}, "", {0}}
 #define RequestSignTx_init_default               {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}, 0}
 #define ResponseSignTx_init_default              {0, {0, {0}}}
+#define RequestSignMsg_init_default              {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}}
+#define ResponseSignMsg_init_default             {0, {0, {0}}}
 #define ResponseError_init_default               {""}
 #define Request_init_default                     {0, {RequestGetVersion_init_default}}
 #define Response_init_default                    {0, {ResponseGetVersion_init_default}}
@@ -90,6 +107,8 @@ extern "C" {
 #define ResponseGetPubKey_init_zero              {0, {0}, "", {0}}
 #define RequestSignTx_init_zero                  {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}, 0}
 #define ResponseSignTx_init_zero                 {0, {0, {0}}}
+#define RequestSignMsg_init_zero                 {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}}
+#define ResponseSignMsg_init_zero                {0, {0, {0}}}
 #define ResponseError_init_zero                  {""}
 #define Request_init_zero                        {0, {RequestGetVersion_init_zero}}
 #define Response_init_zero                       {0, {ResponseGetVersion_init_zero}}
@@ -98,6 +117,8 @@ extern "C" {
 #define RequestGetPubKey_path_tag                1
 #define RequestGetPubKey_confirm_tag             2
 #define RequestGetPubKey_get_chain_code_tag      3
+#define RequestSignMsg_path_tag                  1
+#define RequestSignMsg_message_tag               2
 #define RequestSignTx_path_tag                   1
 #define RequestSignTx_raw_tx_tag                 2
 #define RequestSignTx_chain_id_tag               3
@@ -107,15 +128,19 @@ extern "C" {
 #define ResponseGetPubKey_address_tag            3
 #define ResponseGetPubKey_chain_code_tag         4
 #define ResponseGetVersion_version_tag           1
+#define ResponseSignMsg_approved_tag             1
+#define ResponseSignMsg_signature_tag            2
 #define ResponseSignTx_approved_tag              1
 #define ResponseSignTx_signature_tag             2
 #define Request_get_version_tag                  1
 #define Request_get_pubkey_tag                   2
 #define Request_sign_tx_tag                      3
+#define Request_sign_msg_tag                     4
 #define Response_get_version_tag                 1
 #define Response_get_pubkey_tag                  2
 #define Response_sign_tx_tag                     3
-#define Response_error_tag                       4
+#define Response_sign_msg_tag                    4
+#define Response_error_tag                       5
 
 /* Struct field encoding specification for nanopb */
 #define RequestGetVersion_FIELDLIST(X, a) \
@@ -156,6 +181,18 @@ X(a, STATIC,   SINGULAR, BYTES,    signature,         2)
 #define ResponseSignTx_CALLBACK NULL
 #define ResponseSignTx_DEFAULT NULL
 
+#define RequestSignMsg_FIELDLIST(X, a) \
+X(a, STATIC,   REPEATED, UINT32,   path,              1) \
+X(a, STATIC,   SINGULAR, BYTES,    message,           2)
+#define RequestSignMsg_CALLBACK NULL
+#define RequestSignMsg_DEFAULT NULL
+
+#define ResponseSignMsg_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, BOOL,     approved,          1) \
+X(a, STATIC,   SINGULAR, BYTES,    signature,         2)
+#define ResponseSignMsg_CALLBACK NULL
+#define ResponseSignMsg_DEFAULT NULL
+
 #define ResponseError_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, STRING,   error_msg,         1)
 #define ResponseError_CALLBACK NULL
@@ -164,23 +201,27 @@ X(a, STATIC,   SINGULAR, STRING,   error_msg,         1)
 #define Request_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_version,message_oneof.get_version),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_pubkey,message_oneof.get_pubkey),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_tx,message_oneof.sign_tx),   3)
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_tx,message_oneof.sign_tx),   3) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_msg,message_oneof.sign_msg),   4)
 #define Request_CALLBACK NULL
 #define Request_DEFAULT NULL
 #define Request_message_oneof_get_version_MSGTYPE RequestGetVersion
 #define Request_message_oneof_get_pubkey_MSGTYPE RequestGetPubKey
 #define Request_message_oneof_sign_tx_MSGTYPE RequestSignTx
+#define Request_message_oneof_sign_msg_MSGTYPE RequestSignMsg
 
 #define Response_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_version,message_oneof.get_version),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_pubkey,message_oneof.get_pubkey),   2) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_tx,message_oneof.sign_tx),   3) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,error,message_oneof.error),   4)
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_msg,message_oneof.sign_msg),   4) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,error,message_oneof.error),   5)
 #define Response_CALLBACK NULL
 #define Response_DEFAULT NULL
 #define Response_message_oneof_get_version_MSGTYPE ResponseGetVersion
 #define Response_message_oneof_get_pubkey_MSGTYPE ResponseGetPubKey
 #define Response_message_oneof_sign_tx_MSGTYPE ResponseSignTx
+#define Response_message_oneof_sign_msg_MSGTYPE ResponseSignMsg
 #define Response_message_oneof_error_MSGTYPE ResponseError
 
 extern const pb_msgdesc_t RequestGetVersion_msg;
@@ -189,6 +230,8 @@ extern const pb_msgdesc_t RequestGetPubKey_msg;
 extern const pb_msgdesc_t ResponseGetPubKey_msg;
 extern const pb_msgdesc_t RequestSignTx_msg;
 extern const pb_msgdesc_t ResponseSignTx_msg;
+extern const pb_msgdesc_t RequestSignMsg_msg;
+extern const pb_msgdesc_t ResponseSignMsg_msg;
 extern const pb_msgdesc_t ResponseError_msg;
 extern const pb_msgdesc_t Request_msg;
 extern const pb_msgdesc_t Response_msg;
@@ -200,6 +243,8 @@ extern const pb_msgdesc_t Response_msg;
 #define ResponseGetPubKey_fields &ResponseGetPubKey_msg
 #define RequestSignTx_fields &RequestSignTx_msg
 #define ResponseSignTx_fields &ResponseSignTx_msg
+#define RequestSignMsg_fields &RequestSignMsg_msg
+#define ResponseSignMsg_fields &ResponseSignMsg_msg
 #define ResponseError_fields &ResponseError_msg
 #define Request_fields &Request_msg
 #define Response_fields &Response_msg
@@ -207,11 +252,13 @@ extern const pb_msgdesc_t Response_msg;
 /* Maximum encoded size of messages (where known) */
 #define RequestGetPubKey_size                    64
 #define RequestGetVersion_size                   0
+#define RequestSignMsg_size                      1087
 #define RequestSignTx_size                       1098
 #define Request_size                             1101
 #define ResponseError_size                       66
 #define ResponseGetPubKey_size                   145
 #define ResponseGetVersion_size                  42
+#define ResponseSignMsg_size                     104
 #define ResponseSignTx_size                      104
 #define Response_size                            148
 

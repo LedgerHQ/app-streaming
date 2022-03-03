@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14message-nonano.proto\"\x13\n\x11RequestGetVersion\"%\n\x12ResponseGetVersion\x12\x0f\n\x07version\x18\x01 \x01(\t\"I\n\x10RequestGetPubKey\x12\x0c\n\x04path\x18\x01 \x03(\r\x12\x0f\n\x07\x63onfirm\x18\x02 \x01(\x08\x12\x16\n\x0eget_chain_code\x18\x03 \x01(\x08\"Z\n\x11ResponseGetPubKey\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\x12\x12\n\nchain_code\x18\x04 \x01(\x0c\"?\n\rRequestSignTx\x12\x0c\n\x04path\x18\x01 \x03(\r\x12\x0e\n\x06raw_tx\x18\x02 \x01(\x0c\x12\x10\n\x08\x63hain_id\x18\x03 \x01(\x04\"5\n\x0eResponseSignTx\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"\"\n\rResponseError\x12\x11\n\terror_msg\x18\x01 \x01(\t\"\x91\x01\n\x07Request\x12)\n\x0bget_version\x18\x01 \x01(\x0b\x32\x12.RequestGetVersionH\x00\x12\'\n\nget_pubkey\x18\x02 \x01(\x0b\x32\x11.RequestGetPubKeyH\x00\x12!\n\x07sign_tx\x18\x03 \x01(\x0b\x32\x0e.RequestSignTxH\x00\x42\x0f\n\rmessage_oneof\"\xb6\x01\n\x08Response\x12*\n\x0bget_version\x18\x01 \x01(\x0b\x32\x13.ResponseGetVersionH\x00\x12(\n\nget_pubkey\x18\x02 \x01(\x0b\x32\x12.ResponseGetPubKeyH\x00\x12\"\n\x07sign_tx\x18\x03 \x01(\x0b\x32\x0f.ResponseSignTxH\x00\x12\x1f\n\x05\x65rror\x18\x04 \x01(\x0b\x32\x0e.ResponseErrorH\x00\x42\x0f\n\rmessage_oneofb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14message-nonano.proto\"\x13\n\x11RequestGetVersion\"%\n\x12ResponseGetVersion\x12\x0f\n\x07version\x18\x01 \x01(\t\"I\n\x10RequestGetPubKey\x12\x0c\n\x04path\x18\x01 \x03(\r\x12\x0f\n\x07\x63onfirm\x18\x02 \x01(\x08\x12\x16\n\x0eget_chain_code\x18\x03 \x01(\x08\"Z\n\x11ResponseGetPubKey\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x0f\n\x07\x61\x64\x64ress\x18\x03 \x01(\t\x12\x12\n\nchain_code\x18\x04 \x01(\x0c\"?\n\rRequestSignTx\x12\x0c\n\x04path\x18\x01 \x03(\r\x12\x0e\n\x06raw_tx\x18\x02 \x01(\x0c\x12\x10\n\x08\x63hain_id\x18\x03 \x01(\x04\"5\n\x0eResponseSignTx\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"/\n\x0eRequestSignMsg\x12\x0c\n\x04path\x18\x01 \x03(\r\x12\x0f\n\x07message\x18\x02 \x01(\x0c\"6\n\x0fResponseSignMsg\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"\"\n\rResponseError\x12\x11\n\terror_msg\x18\x01 \x01(\t\"\xb6\x01\n\x07Request\x12)\n\x0bget_version\x18\x01 \x01(\x0b\x32\x12.RequestGetVersionH\x00\x12\'\n\nget_pubkey\x18\x02 \x01(\x0b\x32\x11.RequestGetPubKeyH\x00\x12!\n\x07sign_tx\x18\x03 \x01(\x0b\x32\x0e.RequestSignTxH\x00\x12#\n\x08sign_msg\x18\x04 \x01(\x0b\x32\x0f.RequestSignMsgH\x00\x42\x0f\n\rmessage_oneof\"\xdc\x01\n\x08Response\x12*\n\x0bget_version\x18\x01 \x01(\x0b\x32\x13.ResponseGetVersionH\x00\x12(\n\nget_pubkey\x18\x02 \x01(\x0b\x32\x12.ResponseGetPubKeyH\x00\x12\"\n\x07sign_tx\x18\x03 \x01(\x0b\x32\x0f.ResponseSignTxH\x00\x12$\n\x08sign_msg\x18\x04 \x01(\x0b\x32\x10.ResponseSignMsgH\x00\x12\x1f\n\x05\x65rror\x18\x05 \x01(\x0b\x32\x0e.ResponseErrorH\x00\x42\x0f\n\rmessage_oneofb\x06proto3')
 
 
 
@@ -24,6 +24,8 @@ _REQUESTGETPUBKEY = DESCRIPTOR.message_types_by_name['RequestGetPubKey']
 _RESPONSEGETPUBKEY = DESCRIPTOR.message_types_by_name['ResponseGetPubKey']
 _REQUESTSIGNTX = DESCRIPTOR.message_types_by_name['RequestSignTx']
 _RESPONSESIGNTX = DESCRIPTOR.message_types_by_name['ResponseSignTx']
+_REQUESTSIGNMSG = DESCRIPTOR.message_types_by_name['RequestSignMsg']
+_RESPONSESIGNMSG = DESCRIPTOR.message_types_by_name['ResponseSignMsg']
 _RESPONSEERROR = DESCRIPTOR.message_types_by_name['ResponseError']
 _REQUEST = DESCRIPTOR.message_types_by_name['Request']
 _RESPONSE = DESCRIPTOR.message_types_by_name['Response']
@@ -69,6 +71,20 @@ ResponseSignTx = _reflection.GeneratedProtocolMessageType('ResponseSignTx', (_me
   })
 _sym_db.RegisterMessage(ResponseSignTx)
 
+RequestSignMsg = _reflection.GeneratedProtocolMessageType('RequestSignMsg', (_message.Message,), {
+  'DESCRIPTOR' : _REQUESTSIGNMSG,
+  '__module__' : 'message_nonano_pb2'
+  # @@protoc_insertion_point(class_scope:RequestSignMsg)
+  })
+_sym_db.RegisterMessage(RequestSignMsg)
+
+ResponseSignMsg = _reflection.GeneratedProtocolMessageType('ResponseSignMsg', (_message.Message,), {
+  'DESCRIPTOR' : _RESPONSESIGNMSG,
+  '__module__' : 'message_nonano_pb2'
+  # @@protoc_insertion_point(class_scope:ResponseSignMsg)
+  })
+_sym_db.RegisterMessage(ResponseSignMsg)
+
 ResponseError = _reflection.GeneratedProtocolMessageType('ResponseError', (_message.Message,), {
   'DESCRIPTOR' : _RESPONSEERROR,
   '__module__' : 'message_nonano_pb2'
@@ -105,10 +121,14 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _REQUESTSIGNTX._serialized_end=314
   _RESPONSESIGNTX._serialized_start=316
   _RESPONSESIGNTX._serialized_end=369
-  _RESPONSEERROR._serialized_start=371
-  _RESPONSEERROR._serialized_end=405
-  _REQUEST._serialized_start=408
-  _REQUEST._serialized_end=553
-  _RESPONSE._serialized_start=556
-  _RESPONSE._serialized_end=738
+  _REQUESTSIGNMSG._serialized_start=371
+  _REQUESTSIGNMSG._serialized_end=418
+  _RESPONSESIGNMSG._serialized_start=420
+  _RESPONSESIGNMSG._serialized_end=474
+  _RESPONSEERROR._serialized_start=476
+  _RESPONSEERROR._serialized_end=510
+  _REQUEST._serialized_start=513
+  _REQUEST._serialized_end=695
+  _RESPONSE._serialized_start=698
+  _RESPONSE._serialized_end=918
 # @@protoc_insertion_point(module_scope)

@@ -24,6 +24,12 @@ PB_BIND(RequestSignTx, RequestSignTx, 2)
 PB_BIND(ResponseSignTx, ResponseSignTx, AUTO)
 
 
+PB_BIND(RequestSignMsg, RequestSignMsg, 2)
+
+
+PB_BIND(ResponseSignMsg, ResponseSignMsg, AUTO)
+
+
 PB_BIND(ResponseError, ResponseError, AUTO)
 
 

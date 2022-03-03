@@ -3,8 +3,7 @@ syntax = "proto3";
 import "nanopb.proto";
 
 // apt install protobuf-c-compiler protobuf-compiler
-// cat message.proto | sed 's/import.*//' | sed 's/\[.*\]//g' > message-nonano.proto
-// protoc --python_out=. message-nonano.proto && mv message_nonano_pb2.py message_pb2.py && rm message-nonano.proto
+// cat message.proto | sed 's/import.*//' | sed 's/\[.*\]//g' > message-nonano.proto && protoc --python_out=. message-nonano.proto && mv message_nonano_pb2.py message_pb2.py && rm message-nonano.proto
 
 // apt install python3-protobuf
 // ./nanopb/generator/nanopb_generator.py app-ethereum/protobuf/message.proto
@@ -40,6 +39,16 @@ message ResponseSignTx {
   bytes signature = 2 [(nanopb).max_size = 100];
 };
 
+message RequestSignMsg {
+  repeated uint32 path = 1 [(nanopb).max_count = 10];
+  bytes message = 2 [(nanopb).max_size = 1024];
+};
+
+message ResponseSignMsg {
+  bool approved = 1;
+  bytes signature = 2 [(nanopb).max_size = 100];
+};
+
 message ResponseError {
   string error_msg = 1 [(nanopb).max_length = 64];
 };
@@ -49,6 +58,7 @@ message Request {
     RequestGetVersion get_version = 1;
     RequestGetPubKey get_pubkey = 2;
     RequestSignTx sign_tx = 3;
+    RequestSignMsg sign_msg = 4;
   };
 }
 
@@ -57,6 +67,7 @@ message Response {
     ResponseGetVersion get_version = 1;
     ResponseGetPubKey get_pubkey = 2;
     ResponseSignTx sign_tx = 3;
-    ResponseError error = 4;
+    ResponseSignMsg sign_msg = 4;
+    ResponseError error = 5;
   };
 }

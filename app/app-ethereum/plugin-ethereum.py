@@ -60,3 +60,19 @@ class Plugin:
         assert response.WhichOneof("message_oneof") == "sign_tx"
         print(f"signature: {response.sign_tx.signature.hex()}")
         return response
+
+    def sign_msg_prepare_request(self):
+        sign_msg = message_pb2.RequestSignMsg()
+        sign_msg.path.extend(self.path)
+        sign_msg.message = b"Hello world"
+        message = message_pb2.Request()
+        message.sign_msg.CopyFrom(sign_msg)
+        assert message.WhichOneof("message_oneof") == "sign_msg"
+        return message.SerializeToString()
+
+    def sign_msg_parse_response(self, data):
+        response = message_pb2.Response()
+        response.ParseFromString(data)
+        assert response.WhichOneof("message_oneof") == "sign_msg"
+        print(f"signature: {response.sign_msg.signature.hex()}")
+        return response
