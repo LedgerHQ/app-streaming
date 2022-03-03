@@ -5,14 +5,17 @@ if (NOT NATIVE)
     risc-v/ecall-riscv.c
     risc-v/start.S
     risc-v/std.c
-    sdk.c)
+    sdk.c
+    uint256.c)
 else()
   add_compile_options(-DNATIVE_64BITS)
 
   add_library(sdk
     crypto.c
     native/ecall-native.c
+    native/uint256-native.c
     sdk.c
+    uint256.c
 
     ${SPECULOS_DIR}/src/bolos/bagl.c
     ${SPECULOS_DIR}/src/bolos/cx_aes.c

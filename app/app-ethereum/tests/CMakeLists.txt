@@ -2,12 +2,10 @@ include_directories(../src/)
 
 add_executable(test_pubkey
   test_pubkey.c
-  ../src/uint256.c
   ../src/utils.c)
 
 add_executable(test_utils
   test_utils.c
-  ../src/uint256.c
   ../src/utils.c)
 
 add_dependencies(test_pubkey

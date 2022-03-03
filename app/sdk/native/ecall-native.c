@@ -7,6 +7,7 @@
 #include "crypto.h"
 #include "ecall.h"
 #include "ecall-common.h"
+#include "uint256-native.h"
 #include "sdk/sdk.h"
 
 static void readall(int fd, void *buf, size_t count)
@@ -183,4 +184,9 @@ void ecall_mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
 void ecall_multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len)
 {
     sys_cx_math_multm(r, a, b, m, len);
+}
+
+bool ecall_tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len)
+{
+    return sys_tostring256(number, base, out, len);
 }

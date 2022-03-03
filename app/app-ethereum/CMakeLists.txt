@@ -6,7 +6,6 @@ add_executable(app-ethereum
                src/rlp.c
                src/sign_tx.c
                src/ui.c
-               src/uint256.c
                src/utils.c
                protobuf/message.pb.h
                protobuf/message.pb.c

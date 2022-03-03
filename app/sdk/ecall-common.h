@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "crypto.h"
+#include "uint256.h"
 
 /*
  * The following functions are aliased to ecall implementations.
@@ -49,3 +50,6 @@ void mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len) \
 
 void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len) \
     __attribute__((alias("ecall_multm")));
+
+bool tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len) \
+    __attribute__((alias("ecall_tostring256")));

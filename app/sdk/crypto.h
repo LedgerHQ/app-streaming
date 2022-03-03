@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "speculos.h"
+#include "uint256.h"
 
 typedef uint32_t cx_err_t;
 
@@ -35,3 +36,4 @@ void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest);
 size_t ecdsa_sign(const cx_ecfp_private_key_t *key, const int mode, const cx_md_t hash_id, const uint8_t * hash, uint8_t *sig, size_t sig_len);
 void mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len);
 void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len);
+bool tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len);

@@ -20,28 +20,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "crypto.h"
+#include "lcx_math.h"
 
-#include "uint256.h"
+#include "uint256-internal.h"
+
+#define UPPER_P(x) x->elements[0]
+#define LOWER_P(x) x->elements[1]
+#define UPPER(x)   x.elements[0]
+#define LOWER(x)   x.elements[1]
 
 static const char HEXDIGITS[] = "0123456789abcdef";
-
-static uint64_t readUint64BE(uint8_t *buffer) {
-    return (((uint64_t) buffer[0]) << 56) | (((uint64_t) buffer[1]) << 48) |
-           (((uint64_t) buffer[2]) << 40) | (((uint64_t) buffer[3]) << 32) |
-           (((uint64_t) buffer[4]) << 24) | (((uint64_t) buffer[5]) << 16) |
-           (((uint64_t) buffer[6]) << 8) | (((uint64_t) buffer[7]));
-}
-
-void readu128BE(uint8_t *buffer, uint128_t *target) {
-    UPPER_P(target) = readUint64BE(buffer);
-    LOWER_P(target) = readUint64BE(buffer + 8);
-}
-
-void readu256BE(uint8_t *buffer, uint256_t *target) {
-    readu128BE(buffer, &UPPER_P(target));
-    readu128BE(buffer + 16, &LOWER_P(target));
-}
 
 bool zero128(uint128_t *number) {
     return ((LOWER_P(number) == 0) && (UPPER_P(number) == 0));
@@ -325,42 +313,6 @@ void mul128(uint128_t *number1, uint128_t *number2, uint128_t *target) {
     add128(&tmp, &tmp2, target);
 }
 
-void write_u64_be(uint8_t *buffer, uint64_t value) {
-    buffer[0] = ((value >> 56) & 0xff);
-    buffer[1] = ((value >> 48) & 0xff);
-    buffer[2] = ((value >> 40) & 0xff);
-    buffer[3] = ((value >> 32) & 0xff);
-    buffer[4] = ((value >> 24) & 0xff);
-    buffer[5] = ((value >> 16) & 0xff);
-    buffer[6] = ((value >> 8) & 0xff);
-    buffer[7] = (value & 0xff);
-}
-
-void read_u64_be(uint8_t *in, uint64_t *out) {
-    uint8_t *out_ptr = (uint8_t *) out;
-    *out_ptr++ = in[7];
-    *out_ptr++ = in[6];
-    *out_ptr++ = in[5];
-    *out_ptr++ = in[4];
-    *out_ptr++ = in[3];
-    *out_ptr++ = in[2];
-    *out_ptr++ = in[1];
-    *out_ptr = in[0];
-}
-
-void mul256(uint256_t *number1, uint256_t *number2, uint256_t *target) {
-    uint8_t num1[INT256_LENGTH], num2[INT256_LENGTH], result[INT256_LENGTH * 2];
-    memset(&result, 0, sizeof(result));
-    for (uint8_t i = 0; i < 4; i++) {
-        write_u64_be(num1 + i * sizeof(uint64_t), number1->elements[i / 2].elements[i % 2]);
-        write_u64_be(num2 + i * sizeof(uint64_t), number2->elements[i / 2].elements[i % 2]);
-    }
-    mult(result, num1, num2, sizeof(num1));
-    for (uint8_t i = 0; i < 4; i++) {
-        read_u64_be(result + 32 + i * sizeof(uint64_t), &target->elements[i / 2].elements[i % 2]);
-    }
-}
-
 void divmod128(uint128_t *l, uint128_t *r, uint128_t *retDiv, uint128_t *retMod) {
     uint128_t copyd, adder, resDiv, resMod;
     uint128_t one;
@@ -424,7 +376,7 @@ void divmod256(uint256_t *l, uint256_t *r, uint256_t *retDiv, uint256_t *retMod)
     }
 }
 
-static void reverseString(char *str, uint32_t length) {
+void reverseString(char *str, uint32_t length) {
     uint32_t i, j;
     for (i = 0, j = length - 1; i < j; i++, j--) {
         uint8_t c;
@@ -458,11 +410,11 @@ bool tostring128(uint128_t *number, uint32_t baseParam, char *out, uint32_t outL
     return true;
 }
 
-bool tostring256(uint256_t *number, uint32_t baseParam, char *out, uint32_t outLength) {
+bool tostring256(const uint256_t *number, const unsigned int baseParam, char *out, size_t outLength) {
     uint256_t rDiv;
     uint256_t rMod;
     uint256_t base;
-    copy256(&rDiv, number);
+    copy256(&rDiv, (uint256_t *)number);
     clear256(&rMod);
     clear256(&base);
     UPPER(LOWER(base)) = 0;

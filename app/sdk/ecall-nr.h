@@ -24,3 +24,4 @@
 #define ECALL_ECDSA_SIGN            103
 #define ECALL_MULT                  104
 #define ECALL_MULTM                 105
+#define ECALL_TOSTRING256           106

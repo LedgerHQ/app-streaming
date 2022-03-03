@@ -9,6 +9,7 @@
 #include "rv.h"
 #include "stream.h"
 #include "types.h"
+#include "uint256-internal.h"
 
 #include "sdk/ecall-nr.h"
 
@@ -160,6 +161,26 @@ static void sys_multm(uint32_t r_addr, uint32_t a_addr, uint32_t b_addr, uint32_
     copy_host_buffer(r_addr, r, len * 2);
 }
 
+static bool sys_tostring256(const uint32_t number_addr, const unsigned int base, uint32_t out_addr, size_t len)
+{
+    uint256_t number;
+    char buf[100];
+
+    if (len > sizeof(buf)) {
+        len = sizeof(buf);
+    }
+
+    copy_guest_buffer(number_addr, &number, sizeof(number));
+
+    if (!tostring256(&number, base, buf, len)) {
+        return false;
+    }
+
+    copy_host_buffer(out_addr, buf, len);
+
+    return true;
+}
+
 /*
  * XXX - Disclaimer: these ECALLs aren't stable, probably buggy.
  *       The API is a WIP.
@@ -186,6 +207,9 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
         break;
     case ECALL_MULTM:
         sys_multm(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
+        break;
+    case ECALL_TOSTRING256:
+        cpu->regs[RV_REG_A0] = sys_tostring256(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
         break;
     default:
         sys_exit(0xdeaddead);
