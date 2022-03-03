@@ -6,6 +6,8 @@
 #include "rlp.h"
 #include "sdk.h"
 
+#define MAX_DATA_SIZE 1024
+
 static uint64_t rlp_decode_fixed_int(const uint8_t *data, const size_t size)
 {
     uint64_t value = 0;
@@ -61,6 +63,9 @@ static size_t rlp_decode_bytes(const uint8_t *data,
             return 0;
         }
         string_size = rlp_decode_fixed_int(&data[1], length_size);
+        if (string_size > MAX_DATA_SIZE) {
+            return 0;
+        }
     }
 
     if (1 + length_size + string_size > size) {
