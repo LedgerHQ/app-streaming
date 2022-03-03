@@ -37,7 +37,7 @@ static void readall(int fd, void *buf, size_t count)
 
 static void writeall(const uint8_t *buffer, size_t size)
 {
-    const char *p;
+    const uint8_t *p;
     ssize_t i;
 
     p = buffer;

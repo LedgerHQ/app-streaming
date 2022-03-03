@@ -89,7 +89,7 @@ bool ui_get_pubkey_validation(void)
     return (validated == 1);
 }
 
-void ui_set_tx_address(uint64_t chain_id, char *to)
+void ui_set_tx_address(uint64_t chain_id, uint8_t *to)
 {
     getEthAddressStringFromBinary(to, g_ux_sign_tx_full_address, chain_id);
 }

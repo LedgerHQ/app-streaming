@@ -129,7 +129,7 @@ void set_network_name(const uint64_t chain_id, char *name, size_t size)
     const char *network_name = get_network_name(chain_id);
 
     if (network_name == NULL) {
-        snprintf(name, size, "%zu", chain_id);
+        snprintf(name, size, "%" PRIu64, chain_id);
     } else {
         strncpy(name, network_name, size);
         name[size - 1] = '\x00';

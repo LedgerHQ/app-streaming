@@ -349,7 +349,7 @@ void ux_stack_display(unsigned int stack_slot) {
 #endif // HAVE_SE_SCREEN
   }
   // asking to redraw below top screen (likely the app below the ux)
-  else if (stack_slot == -1UL || G_ux.stack_count == 0) {
+  else if (stack_slot == -1 || G_ux.stack_count == 0) {
     if (G_ux.exit_code == BOLOS_UX_OK) {
       G_ux.exit_code = BOLOS_UX_REDRAW;
     }
