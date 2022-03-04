@@ -14,13 +14,4 @@ RUN git clone --depth 1 git://cygwin.com/git/newlib-cygwin.git /tmp/newlib-cygwi
     cd / && \
     rm -rf /tmp/newlib-cygwin/
 
-RUN git clone --depth 1 https://github.com/json-c/json-c.git /tmp/json-c/ && \
-    mkdir /tmp/json-c/build && \
-    cd /tmp/json-c/build && \
-    cmake ../ -DCMAKE_C_FLAGS='-march=rv32g -mno-div -mno-fdiv -mstrict-align -Os' && \
-    make && \
-    make install && \
-    cd / && \
-    rm -rf /tmp/json-c/
-
 ENTRYPOINT /bin/bash

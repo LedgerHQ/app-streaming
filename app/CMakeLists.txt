@@ -26,8 +26,8 @@ if (NOT NATIVE)
   add_compile_options(-march=rv32g)
   add_link_options(-z noseparate-code -static -nostdlib)
 
-  include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ /usr/local/include/ sdk/risc-v/)
-  link_directories(/usr/local/riscv32-unknown-linux-gnu/lib /usr/local/lib/)
+  include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ sdk/risc-v/)
+  link_directories(/usr/local/riscv32-unknown-linux-gnu/lib)
   link_libraries(c)
 
 else()
@@ -49,11 +49,13 @@ endif()
 
 add_compile_options(-Werror)
 
-# Compute the absolute path of nanopb/ and store it in the variable NANOPB_PATH
+# Compute the absolute path of jsmn/ and nanopb/ and store them in the variables JSMN_PATH and NANOPB_PATH
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.19.0")
   file(REAL_PATH nanopb/ NANOPB_PATH)
+  file(REAL_PATH jsmn/ JSMN_PATH)
 else()
   get_filename_component(NANOPB_PATH nanopb/ REALPATH)
+  get_filename_component(JSMN_PATH jsmn/ REALPATH)
 endif()
 
 # Make sure to include sdk/ first to prevent ${SPECULOS_DIR}/src/sdk.h

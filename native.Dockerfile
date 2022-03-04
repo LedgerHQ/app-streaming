@@ -5,7 +5,7 @@ FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -yq update && \
-    apt-get -yq install build-essential clang cmake less make libcmocka-dev libjson-c-dev libprotobuf-c-dev python3 python3-pip wget && \
+    apt-get -yq install build-essential clang cmake less make libcmocka-dev libprotobuf-c-dev python3 python3-pip wget && \
     pip3 install protobuf
 
 # Unfortunately, libssl-dev has no support for ED25519 on Ubuntu 20.04.
