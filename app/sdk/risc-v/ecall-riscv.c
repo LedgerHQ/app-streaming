@@ -172,6 +172,22 @@
         return ret;                                                     \
     }
 
+#define ECALL6v(_name, _id, _type0, _arg0, _type1, _arg1, _type2, _arg2, _type3, _arg3, _type4, _arg4, _type5, _arg5) \
+    void _name(_type0 _arg0, _type1 _arg1, _type2 _arg2, _type3 _arg3, _type4 _arg4, _type5 _arg5) \
+    {                                                                   \
+        register uint32_t a0 asm ("a0") = (uint32_t)_arg0;              \
+        register uint32_t a1 asm ("a1") = (uint32_t)_arg1;              \
+        register uint32_t a2 asm ("a2") = (uint32_t)_arg2;              \
+        register uint32_t a3 asm ("a3") = (uint32_t)_arg3;              \
+        register uint32_t a4 asm ("a4") = (uint32_t)_arg4;              \
+        register uint32_t a5 asm ("a5") = (uint32_t)_arg5;              \
+        asm (                                                           \
+             "li t0, %0\n"                                              \
+             "ecall\n"                                                  \
+             :: "i"(_id), "r"(a0), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5) : "t0", "memory" \
+        );                                                              \
+    }
+
 #define ECALL8v(_name, _id, _type0, _arg0, _type1, _arg1, _type2, _arg2, _type3, _arg3, _type4, _arg4, _type5, _arg5, _type6, _arg6, _type7, _arg7) \
     void _name(_type0 _arg0, _type1 _arg1, _type2 _arg2, _type3 _arg3, _type4 _arg4, _type5 _arg5, _type6 _arg6, _type7 _arg7) \
     {                                                                   \
@@ -198,8 +214,10 @@ ECALL1v(ecall_app_loading_start, ECALL_LOADING_START, const char *, status)
 ECALL2(ecall_xrecv, ECALL_XRECV, size_t, uint8_t *, buffer, size_t, size)
 ECALL2v(ecall_xsend, ECALL_XSEND, const uint8_t *, buffer, size_t, size)
 ECALL3(ecall_ecfp_generate_pair, ECALL_CX_ECFP_GENERATE_PAIR, cx_err_t, cx_curve_t, curve, cx_ecfp_public_key_t *, pubkey, cx_ecfp_private_key_t *, privkey)
+ECALL3(ecall_hash_final, ECALL_HASH_FINAL, bool, const cx_hash_id_t, hash_id, ctx_hash_guest_t *, ctx, uint8_t *, digest)
 ECALL3v(ecall_sha256sum, ECALL_SHA256SUM, const uint8_t *, buffer, size_t, size, uint8_t *, digest)
 ECALL3v(ecall_sha3_256, ECALL_CX_SHA3_256, const uint8_t *, buffer, size_t, size, uint8_t *, digest)
+ECALL4(ecall_hash_update, ECALL_HASH_UPDATE, bool, const cx_hash_id_t, hash_id, ctx_hash_guest_t *, ctx, const uint8_t *, buffer, const size_t, size)
 ECALL4(ecall_tostring256, ECALL_TOSTRING256, bool, const uint256_t *, number, const unsigned int, base, char *, out, size_t, len)
 ECALL4v(ecall_bagl_draw_with_context, ECALL_BAGL_DRAW, packed_bagl_component_t *,component, const void *, context, unsigned short, context_length, unsigned char, context_encoding)
 ECALL4v(ecall_mult, ECALL_MULT, uint8_t *, r, const uint8_t *, a, const uint8_t *, b, size_t, len)

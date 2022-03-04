@@ -5,6 +5,7 @@
 
 #include "apdu.h"
 #include "ecall.h"
+#include "ecall_hash.h"
 #include "error.h"
 #include "rv.h"
 #include "stream.h"
@@ -67,30 +68,6 @@ static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, uint32_t pubkey_addr, u
     explicit_bzero(&privkey, sizeof(privkey));
 
     return err;
-}
-
-static void sys_sha3_256(uint32_t buffer_addr, size_t size, const uint32_t digest_addr)
-{
-    cx_sha3_t ctx;
-
-    cx_keccak_init(&ctx, 256);
-    while (size > 0) {
-        size_t n;
-        n = PAGE_SIZE - (buffer_addr - PAGE_START(buffer_addr));
-        n = MIN(size, n);
-
-        uint8_t *buffer;
-        buffer = get_buffer(buffer_addr, n, false);
-        cx_hash((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
-
-        buffer_addr += n;
-        size -= n;
-    }
-
-    uint8_t digest[32];
-    cx_hash((cx_hash_t *)&ctx, CX_LAST, NULL, 0, digest, sizeof(digest));
-
-    copy_host_buffer(digest_addr, digest, sizeof(digest));
 }
 
 static size_t sys_ecdsa_sign(const uint32_t key_addr, const int mode,
@@ -190,6 +167,9 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
     bool stop = false;
 
     switch (nr) {
+    case ECALL_SHA256SUM:
+        sys_sha256sum(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        break;
     case ECALL_DERIVE_NODE_BIP32:
         cpu->regs[RV_REG_A0] = sys_derive_node_bip32(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
         break;
@@ -210,6 +190,12 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
         break;
     case ECALL_TOSTRING256:
         cpu->regs[RV_REG_A0] = sys_tostring256(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
+        break;
+    case ECALL_HASH_UPDATE:
+        cpu->regs[RV_REG_A0] = sys_hash_update(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
+        break;
+    case ECALL_HASH_FINAL:
+        cpu->regs[RV_REG_A0] = sys_hash_final(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
         break;
     default:
         sys_exit(0xdeaddead);

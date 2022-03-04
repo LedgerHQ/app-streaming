@@ -177,47 +177,6 @@ static void xsend(uint32_t addr, size_t size)
     }
 }
 
-static void sha256sum(uint32_t data_addr, size_t size, uint32_t digest_addr)
-{
-    uint8_t digest[CX_SHA256_SIZE];
-    cx_sha256_t ctx;
-
-    cx_sha256_init_no_throw(&ctx);
-
-    /* compute digest over the guest data */
-    while (size > 0) {
-        size_t n;
-        n = PAGE_SIZE - (data_addr - PAGE_START(data_addr));
-        n = MIN(size, n);
-
-        uint8_t *buffer;
-        buffer = get_buffer(data_addr, n, false);
-
-        if (size - n != 0) {
-            cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
-        } else {
-            cx_hash_no_throw((cx_hash_t *)&ctx, CX_LAST, buffer, n, digest, sizeof(digest));
-        }
-
-        data_addr += n;
-        size -= n;
-    }
-
-    /* copy digest to the guest addr */
-    size = sizeof(digest);
-    while (size > 0) {
-        size_t n;
-        n = PAGE_SIZE - (digest_addr - PAGE_START(digest_addr));
-        n = MIN(size, n);
-
-        uint8_t *buffer = get_buffer(digest_addr, n, true);
-        memcpy(buffer, digest + sizeof(digest) - size, n);
-
-        digest_addr += n;
-        size -= n;
-    }
-}
-
 static void sys_fatal(uint32_t msg_addr)
 {
     struct cmd_fatal_s *cmd = (struct cmd_fatal_s *)G_io_apdu_buffer;
@@ -480,9 +439,6 @@ bool ecall(struct rv_cpu *cpu)
         break;
     case ECALL_XRECV:
         cpu->regs[RV_REG_A0] = xrecv(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1]);
-        break;
-    case ECALL_SHA256SUM:
-        sha256sum(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
         break;
     case ECALL_EXIT:
         sys_exit(cpu->regs[RV_REG_A0]);

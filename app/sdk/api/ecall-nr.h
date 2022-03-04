@@ -21,3 +21,5 @@
 #define ECALL_MULT                  104
 #define ECALL_MULTM                 105
 #define ECALL_TOSTRING256           106
+#define ECALL_HASH_UPDATE           107
+#define ECALL_HASH_FINAL            108

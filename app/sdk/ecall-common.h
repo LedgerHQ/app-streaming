@@ -5,7 +5,9 @@
  */
 
 #include <stdbool.h>
+#include <stddef.h>
 
+#include "api/ecall-params.h"
 #include "api/uint256.h"
 #include "crypto.h"
 
@@ -59,3 +61,11 @@ void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, siz
 
 bool tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len)
     __attribute__((alias("ecall_tostring256")));
+
+bool hash_update(const cx_hash_id_t hash_id,
+                 ctx_hash_guest_t *ctx,
+                 const uint8_t *buffer,
+                 const size_t size) __attribute__((alias("ecall_hash_update")));
+
+bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest)
+    __attribute__((alias("ecall_hash_final")));

@@ -80,12 +80,6 @@ size_t ecall_xrecv(uint8_t *buffer, size_t size)
     return n;
 }
 
-void ecall_sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
-{
-    /* XXX */
-    memset(digest, 'a', 32);
-}
-
 void ecall_screen_update(void)
 {
 }
@@ -138,14 +132,6 @@ bool ecall_app_loading_stop(void)
 
 void ecall_ux_idle(void)
 {
-}
-
-void ecall_sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
-{
-    cx_sha3_t ctx;
-
-    cx_keccak_init(&ctx, 256);
-    sys_cx_hash((cx_hash_t *)&ctx, CX_LAST, buffer, size, digest, 32);
 }
 
 cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve,
@@ -221,3 +207,5 @@ bool ecall_tostring256(const uint256_t *number, const unsigned int base, char *o
 {
     return sys_tostring256(number, base, out, len);
 }
+
+#include "ecall-hash.c"
