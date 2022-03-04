@@ -21,6 +21,13 @@ typedef struct _RequestGetPubKey {
     bool get_chain_code; 
 } RequestGetPubKey;
 
+typedef struct _RequestSignEip712 { 
+    pb_size_t path_count;
+    uint32_t path[10]; 
+    pb_byte_t domain_separator[32]; 
+    char message[1024]; 
+} RequestSignEip712;
+
 typedef PB_BYTES_ARRAY_T(1024) RequestSignMsg_message_t;
 typedef struct _RequestSignMsg { 
     pb_size_t path_count;
@@ -51,6 +58,12 @@ typedef struct _ResponseGetVersion {
     char version[41]; 
 } ResponseGetVersion;
 
+typedef PB_BYTES_ARRAY_T(100) ResponseSignEip712_signature_t;
+typedef struct _ResponseSignEip712 { 
+    bool approved; 
+    ResponseSignEip712_signature_t signature; 
+} ResponseSignEip712;
+
 typedef PB_BYTES_ARRAY_T(100) ResponseSignMsg_signature_t;
 typedef struct _ResponseSignMsg { 
     bool approved; 
@@ -70,6 +83,7 @@ typedef struct _Request {
         RequestGetPubKey get_pubkey;
         RequestSignTx sign_tx;
         RequestSignMsg sign_msg;
+        RequestSignEip712 sign_eip712;
     } message_oneof; 
 } Request;
 
@@ -80,6 +94,7 @@ typedef struct _Response {
         ResponseGetPubKey get_pubkey;
         ResponseSignTx sign_tx;
         ResponseSignMsg sign_msg;
+        ResponseSignEip712 sign_eip712;
         ResponseError error;
     } message_oneof; 
 } Response;
@@ -98,6 +113,8 @@ extern "C" {
 #define ResponseSignTx_init_default              {0, {0, {0}}}
 #define RequestSignMsg_init_default              {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}}
 #define ResponseSignMsg_init_default             {0, {0, {0}}}
+#define RequestSignEip712_init_default           {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0}, ""}
+#define ResponseSignEip712_init_default          {0, {0, {0}}}
 #define ResponseError_init_default               {""}
 #define Request_init_default                     {0, {RequestGetVersion_init_default}}
 #define Response_init_default                    {0, {ResponseGetVersion_init_default}}
@@ -109,6 +126,8 @@ extern "C" {
 #define ResponseSignTx_init_zero                 {0, {0, {0}}}
 #define RequestSignMsg_init_zero                 {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, {0}}}
 #define ResponseSignMsg_init_zero                {0, {0, {0}}}
+#define RequestSignEip712_init_zero              {0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0}, ""}
+#define ResponseSignEip712_init_zero             {0, {0, {0}}}
 #define ResponseError_init_zero                  {""}
 #define Request_init_zero                        {0, {RequestGetVersion_init_zero}}
 #define Response_init_zero                       {0, {ResponseGetVersion_init_zero}}
@@ -117,6 +136,9 @@ extern "C" {
 #define RequestGetPubKey_path_tag                1
 #define RequestGetPubKey_confirm_tag             2
 #define RequestGetPubKey_get_chain_code_tag      3
+#define RequestSignEip712_path_tag               1
+#define RequestSignEip712_domain_separator_tag   2
+#define RequestSignEip712_message_tag            3
 #define RequestSignMsg_path_tag                  1
 #define RequestSignMsg_message_tag               2
 #define RequestSignTx_path_tag                   1
@@ -128,6 +150,8 @@ extern "C" {
 #define ResponseGetPubKey_address_tag            3
 #define ResponseGetPubKey_chain_code_tag         4
 #define ResponseGetVersion_version_tag           1
+#define ResponseSignEip712_approved_tag          1
+#define ResponseSignEip712_signature_tag         2
 #define ResponseSignMsg_approved_tag             1
 #define ResponseSignMsg_signature_tag            2
 #define ResponseSignTx_approved_tag              1
@@ -136,11 +160,13 @@ extern "C" {
 #define Request_get_pubkey_tag                   2
 #define Request_sign_tx_tag                      3
 #define Request_sign_msg_tag                     4
+#define Request_sign_eip712_tag                  5
 #define Response_get_version_tag                 1
 #define Response_get_pubkey_tag                  2
 #define Response_sign_tx_tag                     3
 #define Response_sign_msg_tag                    4
-#define Response_error_tag                       5
+#define Response_sign_eip712_tag                 5
+#define Response_error_tag                       6
 
 /* Struct field encoding specification for nanopb */
 #define RequestGetVersion_FIELDLIST(X, a) \
@@ -193,6 +219,19 @@ X(a, STATIC,   SINGULAR, BYTES,    signature,         2)
 #define ResponseSignMsg_CALLBACK NULL
 #define ResponseSignMsg_DEFAULT NULL
 
+#define RequestSignEip712_FIELDLIST(X, a) \
+X(a, STATIC,   REPEATED, UINT32,   path,              1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, domain_separator,   2) \
+X(a, STATIC,   SINGULAR, STRING,   message,           3)
+#define RequestSignEip712_CALLBACK NULL
+#define RequestSignEip712_DEFAULT NULL
+
+#define ResponseSignEip712_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, BOOL,     approved,          1) \
+X(a, STATIC,   SINGULAR, BYTES,    signature,         2)
+#define ResponseSignEip712_CALLBACK NULL
+#define ResponseSignEip712_DEFAULT NULL
+
 #define ResponseError_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, STRING,   error_msg,         1)
 #define ResponseError_CALLBACK NULL
@@ -202,26 +241,30 @@ X(a, STATIC,   SINGULAR, STRING,   error_msg,         1)
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_version,message_oneof.get_version),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_pubkey,message_oneof.get_pubkey),   2) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_tx,message_oneof.sign_tx),   3) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_msg,message_oneof.sign_msg),   4)
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_msg,message_oneof.sign_msg),   4) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_eip712,message_oneof.sign_eip712),   5)
 #define Request_CALLBACK NULL
 #define Request_DEFAULT NULL
 #define Request_message_oneof_get_version_MSGTYPE RequestGetVersion
 #define Request_message_oneof_get_pubkey_MSGTYPE RequestGetPubKey
 #define Request_message_oneof_sign_tx_MSGTYPE RequestSignTx
 #define Request_message_oneof_sign_msg_MSGTYPE RequestSignMsg
+#define Request_message_oneof_sign_eip712_MSGTYPE RequestSignEip712
 
 #define Response_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_version,message_oneof.get_version),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_pubkey,message_oneof.get_pubkey),   2) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_tx,message_oneof.sign_tx),   3) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_msg,message_oneof.sign_msg),   4) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,error,message_oneof.error),   5)
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sign_eip712,message_oneof.sign_eip712),   5) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,error,message_oneof.error),   6)
 #define Response_CALLBACK NULL
 #define Response_DEFAULT NULL
 #define Response_message_oneof_get_version_MSGTYPE ResponseGetVersion
 #define Response_message_oneof_get_pubkey_MSGTYPE ResponseGetPubKey
 #define Response_message_oneof_sign_tx_MSGTYPE ResponseSignTx
 #define Response_message_oneof_sign_msg_MSGTYPE ResponseSignMsg
+#define Response_message_oneof_sign_eip712_MSGTYPE ResponseSignEip712
 #define Response_message_oneof_error_MSGTYPE ResponseError
 
 extern const pb_msgdesc_t RequestGetVersion_msg;
@@ -232,6 +275,8 @@ extern const pb_msgdesc_t RequestSignTx_msg;
 extern const pb_msgdesc_t ResponseSignTx_msg;
 extern const pb_msgdesc_t RequestSignMsg_msg;
 extern const pb_msgdesc_t ResponseSignMsg_msg;
+extern const pb_msgdesc_t RequestSignEip712_msg;
+extern const pb_msgdesc_t ResponseSignEip712_msg;
 extern const pb_msgdesc_t ResponseError_msg;
 extern const pb_msgdesc_t Request_msg;
 extern const pb_msgdesc_t Response_msg;
@@ -245,6 +290,8 @@ extern const pb_msgdesc_t Response_msg;
 #define ResponseSignTx_fields &ResponseSignTx_msg
 #define RequestSignMsg_fields &RequestSignMsg_msg
 #define ResponseSignMsg_fields &ResponseSignMsg_msg
+#define RequestSignEip712_fields &RequestSignEip712_msg
+#define ResponseSignEip712_fields &ResponseSignEip712_msg
 #define ResponseError_fields &ResponseError_msg
 #define Request_fields &Request_msg
 #define Response_fields &Response_msg
@@ -252,12 +299,14 @@ extern const pb_msgdesc_t Response_msg;
 /* Maximum encoded size of messages (where known) */
 #define RequestGetPubKey_size                    64
 #define RequestGetVersion_size                   0
+#define RequestSignEip712_size                   1120
 #define RequestSignMsg_size                      1087
 #define RequestSignTx_size                       1098
-#define Request_size                             1101
+#define Request_size                             1123
 #define ResponseError_size                       66
 #define ResponseGetPubKey_size                   145
 #define ResponseGetVersion_size                  42
+#define ResponseSignEip712_size                  104
 #define ResponseSignMsg_size                     104
 #define ResponseSignTx_size                      104
 #define Response_size                            148

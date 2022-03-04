@@ -37,6 +37,22 @@ target_link_libraries(test_utils PRIVATE
   cmocka
   sdk)
 
+add_executable(test_eip712
+  test_eip712.c
+  ../src/ui.c
+  ../src/utils.c)
+
+add_dependencies(test_eip712
+  eip712
+  sdk
+  ux)
+
+target_link_libraries(test_eip712 PRIVATE
+  cmocka
+  eip712
+  ux
+  sdk)
+
 add_executable(fuzz_rlp
   fuzz_rlp.c
   ../src/rlp.c)

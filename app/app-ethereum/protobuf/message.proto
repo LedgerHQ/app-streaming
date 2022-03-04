@@ -49,6 +49,17 @@ message ResponseSignMsg {
   bytes signature = 2 [(nanopb).max_size = 100];
 };
 
+message RequestSignEip712 {
+  repeated uint32 path = 1 [(nanopb).max_count = 10];
+  bytes domain_separator = 2 [(nanopb).max_size = 32, (nanopb).fixed_length = true];
+  string message = 3 [(nanopb).max_size = 1024];
+};
+
+message ResponseSignEip712 {
+  bool approved = 1;
+  bytes signature = 2 [(nanopb).max_size = 100];
+};
+
 message ResponseError {
   string error_msg = 1 [(nanopb).max_length = 64];
 };
@@ -59,6 +70,7 @@ message Request {
     RequestGetPubKey get_pubkey = 2;
     RequestSignTx sign_tx = 3;
     RequestSignMsg sign_msg = 4;
+    RequestSignEip712 sign_eip712 = 5;
   };
 }
 
@@ -68,6 +80,7 @@ message Response {
     ResponseGetPubKey get_pubkey = 2;
     ResponseSignTx sign_tx = 3;
     ResponseSignMsg sign_msg = 4;
-    ResponseError error = 5;
+    ResponseSignEip712 sign_eip712 = 5;
+    ResponseError error = 6;
   };
 }

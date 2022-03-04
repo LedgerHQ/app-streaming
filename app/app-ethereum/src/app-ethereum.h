@@ -19,6 +19,7 @@ const char *sign(const uint32_t *path,
 const char *handle_get_pubkey(const RequestGetPubKey *req, ResponseGetPubKey *response);
 const char *handle_sign_tx(const RequestSignTx *req, ResponseSignTx *response);
 const char *handle_sign_message(const RequestSignMsg *req, ResponseSignMsg *response);
+const char *handle_sign_eip712(const RequestSignEip712 *req, ResponseSignEip712 *response);
 
 void getEthAddressStringFromBinary(uint8_t *hash_address, char *out, uint64_t chain_id);
 void getEthAddressStringFromKey(cx_ecfp_public_key_t *publicKey, char *out, uint64_t chainId);
@@ -32,3 +33,5 @@ void compute_amount(uint64_t chain_id,
                     const uint256_t *amount,
                     char *out_buffer,
                     size_t out_buffer_size);
+
+void eip712_test(void);

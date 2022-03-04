@@ -53,6 +53,11 @@ static void handle_req(const Request *req, Response *response)
         error = handle_sign_message(&req->message_oneof.sign_msg,
                                     &response->message_oneof.sign_msg);
         break;
+    case Request_sign_eip712_tag:
+        response->which_message_oneof = Response_sign_eip712_tag;
+        error = handle_sign_eip712(&req->message_oneof.sign_eip712,
+                                   &response->message_oneof.sign_eip712);
+        break;
     default:
         error = "invalid request tag";
         break;

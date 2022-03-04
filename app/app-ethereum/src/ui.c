@@ -9,6 +9,7 @@
 #include "ui.h"
 
 static int validated;
+int eip712_validated;
 static char g_ux_get_pubkey_full_address[64];
 
 UX_STEP_NOCB(ux_get_pubkey_1_step, pnn, { &C_icon_eye, "Verify", "address" });
@@ -131,4 +132,27 @@ bool ui_sign_tx_validation(void)
     }
 
     return (validated == 1);
+}
+
+/* return true if the user approved the tx, false otherwise */
+bool ui_eip712(const ux_flow_step_t *const *steps)
+{
+    eip712_validated = 0;
+
+    bool app_loading = app_loading_stop();
+
+    ui_init(steps);
+
+    while (eip712_validated == 0) {
+        int button = wait_button();
+        ui_button_helper(button);
+    }
+
+    if (app_loading) {
+        app_loading_start("Signing EIP712...");
+    } else {
+        ux_idle();
+    }
+
+    return (eip712_validated == 1);
 }

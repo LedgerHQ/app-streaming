@@ -30,6 +30,12 @@ PB_BIND(RequestSignMsg, RequestSignMsg, 2)
 PB_BIND(ResponseSignMsg, ResponseSignMsg, AUTO)
 
 
+PB_BIND(RequestSignEip712, RequestSignEip712, 2)
+
+
+PB_BIND(ResponseSignEip712, ResponseSignEip712, AUTO)
+
+
 PB_BIND(ResponseError, ResponseError, AUTO)
 
 

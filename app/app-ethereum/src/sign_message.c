@@ -19,29 +19,26 @@ static const char *sign_helper(const RequestSignMsg *req,
 
 const char *handle_sign_message(const RequestSignMsg *req, ResponseSignMsg *response)
 {
-    const char *error = NULL;
-
     /* TODO: add UI */
 
-    size_t size = sizeof(PREFIX) - 1 + MAX_INT32_SIZE + req->message.size;
-    uint8_t *message = malloc(size);
-    if (message == NULL) {
-        error = "malloc failed";
-        goto end;
-    }
+    char prefix[sizeof(PREFIX) - 1 + MAX_INT32_SIZE];
+    size_t len = snprintf(prefix, sizeof(prefix), PREFIX "%u", req->message.size);
 
-    size_t len = snprintf((char *)message, size, PREFIX "%u", req->message.size);
-    memcpy(message + len, req->message.bytes, req->message.size);
+    app_loading_start("Signing message...");
 
+    ctx_sha3_t ctx;
     uint8_t hash[32];
-    sha3_256(message, len + req->message.size, hash);
 
-    error = sign_helper(req, hash, &response->signature);
+    sha3_256_init(&ctx);
+    sha3_256_update(&ctx, (uint8_t *)prefix, len);
+    sha3_256_update(&ctx, req->message.bytes, req->message.size);
+    sha3_256_final(&ctx, hash);
+
+    const char *error = sign_helper(req, hash, &response->signature);
     if (error != NULL) {
         goto end;
     }
 
 end:
-    free(message);
     return error;
 }
