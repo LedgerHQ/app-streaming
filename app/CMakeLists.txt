@@ -63,7 +63,6 @@ include_directories(BEFORE ./ sdk/)
 add_subdirectory(sdk)
 add_subdirectory(ux)
 
-add_subdirectory(app-boilerplate)
 add_subdirectory(app-ethereum)
 add_subdirectory(app-sha256)
 add_subdirectory(app-wip)
