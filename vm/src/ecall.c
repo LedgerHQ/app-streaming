@@ -521,10 +521,10 @@ bool ecall(struct rv_cpu *cpu)
         sys_bagl_draw_with_context(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
         break;
     case ECALL_LOADING_START:
-        app_loading_start();
+        sys_app_loading_start(cpu->regs[RV_REG_A0]);
         break;
     case ECALL_LOADING_STOP:
-        cpu->regs[RV_REG_A0] = app_loading_stop();
+        cpu->regs[RV_REG_A0] = sys_app_loading_stop();
         break;
     case ECALL_UX_IDLE:
         sys_ux_idle();

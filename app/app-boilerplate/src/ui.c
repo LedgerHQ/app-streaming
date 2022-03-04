@@ -53,7 +53,7 @@ bool ui_sign_tx_validation(void)
     }
 
     if (app_loading) {
-        app_loading_start();
+        app_loading_start(NULL);
     } else {
         ux_idle();
     }

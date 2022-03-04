@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "ecall.h"
 #include "loading.h"
 #include "ux.h"
 
@@ -14,6 +15,7 @@ static bool app_loading;
 
 typedef struct ux_layout_p_params_s {
     const bagl_icon_details_t* icon;
+	const char* line1;
 } ux_layout_p_params_t;
 
 
@@ -22,11 +24,13 @@ const bagl_element_t ux_layout_p_elements[] = {
   {{BAGL_RECTANGLE                      , 0x00,   0,   0, 128,  64, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF, 0, 0}, NULL},
 
   {{BAGL_ICON                           , 0x10,  57,  17,  14,  14, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, NULL },
+  {{BAGL_LABELINE                       , 0x11,   0,  44, 128,  32, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, NULL },
 #elif (BAGL_WIDTH==128 && BAGL_HEIGHT==32)
   // erase
   {{BAGL_RECTANGLE                      , 0x00,   0,   0, 128,  32, 0, 0, BAGL_FILL, 0x000000, 0xFFFFFF, 0, 0}, NULL},
 
   {{BAGL_ICON                           , 0x10,  56,  2,  16,  16, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, NULL },
+  {{BAGL_LABELINE                       , 0x11,   0, 28, 128,  32, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, NULL },
 #else
   #error "BAGL_WIDTH/BAGL_HEIGHT not defined"
 #endif
@@ -42,6 +46,8 @@ static const bagl_element_t* ux_layout_p_prepro(const bagl_element_t* element)
     case 0x10:
         G_ux.tmp_element.text = (const char*)params->icon;
         break;
+    case 0x11:
+  		G_ux.tmp_element.text = params->line1;
     }
 
     return &G_ux.tmp_element;
@@ -58,14 +64,16 @@ static void ux_layout_p_init(unsigned int stack_slot)
     ux_stack_display(stack_slot);
 }
 
-UX_STEP_NOCB(ux_loading_1_step, p, {&C_icon_loading_1});
-UX_STEP_NOCB(ux_loading_2_step, p, {&C_icon_loading_2});
-UX_STEP_NOCB(ux_loading_3_step, p, {&C_icon_loading_3});
-UX_STEP_NOCB(ux_loading_4_step, p, {&C_icon_loading_4});
-UX_STEP_NOCB(ux_loading_5_step, p, {&C_icon_loading_5});
-UX_STEP_NOCB(ux_loading_6_step, p, {&C_icon_loading_6});
-UX_STEP_NOCB(ux_loading_7_step, p, {&C_icon_loading_7});
-UX_STEP_NOCB(ux_loading_8_step, p, {&C_icon_loading_8});
+static char loading_status[32];
+
+UX_STEP_NOCB(ux_loading_1_step, p, {&C_icon_loading_1, loading_status});
+UX_STEP_NOCB(ux_loading_2_step, p, {&C_icon_loading_2, loading_status});
+UX_STEP_NOCB(ux_loading_3_step, p, {&C_icon_loading_3, loading_status});
+UX_STEP_NOCB(ux_loading_4_step, p, {&C_icon_loading_4, loading_status});
+UX_STEP_NOCB(ux_loading_5_step, p, {&C_icon_loading_5, loading_status});
+UX_STEP_NOCB(ux_loading_6_step, p, {&C_icon_loading_6, loading_status});
+UX_STEP_NOCB(ux_loading_7_step, p, {&C_icon_loading_7, loading_status});
+UX_STEP_NOCB(ux_loading_8_step, p, {&C_icon_loading_8, loading_status});
 
 UX_FLOW(ux_loading_flow,
         &ux_loading_1_step,
@@ -78,18 +86,27 @@ UX_FLOW(ux_loading_flow,
         &ux_loading_8_step,
         FLOW_LOOP);
 
-void app_loading_start(void)
+void sys_app_loading_start(uint32_t status_addr)
 {
     app_loading = true;
     app_loading_counter = 0;
     host_exchanges_counter = 0;
+
+    if (status_addr == 0) {
+        loading_status[0] = '\x00';
+    } else {
+        /* XXX: this might be wrong if the guest buffer is smaller that sizeof(loading_status) and
+         * at the end of a memory mapping */
+        copy_guest_buffer(status_addr, loading_status, sizeof(loading_status) - 1);
+        loading_status[sizeof(loading_status) - 1] = '\x00';
+    }
 
     memset(&G_ux, 0, sizeof(G_ux));
     ux_stack_push();
     ux_flow_init(0, ux_loading_flow, NULL);
 }
 
-bool app_loading_stop(void)
+bool sys_app_loading_stop(void)
 {
     if (app_loading) {
         app_loading = false;

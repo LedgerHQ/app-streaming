@@ -9,7 +9,7 @@
  * The following functions are aliased to ecall implementations.
  */
 
-void app_loading_start(void) __attribute__((alias("ecall_app_loading_start")));
+void app_loading_start(const char *status) __attribute__((alias("ecall_app_loading_start")));
 
 bool app_loading_stop(void) __attribute__((alias("ecall_app_loading_stop")));
 

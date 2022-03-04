@@ -387,7 +387,7 @@ void stream_init_app(uint8_t *buffer)
     init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
 
     lfsr_init();
-    app_loading_stop();
+    sys_app_loading_stop();
     set_app_name(cmd->name);
 }
 

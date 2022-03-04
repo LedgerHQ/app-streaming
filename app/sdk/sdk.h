@@ -13,7 +13,7 @@ void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest);
 void screen_update(void);
 int wait_button(void);
 
-void app_loading_start(void);
+void app_loading_start(const char *status);
 bool app_loading_stop(void);
 
 void ux_idle(void);

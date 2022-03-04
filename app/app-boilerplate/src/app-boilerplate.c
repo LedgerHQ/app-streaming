@@ -87,7 +87,7 @@ int main(void)
         uint8_t buf[MAX_MSG_SIZE];
         size_t msg_len = xrecv(buf, MAX_MSG_SIZE);
 
-        app_loading_start();
+        app_loading_start(NULL);
 
         /* unpack it */
         Message *msg = message__unpack(NULL, msg_len, buf);

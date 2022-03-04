@@ -29,6 +29,8 @@ const char *handle_sign_tx(const RequestSignTx *req, ResponseSignTx *response)
         goto end;
     }
 
+    app_loading_start("Preparing UI...");
+
     ui_set_tx_address(tx.chain_id, tx.to);
     ui_set_tx_amount(tx.chain_id, &tx.value);
     ui_set_tx_network_name(tx.chain_id);

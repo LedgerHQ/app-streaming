@@ -74,7 +74,7 @@ int main(void)
         uint8_t buf[MAX_REQ_SIZE];
         const size_t req_len = xrecv(buf, sizeof(buf));
 
-        app_loading_start();
+        app_loading_start("Decoding request...");
 
         pb_istream_t istream = pb_istream_from_buffer(buf, req_len);
         if (pb_decode(&istream, Request_fields, &req)) {

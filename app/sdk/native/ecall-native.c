@@ -122,7 +122,7 @@ __attribute__((noreturn)) void ecall_fatal(char *msg)
 
 static bool app_loading;
 
-void ecall_app_loading_start(void)
+void ecall_app_loading_start(const char *status)
 {
     app_loading = true;
 }

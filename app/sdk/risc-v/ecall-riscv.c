@@ -27,6 +27,16 @@
         return ret;                                                     \
     }
 
+#define ECALL1v(_name, _id, _type0, _arg0)               \
+    void _name(_type0 _arg0)                              \
+    {                                                                   \
+        register uint32_t a0 asm ("a0") = (uint32_t)_arg0;              \
+        asm (                                                           \
+             "li t0, %0\n"                                              \
+             "ecall\n"                                                  \
+             :: "i"(_id), "r"(a0) : "t0", "memory"             \
+        );                                                              \
+    }
 #define ECALL2v(_name, _id, _type0, _arg0, _type1, _arg1)               \
     void _name(_type0 _arg0, _type1 _arg1)                              \
     {                                                                   \
@@ -182,9 +192,9 @@
 
 ECALL0(ecall_wait_button, ECALL_WAIT_BUTTON, int)
 ECALL0(ecall_app_loading_stop, ECALL_LOADING_STOP, bool)
-ECALL0v(ecall_app_loading_start, ECALL_LOADING_START)
 ECALL0v(ecall_screen_update, ECALL_SCREEN_UPDATE)
 ECALL0v(ecall_ux_idle, ECALL_UX_IDLE)
+ECALL1v(ecall_app_loading_start, ECALL_LOADING_START, const char *, status)
 ECALL2(ecall_xrecv, ECALL_XRECV, size_t, uint8_t *, buffer, size_t, size)
 ECALL2v(ecall_xsend, ECALL_XSEND, const uint8_t *, buffer, size_t, size)
 ECALL3(ecall_ecfp_generate_pair, ECALL_CX_ECFP_GENERATE_PAIR, cx_err_t, cx_curve_t, curve, cx_ecfp_public_key_t *, pubkey, cx_ecfp_private_key_t *, privkey)
