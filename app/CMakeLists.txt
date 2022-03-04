@@ -26,8 +26,8 @@ if (NOT NATIVE)
   add_compile_options(-march=rv32g)
   add_link_options(-z noseparate-code -static -nostdlib)
 
-  include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ sdk/risc-v/)
-  link_directories(/usr/local/riscv32-unknown-linux-gnu/lib)
+  include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ /usr/local/include/ sdk/risc-v/)
+  link_directories(/usr/local/riscv32-unknown-linux-gnu/lib /usr/local/lib/)
   link_libraries(c)
 
 else()
