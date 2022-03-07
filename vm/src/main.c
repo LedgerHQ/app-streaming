@@ -91,9 +91,9 @@ void app_main(void) {
             CATCH_OTHER(e) {
                 G_io_apdu_buffer[0] = e >> 8;
                 G_io_apdu_buffer[1] = e & 0xff;
-                io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 2);
                 PRINTF("exception\n");
                 os_sched_exit(12);
+                io_exchange(CHANNEL_APDU | IO_ASYNCH_REPLY, 2);
             }
             FINALLY {
             }
