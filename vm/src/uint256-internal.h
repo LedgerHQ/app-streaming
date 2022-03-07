@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "sdk/uint256.h"
+#include "sdk/api/uint256.h"
 
 void readu128BE(uint8_t *buffer, uint128_t *target);
 void write_u64_be(uint8_t *buffer, uint64_t value);

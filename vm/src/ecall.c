@@ -14,7 +14,8 @@
 #include "types.h"
 #include "ui.h"
 
-#include "sdk/ecall-nr.h"
+#include "sdk/api/ecall-nr.h"
+#include "sdk/api/ecall-params.h"
 
 int saved_apdu_state;
 
@@ -419,22 +420,6 @@ static int sys_wait_button(void)
 
     return button_mask;
 }
-
-typedef struct {
-  unsigned char type;
-  unsigned char userid;
-  short x;
-  short y;
-  unsigned short width;
-  unsigned short height;
-  unsigned char stroke;
-  unsigned char radius;
-  unsigned char fill;
-  unsigned int fgcolor;
-  unsigned int bgcolor;
-  unsigned short font_id;
-  unsigned char icon_id;
-} __attribute__((packed)) packed_bagl_component_t;
 
 static void sys_bagl_draw_with_context(uint32_t component_addr, uint32_t context_addr, size_t context_length, int context_encoding)
 {

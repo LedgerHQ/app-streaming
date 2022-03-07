@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "api/uint256.h"
 #include "app-ethereum.h"
-#include "uint256.h"
 
 struct tx_s {
     uint256_t nonce;

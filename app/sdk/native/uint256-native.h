@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "uint256.h"
+#include "api/uint256.h"
 
 void readu128BE(uint8_t *buffer, uint128_t *target);
 void write_u64_be(uint8_t *buffer, uint64_t value);

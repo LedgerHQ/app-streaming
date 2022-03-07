@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "api/uint256.h"
 #include "app-ethereum.h"
-#include "uint256.h"
 
 #define ADDRESS_SIZE 40
 #define WEI_TO_ETHER 18

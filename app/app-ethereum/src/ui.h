@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "uint256.h"
+#include "api/uint256.h"
 
 bool ui_get_pubkey_validation(void);
 void ui_set_pubkey_address(char *address);

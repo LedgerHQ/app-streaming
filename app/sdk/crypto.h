@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "api/uint256.h"
 #include "speculos.h"
-#include "uint256.h"
 
 typedef uint32_t cx_err_t;
 

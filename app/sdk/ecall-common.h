@@ -1,9 +1,13 @@
 #pragma once
 
+/*
+ * This file is intended to be included from native and RISC-V apps.
+ */
+
 #include <stdbool.h>
 
+#include "api/uint256.h"
 #include "crypto.h"
-#include "uint256.h"
 
 /*
  * The following functions are aliased to ecall implementations.

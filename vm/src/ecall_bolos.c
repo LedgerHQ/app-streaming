@@ -11,7 +11,7 @@
 #include "types.h"
 #include "uint256-internal.h"
 
-#include "sdk/ecall-nr.h"
+#include "sdk/api/ecall-nr.h"
 
 static cx_err_t sys_derive_node_bip32(cx_curve_t curve, uint32_t path_addr, size_t path_count, uint32_t private_key_addr, uint32_t chain_addr)
 {

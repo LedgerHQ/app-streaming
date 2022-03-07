@@ -1,9 +1,5 @@
 #pragma once
 
-/*
- * This file is shared between the RISC-V apps and the RISC-V VM.
- */
-
 #define ECALL_FATAL            1
 #define ECALL_XSEND            2
 #define ECALL_XRECV            3

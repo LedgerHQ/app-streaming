@@ -1,5 +1,5 @@
+#include "api/ecall-nr.h"
 #include "ecall-common.h"
-#include "ecall-nr.h"
 #include "ecall.h"
 
 /* clang-format off */
