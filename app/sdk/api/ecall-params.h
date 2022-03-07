@@ -18,20 +18,23 @@ typedef struct {
     unsigned char icon_id;
 } __attribute__((packed)) packed_bagl_component_t;
 
-typedef union ctx_hash_s {
-    struct ctx_sha256_s {
-        size_t blen;
-        uint8_t block[64];
-        uint8_t acc[8 * 4];
-    } sha256;
+typedef struct ctx_sha256_s {
+    size_t blen;
+    uint8_t block[64];
+    uint8_t acc[8 * 4];
+} ctx_sha256_t;
 
-    struct ctx_sha3_s {
-        size_t output_size;
-        size_t block_size;
-        size_t blen;
-        uint8_t block[200];
-        uint64_t acc[25];
-    } sha3;
+typedef struct ctx_sha3_s {
+    size_t output_size;
+    size_t block_size;
+    size_t blen;
+    uint8_t block[200];
+    uint64_t acc[25];
+} ctx_sha3_t;
+
+typedef union ctx_hash_s {
+    ctx_sha256_t sha256;
+    ctx_sha3_t sha3;
 } __attribute__((packed)) ctx_hash_guest_t;
 
 typedef enum cx_hash_id_e {

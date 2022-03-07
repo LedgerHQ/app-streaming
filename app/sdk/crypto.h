@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "api/ecall-params.h"
 #include "api/uint256.h"
 #include "speculos.h"
 
@@ -51,3 +52,14 @@ size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
 void mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len);
 void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len);
 bool tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len);
+
+bool hash_update(const cx_hash_id_t hash_id,
+                 ctx_hash_guest_t *ctx,
+                 const uint8_t *buffer,
+                 const size_t size);
+
+bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest);
+
+void sha3_256_init(ctx_sha3_t *ctx);
+void sha3_256_update(ctx_sha3_t *ctx, const uint8_t *buffer, const size_t size);
+void sha3_256_final(ctx_sha3_t *ctx, uint8_t *digest);

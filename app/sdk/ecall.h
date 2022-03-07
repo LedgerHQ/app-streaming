@@ -6,7 +6,7 @@
 #include "sdk/api/ecall-params.h"
 
 __attribute__((noreturn)) void ecall_exit(int status);
-__attribute__((noreturn)) void ecall_fatal(char *msg);
+__attribute__((noreturn)) void fatal(char *msg);
 size_t ecall_xrecv(uint8_t *buffer, size_t size);
 void ecall_bagl_draw_with_context(packed_bagl_component_t *component,
                                   const void *context,
