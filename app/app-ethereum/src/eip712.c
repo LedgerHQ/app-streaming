@@ -9,7 +9,7 @@
 #include "sdk.h"
 
 #define TOKEN_MAX 128
-#define EIP712_DOMAIN_EXAMPLE_MAIN                                                                 \
+#define EIP712_DOMAIN_EXAMPLE_MAIL                                                                 \
     "\xf2\xce\xe3\x75\xfa\x42\xb4\x21\x43\x80\x40\x25\xfc\x44\x9d\xea\xfd\x50\xcc\x03\x1c\xa2\x57" \
     "\xe0\xb1\x94\xa6\x50\xa9\x12\x09\x0f"
 
@@ -210,7 +210,7 @@ const char *eip712_hash_struct(const char *json_string,
     }
 
     const hash_struct_t *hstruct;
-    if (memcmp(domain, EIP712_DOMAIN_EXAMPLE_MAIN, 32) == 0) {
+    if (memcmp(domain, EIP712_DOMAIN_EXAMPLE_MAIL, 32) == 0) {
         hstruct = eip712_example_mail(json_string, &t[1], token_count - 1);
     } else {
         return "unknown EIP712 domain";

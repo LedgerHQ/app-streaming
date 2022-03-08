@@ -69,7 +69,7 @@ static void test_example_mail(void **state __attribute__((unused)))
     /* disabled because of UI validation */
 #if 0
     const char *error = eip712_hash_struct(EXAMPLE_MAIL_JSON, sizeof(EXAMPLE_MAIL_JSON),
-                                           (const uint8_t *)EIP712_DOMAIN_EXAMPLE_MAIN, digest);
+                                           (const uint8_t *)EIP712_DOMAIN_EXAMPLE_MAIL, digest);
     assert_null(error);
 #else
     memcpy(digest,
@@ -85,7 +85,7 @@ static void test_example_mail(void **state __attribute__((unused)))
 
     sha3_256_init(&ctx);
     sha3_256_update(&ctx, (uint8_t *)"\x19\x01", 2);
-    sha3_256_update(&ctx, (const uint8_t *)EIP712_DOMAIN_EXAMPLE_MAIN, 32);
+    sha3_256_update(&ctx, (const uint8_t *)EIP712_DOMAIN_EXAMPLE_MAIL, 32);
     sha3_256_update(&ctx, digest, sizeof(digest));
     sha3_256_final(&ctx, hash);
 
