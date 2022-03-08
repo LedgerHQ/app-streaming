@@ -25,8 +25,6 @@ typedef struct ctx_sha256_s {
 } ctx_sha256_t;
 
 typedef struct ctx_sha3_s {
-    size_t output_size;
-    size_t block_size;
     size_t blen;
     uint8_t block[200];
     uint64_t acc[25];

@@ -26,9 +26,7 @@ static bool restore_ctx_from_guest(const cx_hash_id_t hash_id,
 {
     switch (hash_id) {
     case HASH_ID_SHA3_256:
-        cx_sha3_init(&ctx->sha3, 256);
-        ctx->sha3.output_size = guest->sha3.output_size;
-        ctx->sha3.block_size = guest->sha3.block_size;
+        cx_keccak_init(&ctx->sha3, 256);
         ctx->sha3.blen = guest->sha3.blen;
         memcpy(&ctx->sha3.block, guest->sha3.block, sizeof(ctx->sha3.block));
         memcpy(&ctx->sha3.acc, guest->sha3.acc, sizeof(ctx->sha3.acc));
@@ -51,7 +49,7 @@ static bool save_ctx_from_host(const cx_hash_id_t hash_id,
 {
     switch (hash_id) {
     case HASH_ID_SHA3_256:
-        ctx->sha3.blen = guest->sha3.blen;
+        guest->sha3.blen = ctx->sha3.blen;
         memcpy(guest->sha3.block, &ctx->sha3.block, sizeof(ctx->sha3.block));
         memcpy(guest->sha3.acc, &ctx->sha3.acc, sizeof(ctx->sha3.acc));
         break;
@@ -77,6 +75,7 @@ bool ecall_hash_update(const cx_hash_id_t hash_id,
         return false;
     }
 
+    /* XXX: return value? */
     sys_cx_hash((cx_hash_t *)&ctx, 0, buffer, size, NULL, 0);
 
     return save_ctx_from_host(hash_id, guest_ctx, &ctx);
@@ -102,6 +101,7 @@ bool ecall_hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *guest_ctx, u
         return false;
     }
 
+    /* XXX: return value? */
     sys_cx_hash(&ctx.header, CX_LAST, NULL, 0, digest, hash_len);
 
     /* no need to save the context */

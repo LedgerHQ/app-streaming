@@ -20,8 +20,6 @@ void sha3_256_init(ctx_sha3_t *ctx)
 {
     const size_t size = 256;
     ctx->blen = 0;
-    ctx->output_size = size >> 3;
-    ctx->block_size = (1600 - 2 * size) >> 3;
     memset(ctx->block, 0, sizeof(ctx->block));
     memset(ctx->acc, 0, sizeof(ctx->acc));
 }

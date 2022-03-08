@@ -86,9 +86,7 @@ static bool restore_ctx_from_guest(const cx_hash_id_t hash_id, uint32_t ctx_addr
     switch (hash_id) {
     case HASH_ID_SHA3_256:
         copy_guest_buffer(ctx_addr, &guest.sha3, sizeof(guest.sha3));
-        cx_sha3_init_no_throw(&ctx->sha3, 256);
-        ctx->sha3.output_size = guest.sha3.output_size;
-        ctx->sha3.block_size = guest.sha3.block_size;
+        cx_keccak_init(&ctx->sha3, 256);
         ctx->sha3.blen = guest.sha3.blen;
         memcpy(&ctx->sha3.block, guest.sha3.block, sizeof(ctx->sha3.block));
         memcpy(&ctx->sha3.acc, guest.sha3.acc, sizeof(ctx->sha3.acc));
@@ -112,7 +110,7 @@ static bool save_ctx_from_host(const cx_hash_id_t hash_id, uint32_t ctx_addr, un
 
     switch (hash_id) {
     case HASH_ID_SHA3_256:
-        ctx->sha3.blen = guest.sha3.blen;
+        guest.sha3.blen = ctx->sha3.blen;
         memcpy(guest.sha3.block, &ctx->sha3.block, sizeof(ctx->sha3.block));
         memcpy(guest.sha3.acc, &ctx->sha3.acc, sizeof(ctx->sha3.acc));
         copy_host_buffer(ctx_addr, &guest.sha3, sizeof(guest.sha3));
