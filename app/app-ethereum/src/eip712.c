@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -13,37 +14,92 @@
     "\xf2\xce\xe3\x75\xfa\x42\xb4\x21\x43\x80\x40\x25\xfc\x44\x9d\xea\xfd\x50\xcc\x03\x1c\xa2\x57" \
     "\xe0\xb1\x94\xa6\x50\xa9\x12\x09\x0f"
 
+static void encode_data(const member_data_t *data, uint8_t *result);
 static void hash_struct(const hash_struct_t *hstruct, uint8_t *digest);
+
+static void unhex(const char *hex, uint8_t *bin, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        unsigned int c;
+        sscanf(&hex[i * 2], "%02x", &c);
+        bin[i] = c;
+    }
+}
+
+static bool is_hex_string(const char *string, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        if (!isxdigit(string[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 static void encode_address(const eip712_address_t *address, uint8_t *result)
 {
-    uint8_t bin[20];
-
     _Static_assert(sizeof(address->value) == 40, "invalid address size");
 
     memset(result, 0, 12);
-    for (size_t i = 0; i < 20; i++) {
-        unsigned int c;
-        sscanf(&address->value[i * 2], "%02x", &c);
-        result[12 + i] = c;
+    unhex(address->value, result + 12, 20);
+}
+
+static void encode_bytes_n(const eip712_bytes_n_t *bytes, uint8_t *result)
+{
+    unhex(bytes->hex, result, bytes->count);
+    memset(result + bytes->count, '\x00', 32 - bytes->count);
+}
+
+static void encode_uint_n(const eip712_uint_n_t *uint, uint8_t *result)
+{
+    memset(result, '\x00', 32 - uint->count);
+    unhex(uint->hex, result + 32 - uint->count, uint->count);
+}
+
+static void encode_int_n(const eip712_int_n_t *sint, uint8_t *result)
+{
+    if (sint->positive) {
+        memset(result, '\x00', 32 - sint->count);
+        unhex(sint->hex, result + 32 - sint->count, sint->count);
+    } else {
+        memset(result, '\xff', 32 - sint->count);
+        unhex(sint->hex, result + 32 - sint->count, sint->count);
+        result[32 - sint->count] |= 0x80;
+    }
+}
+
+static void encode_array(const eip712_array_t *array, uint8_t *result)
+{
+    ctx_sha3_t ctx;
+
+    sha3_256_init(&ctx);
+
+    for (size_t i = 0; i < array->count; i++) {
+        uint8_t digest[32];
+        encode_data(&array->values[i], digest);
+        sha3_256_update(&ctx, digest, sizeof(digest));
+    }
+
+    sha3_256_final(&ctx, result);
+}
+
+static void encode_bool(bool boolean, uint8_t *result)
+{
+    memset(result, '\x00', 32);
+    if (boolean) {
+        result[31] = '\x01';
     }
 }
 
 static void encode_data(const member_data_t *data, uint8_t *result)
 {
     switch (data->type) {
+    case TYPE_BYTES_N:
+        encode_bytes_n(&data->bytes_n, result);
+        break;
     case TYPE_BOOL:
-        if (data->boolean) {
-            memcpy(result,
-                   "\xb1\x0e\x2d\x52\x76\x12\x07\x3b\x26\xee\xcd\xfd\x71\x7e\x6a\x32\x0c\xf4\x4b"
-                   "\x4a\xfa\xc2\xb0\x73\x2d\x9f\xcb\xe2\xb7\xfa\x0c\xf6",
-                   32);
-        } else {
-            memcpy(result,
-                   "\x29\x0d\xec\xd9\x54\x8b\x62\xa8\xd6\x03\x45\xa9\x88\x38\x6f\xc8\x4b\xa6\xbc"
-                   "\x95\x48\x40\x08\xf6\x36\x2f\x93\x16\x0e\xf3\xe5\x63",
-                   32);
-        }
+        encode_bool(data->boolean, result);
         break;
     case TYPE_STRING:
         sha3_256((const uint8_t *)data->string.value, data->string.length, result);
@@ -57,8 +113,17 @@ static void encode_data(const member_data_t *data, uint8_t *result)
     case TYPE_ADDRESS:
         encode_address(&data->address, result);
         break;
+    case TYPE_UINT_N:
+        encode_uint_n(&data->uint_n, result);
+        break;
+    case TYPE_INT_N:
+        encode_int_n(&data->int_n, result);
+        break;
+    case TYPE_ARRAY:
+        encode_array(data->array, result);
+        break;
     default:
-        fatal("encode_data: unsupported type (WIP)");
+        fatal("encode_data: unsupported type");
         break;
     }
 }
@@ -98,13 +163,17 @@ static bool set_address(eip712_address_t *address, const char *value, const size
 {
     if (size == 40) {
         memcpy(address->value, value, sizeof(address->value));
-        return true;
     } else if (size == 42 && strncmp(value, "0x", 2) == 0) {
         memcpy(address->value, value + 2, sizeof(address->value));
-        return true;
     } else {
         return false;
     }
+
+    if (!is_hex_string(address->value, sizeof(address->value))) {
+        return false;
+    }
+
+    return true;
 }
 
 bool set_value(member_data_t *member, const char *value, const size_t size)
@@ -118,6 +187,7 @@ bool set_value(member_data_t *member, const char *value, const size_t size)
     case TYPE_ADDRESS:
         success = set_address(&member->address, value, size);
         break;
+    case TYPE_BYTES_N:
     case TYPE_BYTES:
     default:
         fatal("set_value: unsupported type (WIP)");

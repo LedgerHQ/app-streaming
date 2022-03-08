@@ -15,15 +15,6 @@
     "   \"wallet\": \"0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB\"\n  },\n  \"contents\": "        \
     "\"Hello, Bob!\"\n}\n"
 
-static void unhex(const char *hex, uint8_t *bin, size_t size)
-{
-    for (size_t i = 0; i < size; i++) {
-        unsigned int c;
-        sscanf(&hex[i * 2], "%02x", &c);
-        bin[i] = c;
-    }
-}
-
 void assert_digest_equal(const uint8_t *digest, const char *hexpected)
 {
     uint8_t expected[32];
@@ -36,17 +27,13 @@ static void test_encode_data(void **state __attribute__((unused)))
 {
     uint8_t digest[32];
 
-    /*
-     * Web3.solidityKeccak(['uint256'], [1])
-     * keccak.new(digest_bits=256).update(int(1).to_bytes(32, "big")).hexdigest()
-     */
     member_data_t bool_true = { .type = TYPE_BOOL, .boolean = true };
     encode_data(&bool_true, digest);
-    assert_digest_equal(digest, "b10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6");
+    assert_digest_equal(digest, "0000000000000000000000000000000000000000000000000000000000000001");
 
     member_data_t bool_false = { .type = TYPE_BOOL, .boolean = false };
     encode_data(&bool_false, digest);
-    assert_digest_equal(digest, "290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563");
+    assert_digest_equal(digest, "0000000000000000000000000000000000000000000000000000000000000000");
 
     member_data_t string = { .type = TYPE_STRING, .string = { "lol", 3 } };
     encode_data(&string, digest);
@@ -60,6 +47,30 @@ static void test_encode_data(void **state __attribute__((unused)))
                               .address = { "49EdDD3769c0712032808D86597B84ac5c2F5614" } };
     encode_data(&address, digest);
     assert_digest_equal(digest, "00000000000000000000000049eddd3769c0712032808d86597b84ac5c2f5614");
+
+    member_data_t bytes_n = { .type = TYPE_BYTES_N, .bytes_n = { "1234", 2 } };
+    encode_data(&bytes_n, digest);
+    assert_digest_equal(digest, "1234000000000000000000000000000000000000000000000000000000000000");
+
+    member_data_t uint_n = { .type = TYPE_UINT_N, .uint_n = { "1234", 16 / 8 } };
+    encode_data(&uint_n, digest);
+    assert_digest_equal(digest, "0000000000000000000000000000000000000000000000000000000000001234");
+
+    member_data_t int_n = { .type = TYPE_INT_N, .int_n = { "1234", 16 / 8, true } };
+    encode_data(&int_n, digest);
+    assert_digest_equal(digest, "0000000000000000000000000000000000000000000000000000000000001234");
+
+    member_data_t negative_int_n = { .type = TYPE_INT_N, .int_n = { "1234", 16 / 8, false } };
+    encode_data(&negative_int_n, digest);
+    assert_digest_equal(digest, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9234");
+
+    // >>> keccak.new(digest_bits=256).update(int(0).to_bytes(32, "big") + int(1).to_bytes(32,
+    // "big")).hexdigest()
+    member_data_t array_values[] = { bool_false, bool_true };
+    eip712_array_t array_ = { .values = array_values, .count = 2 };
+    member_data_t array = { .type = TYPE_ARRAY, .array = &array_ };
+    encode_data(&array, digest);
+    assert_digest_equal(digest, "a6eef7e35abe7026729641147f7915573c7e97b47efa546f5f6e3230263bcb49");
 }
 
 static void test_example_mail(void **state __attribute__((unused)))

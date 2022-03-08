@@ -10,12 +10,9 @@
 #define DIGEST_SIZE 32
 
 typedef enum {
-    TYPE_BYTES1,
-    TYPE_BYTES32,
-    TYPE_UINT8,
-    TYPE_UINT256,
-    TYPE_INT8,
-    TYPE_INT256,
+    TYPE_BYTES_N,
+    TYPE_UINT_N,
+    TYPE_INT_N,
     TYPE_BOOL,
     TYPE_ADDRESS,
     TYPE_BYTES,
@@ -32,6 +29,11 @@ typedef struct hash_struct_s {
     struct member_data_s *members;
 } hash_struct_t;
 
+typedef struct eip712_array_s {
+    struct member_data_s *values;
+    size_t count;
+} eip712_array_t;
+
 typedef struct eip712_address_s {
     char value[40];
 } eip712_address_t;
@@ -46,15 +48,35 @@ typedef struct eip712_bytes_s {
     size_t size;
 } eip712_bytes_t;
 
+typedef struct eip712_bytes_n_s {
+    const char hex[64];
+    size_t count; // [1;32]
+} eip712_bytes_n_t;
+
+typedef struct eip712_uint_n_s {
+    const char hex[64];
+    size_t count; // [1;32]
+} eip712_uint_n_t;
+
+typedef struct eip712_int_n_s {
+    const char hex[64];
+    size_t count; // [1;32]
+    bool positive;
+} eip712_int_n_t;
+
 typedef struct member_data_s {
     member_type_e type;
     char *display;
     union {
         bool boolean;
         eip712_bytes_t bytes;
+        eip712_bytes_n_t bytes_n;
         eip712_string_t string;
         hash_struct_t *hstruct;
+        eip712_array_t *array;
         eip712_address_t address;
+        eip712_int_n_t int_n;
+        eip712_uint_n_t uint_n;
     };
 } member_data_t;
 
