@@ -16,7 +16,7 @@
 #include "ui.h"
 
 #ifdef TARGET_NANOX
-#define NPAGE_CODE  70
+#define NPAGE_CODE  65
 #define NPAGE_STACK 10
 #define NPAGE_DATA  10
 #else
