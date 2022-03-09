@@ -125,10 +125,6 @@ static void parse_apdu(const struct response_s *response, size_t size) {
     }
 }
 
-/* This IV is made of:
- * - addr and iv32 to ensure that 2 identical data pages won't result in the
- *   same encrypted data
- * - sha256 of a secret key to prevent attacks on known cleartexts */
 static void compute_iv(uint8_t *iv, uint32_t addr, uint32_t iv32)
 {
     /* add address to the IV to prevent 2 pages with identical data and iv32
