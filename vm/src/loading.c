@@ -63,18 +63,18 @@ static void display_next_icon(void)
     app_loading_step = (app_loading_step + 1) % NUMBER_OF_ICONS;
 }
 
-void sys_app_loading_start(uint32_t status_addr)
+void sys_app_loading_start(guest_pointer_t p_status)
 {
     app_loading = true;
     app_loading_counter = 0;
 
     char loading_status[32];
-    if (status_addr == 0) {
+    if (p_status.addr == 0) {
         loading_status[0] = '\x00';
     } else {
         /* XXX: this might be wrong if the guest buffer is smaller that sizeof(loading_status) and
          * at the end of a memory mapping */
-        copy_guest_buffer(status_addr, loading_status, sizeof(loading_status) - 1);
+        copy_guest_buffer(p_status, loading_status, sizeof(loading_status) - 1);
         loading_status[sizeof(loading_status) - 1] = '\x00';
     }
 

@@ -49,7 +49,7 @@ struct cmd_fatal_s {
  * Can't be interrupted by a button press for now when the exchange has started.
  * TODO: display some progress bar or something.
  */
-static size_t xrecv(uint32_t addr, size_t size)
+static size_t xrecv(guest_pointer_t p_buf, size_t size)
 {
     size_t ret = 0;
     uint32_t counter = 0;
@@ -61,11 +61,11 @@ static size_t xrecv(uint32_t addr, size_t size)
         _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(apdu->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
 
         size_t n;
-        n = PAGE_SIZE - (addr - PAGE_START(addr));
+        n = PAGE_SIZE - (p_buf.addr - PAGE_START(p_buf.addr));
         n = MIN(size, n);
 
         /* 0. retrieve buffer pointer now since it can modify G_io_apdu_buffer */
-        uint8_t *buffer = get_buffer(addr, n, true);
+        uint8_t *buffer = get_buffer(p_buf.addr, n, true);
 
         /* 1. send "recv" request */
         struct cmd_recv_buffer_s *cmd = (struct cmd_recv_buffer_s *)G_io_apdu_buffer;
@@ -108,7 +108,7 @@ static size_t xrecv(uint32_t addr, size_t size)
         buffer[0] = apdu->p2;
         memcpy(buffer + 1, apdu->data, n - 1);
 
-        addr += n;
+        p_buf.addr += n;
         size -= n;
         ret += n;
         counter++;
@@ -125,7 +125,7 @@ static size_t xrecv(uint32_t addr, size_t size)
     return ret;
 }
 
-static void xsend(uint32_t addr, size_t size)
+static void xsend(guest_pointer_t p_buf, size_t size)
 {
     uint32_t counter = 0;
 
@@ -135,14 +135,14 @@ static void xsend(uint32_t addr, size_t size)
 
         size_t n;
 
-        n = PAGE_SIZE - (addr - PAGE_START(addr));
+        n = PAGE_SIZE - (p_buf.addr - PAGE_START(p_buf.addr));
         n = MIN(size, n);
         n = MIN(sizeof(cmd->data), n);
 
         /* 0. copy the app buffer (note that it can modify G_io_apdu_buffer) */
         uint8_t *buffer;
 
-        buffer = get_buffer(addr, n, false);
+        buffer = get_buffer(p_buf.addr, n, false);
         memcpy(cmd->data, buffer, n);
         memset(cmd->data + n, '\x00', sizeof(cmd->data) - n);
 
@@ -157,13 +157,13 @@ static void xsend(uint32_t addr, size_t size)
         /* 2. */
         io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-        addr += n;
+        p_buf.addr += n;
         size -= n;
         counter++;
     }
 }
 
-static void sys_fatal(uint32_t msg_addr)
+static void sys_fatal(guest_pointer_t p_msg)
 {
     struct cmd_fatal_s *cmd = (struct cmd_fatal_s *)G_io_apdu_buffer;
 
@@ -173,18 +173,18 @@ static void sys_fatal(uint32_t msg_addr)
     size_t max_size = sizeof(cmd->msg);
 
     uint8_t *p = cmd->msg;
-    size_t n = PAGE_SIZE - (msg_addr - PAGE_START(msg_addr));
+    size_t n = PAGE_SIZE - (p_msg.addr - PAGE_START(p_msg.addr));
     if (n > max_size) {
         n = max_size;
     }
-    copy_guest_buffer(msg_addr, p, n);
+    copy_guest_buffer(p_msg, p, n);
 
     uint8_t *q = memchr(p, '\x00', n);
     if (q == NULL) {
-        msg_addr += n;
+        p_msg.addr += n;
         p += n;
         max_size -= n;
-        copy_guest_buffer(msg_addr, p, max_size);
+        copy_guest_buffer(p_msg, p, max_size);
         q = memchr(p, '\x00', n);
     }
 
@@ -218,45 +218,45 @@ static void sys_screen_update(void)
     screen_update();
 }
 
-void copy_guest_buffer(uint32_t addr, void *buf, size_t size)
+void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
 {
     uint8_t *dst = buf;
 
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (addr - PAGE_START(addr));
+        n = PAGE_SIZE - (p_src.addr - PAGE_START(p_src.addr));
         n = MIN(size, n);
 
         uint8_t *buffer;
-        buffer = get_buffer(addr, n, false);
+        buffer = get_buffer(p_src.addr, n, false);
         memcpy(dst, buffer, n);
 
-        addr += n;
+        p_src.addr += n;
         dst += n;
         size -= n;
     }
 }
 
-void copy_host_buffer(uint32_t addr, void *buf, size_t size)
+void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
 {
-    uint8_t *dst = buf;
+    uint8_t *src = buf;
 
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (addr - PAGE_START(addr));
+        n = PAGE_SIZE - (p_dst.addr - PAGE_START(p_dst.addr));
         n = MIN(size, n);
 
         uint8_t *buffer;
-        buffer = get_buffer(addr, n, true);
-        memcpy(buffer, dst, n);
+        buffer = get_buffer(p_dst.addr, n, true);
+        memcpy(buffer, src, n);
 
-        addr += n;
-        dst += n;
+        p_dst.addr += n;
+        src += n;
         size -= n;
     }
 }
 
-static void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ uint32_t colors_addr, unsigned int bit_per_pixel, uint32_t bitmap_addr, unsigned int bitmap_length_bits)
+static void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits)
 {
     unsigned int colors[2];
     uint8_t bitmap[512];
@@ -266,8 +266,8 @@ static void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height,
         bitmap_length += 1;
     }
 
-    copy_guest_buffer(colors_addr, colors, 2 * sizeof(unsigned int));
-    copy_guest_buffer(bitmap_addr, bitmap, bitmap_length);
+    copy_guest_buffer(p_colors, colors, 2 * sizeof(unsigned int));
+    copy_guest_buffer(p_bitmap, bitmap, bitmap_length);
 
     bagl_hal_draw_bitmap_within_rect(x, y, width, height, /*color_count, */2, colors, bit_per_pixel, bitmap, bitmap_length_bits);
 }
@@ -366,7 +366,7 @@ static int sys_wait_button(void)
     return button_mask;
 }
 
-static void sys_bagl_draw_with_context(uint32_t component_addr, uint32_t context_addr, size_t context_length, int context_encoding)
+static void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding)
 {
     packed_bagl_component_t packed_component;
     bagl_component_t component;
@@ -377,9 +377,9 @@ static void sys_bagl_draw_with_context(uint32_t component_addr, uint32_t context
         context_length = sizeof(context_buf);
     }
 
-    copy_guest_buffer(component_addr, &packed_component, sizeof(packed_component));
-    if (context_addr != 0) {
-        copy_guest_buffer(context_addr, &context_buf, context_length);
+    copy_guest_buffer(p_component, &packed_component, sizeof(packed_component));
+    if (p_context.addr != 0) {
+        copy_guest_buffer(p_context, &context_buf, context_length);
         context = &context_buf;
     } else {
         context = NULL;
@@ -407,65 +407,66 @@ void sys_ux_idle(void)
     ui_app_idle();
 }
 
-static uint32_t sys_memset(uint32_t s_addr, int c, size_t size)
+static uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
 {
-    const uint32_t s = s_addr;
+    const uint32_t s_addr = p_s.addr;
 
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (s_addr - PAGE_START(s_addr));
+        n = PAGE_SIZE - (p_s.addr - PAGE_START(p_s.addr));
         n = MIN(size, n);
 
-        uint8_t *buffer = get_buffer(s_addr, n, true);
+        uint8_t *buffer = get_buffer(p_s.addr, n, true);
         memset(buffer, c, n);
 
-        s_addr += n;
+        p_s.addr += n;
         size -= n;
     }
 
-    return s;
+    return s_addr;
 }
 
-static uint32_t sys_memcpy(uint32_t dst_addr, uint32_t src_addr, size_t size)
+static uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
 {
-    const uint32_t dst = dst_addr;
+    const uint32_t dst_addr = p_dst.addr;
 
     while (size > 0) {
         size_t n, a, b;
-        a = PAGE_SIZE - (dst_addr - PAGE_START(dst_addr));
-        b = PAGE_SIZE - (src_addr - PAGE_START(src_addr));
+        a = PAGE_SIZE - (p_dst.addr - PAGE_START(p_dst.addr));
+        b = PAGE_SIZE - (p_src.addr - PAGE_START(p_src.addr));
         n = MIN(size, MIN(a, b));
 
-        uint8_t *buffer_src = get_buffer(src_addr, n, false);
+        uint8_t *buffer_src = get_buffer(p_src.addr, n, false);
 
         /* a temporary buffer is required because get_buffer() might unlikely
-         * return the same page if dst_addr or src_addr isn't in the cache. */
+         * return the same page if p_dst.addr or p_src.addr isn't in the
+         * cache. */
         uint8_t tmp[PAGE_SIZE];
         memcpy(tmp, buffer_src, n);
 
-        uint8_t *buffer_dst = get_buffer(dst_addr, n, true);
+        uint8_t *buffer_dst = get_buffer(p_dst.addr, n, true);
         memcpy(buffer_dst, tmp, n);
 
-        dst_addr += n;
-        src_addr += n;
+        p_dst.addr += n;
+        p_src.addr += n;
         size -= n;
     }
 
-    return dst;
+    return dst_addr;
 }
 
-static size_t sys_strlen(uint32_t s_addr)
+static size_t sys_strlen(guest_pointer_t p_s)
 {
     size_t size = 0;
 
     while (true) {
         size_t n;
-        n = PAGE_SIZE - (s_addr - PAGE_START(s_addr));
+        n = PAGE_SIZE - (p_s.addr - PAGE_START(p_s.addr));
 
-        char *buffer = (char *)get_buffer(s_addr, n, false);
+        char *buffer = (char *)get_buffer(p_s.addr, n, false);
         size_t tmp_size = strnlen(buffer, n);
 
-        s_addr += n;
+        p_s.addr += n;
         size += tmp_size;
 
         if (tmp_size < n) {
@@ -476,19 +477,19 @@ static size_t sys_strlen(uint32_t s_addr)
     return size;
 }
 
-static size_t sys_strnlen(uint32_t s_addr, size_t maxlen)
+static size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
 {
     size_t size = 0;
 
     while (maxlen > 0) {
         size_t n;
-        n = PAGE_SIZE - (s_addr - PAGE_START(s_addr));
+        n = PAGE_SIZE - (p_s.addr - PAGE_START(p_s.addr));
         n = MIN(n, maxlen);
 
-        char *buffer = (char *)get_buffer(s_addr, n, false);
+        char *buffer = (char *)get_buffer(p_s.addr, n, false);
         size_t tmp_size = strnlen(buffer, n);
 
-        s_addr += n;
+        p_s.addr += n;
         maxlen -= n;
         size += tmp_size;
 
@@ -510,14 +511,14 @@ bool ecall(struct rv_cpu *cpu)
 
     switch (nr) {
     case ECALL_FATAL:
-        sys_fatal(cpu->regs[RV_REG_A0]);
+        sys_fatal(GP(RV_REG_A0));
         stop = true;
         break;
     case ECALL_XSEND:
-        xsend(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1]);
+        xsend(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
         break;
     case ECALL_XRECV:
-        cpu->regs[RV_REG_A0] = xrecv(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1]);
+        cpu->regs[RV_REG_A0] = xrecv(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
         break;
     case ECALL_EXIT:
         sys_exit(cpu->regs[RV_REG_A0]);
@@ -531,17 +532,17 @@ bool ecall(struct rv_cpu *cpu)
         sys_screen_update();
         break;
     case ECALL_BAGL_DRAW_BITMAP:
-        sys_ux_bitmap(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4], cpu->regs[RV_REG_A5], cpu->regs[RV_REG_A6], cpu->regs[RV_REG_A7]);
+        sys_ux_bitmap(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], GP(RV_REG_A4), cpu->regs[RV_REG_A5], GP(RV_REG_A6), cpu->regs[RV_REG_A7]);
         break;
 #endif
     case ECALL_WAIT_BUTTON:
         cpu->regs[RV_REG_A0] = sys_wait_button();
         break;
     case ECALL_BAGL_DRAW:
-        sys_bagl_draw_with_context(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
+        sys_bagl_draw_with_context(GP(RV_REG_A0), GP(RV_REG_A1), cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
         break;
     case ECALL_LOADING_START:
-        sys_app_loading_start(cpu->regs[RV_REG_A0]);
+        sys_app_loading_start(GP(RV_REG_A0));
         break;
     case ECALL_LOADING_STOP:
         cpu->regs[RV_REG_A0] = sys_app_loading_stop();
@@ -550,16 +551,16 @@ bool ecall(struct rv_cpu *cpu)
         sys_ux_idle();
         break;
     case ECALL_MEMSET:
-        cpu->regs[RV_REG_A0] = sys_memset(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        cpu->regs[RV_REG_A0] = sys_memset(GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
         break;
     case ECALL_MEMCPY:
-        cpu->regs[RV_REG_A0] = sys_memcpy(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        cpu->regs[RV_REG_A0] = sys_memcpy(GP(RV_REG_A0), GP(RV_REG_A1), cpu->regs[RV_REG_A2]);
         break;
     case ECALL_STRLEN:
-        cpu->regs[RV_REG_A0] = sys_strlen(cpu->regs[RV_REG_A0]);
+        cpu->regs[RV_REG_A0] = sys_strlen(GP(RV_REG_A0));
         break;
     case ECALL_STRNLEN:
-        cpu->regs[RV_REG_A0] = sys_strnlen(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1]);
+        cpu->regs[RV_REG_A0] = sys_strnlen(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
         break;
     default:
         stop = ecall_bolos(cpu, nr);

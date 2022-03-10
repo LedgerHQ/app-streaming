@@ -14,7 +14,7 @@
 
 #include "sdk/api/ecall-nr.h"
 
-static cx_err_t sys_derive_node_bip32(cx_curve_t curve, uint32_t path_addr, size_t path_count, uint32_t private_key_addr, uint32_t chain_addr)
+static cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain)
 {
     const unsigned int path[10];
     uint8_t private_key[32];
@@ -28,25 +28,25 @@ static cx_err_t sys_derive_node_bip32(cx_curve_t curve, uint32_t path_addr, size
         fatal("derive_node_bip32: invalid curve (TODO)");
     }
 
-    copy_guest_buffer(path_addr, (void *)path, path_count * sizeof(unsigned int));
-    copy_guest_buffer(private_key_addr, private_key, sizeof(private_key));
+    copy_guest_buffer(p_path, (void *)path, path_count * sizeof(unsigned int));
+    copy_guest_buffer(p_private_key, private_key, sizeof(private_key));
 
     os_perso_derive_node_bip32(curve, path, path_count, private_key, chain);
     /* XXX: error? */
 
-    if (private_key_addr != 0) {
-        copy_host_buffer(private_key_addr, &private_key, sizeof(private_key));
+    if (p_private_key.addr != 0) {
+        copy_host_buffer(p_private_key, &private_key, sizeof(private_key));
         explicit_bzero(private_key, sizeof(private_key));
     }
 
-    if (chain_addr != 0) {
-        copy_host_buffer(chain_addr, &chain, sizeof(chain));
+    if (p_chain.addr != 0) {
+        copy_host_buffer(p_chain, &chain, sizeof(chain));
     }
 
     return CX_OK;
 }
 
-static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, uint32_t pubkey_addr, uint32_t privkey_addr)
+static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
 {
     cx_ecfp_public_key_t pubkey;
     cx_ecfp_private_key_t privkey;
@@ -56,8 +56,8 @@ static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, uint32_t pubkey_addr, u
         goto error;
     }
 
-    copy_host_buffer(pubkey_addr, &pubkey, sizeof(pubkey));
-    copy_host_buffer(privkey_addr, &privkey, sizeof(privkey));
+    copy_host_buffer(p_pubkey, &pubkey, sizeof(pubkey));
+    copy_host_buffer(p_privkey, &privkey, sizeof(privkey));
 
  error:
     explicit_bzero(&privkey, sizeof(privkey));
@@ -65,19 +65,19 @@ static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, uint32_t pubkey_addr, u
     return err;
 }
 
-static cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, uint32_t pubkey_addr, uint32_t privkey_addr)
+static cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
 {
     cx_ecfp_public_key_t pubkey;
     cx_ecfp_private_key_t privkey;
 
-    copy_guest_buffer(privkey_addr, &privkey, sizeof(privkey));
+    copy_guest_buffer(p_privkey, &privkey, sizeof(privkey));
 
     cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, true);
     if (err != CX_OK) {
         goto error;
     }
 
-    copy_host_buffer(pubkey_addr, &pubkey, sizeof(pubkey));
+    copy_host_buffer(p_pubkey, &pubkey, sizeof(pubkey));
 
  error:
     explicit_bzero(&privkey, sizeof(privkey));
@@ -85,9 +85,9 @@ static cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, uint32_t pubkey_addr, uint
     return err;
 }
 
-static size_t sys_ecdsa_sign(const uint32_t key_addr, const int mode,
-                             const cx_md_t hash_id, const uint32_t hash_addr,
-                             uint32_t sig_addr, size_t sig_len)
+static size_t sys_ecdsa_sign(const guest_pointer_t p_key, const int mode,
+                             const cx_md_t hash_id, const guest_pointer_t p_hash,
+                             guest_pointer_t p_sig, size_t sig_len)
 {
     cx_ecfp_private_key_t key;
     uint8_t hash[CX_SHA512_SIZE];
@@ -105,20 +105,20 @@ static size_t sys_ecdsa_sign(const uint32_t key_addr, const int mode,
     default: return 0;
     }
 
-    copy_guest_buffer(key_addr, (void *)&key, sizeof(key));
-    copy_guest_buffer(hash_addr, hash, hash_len);
+    copy_guest_buffer(p_key, (void *)&key, sizeof(key));
+    copy_guest_buffer(p_hash, hash, hash_len);
 
     ret = cx_ecdsa_sign(&key, mode, hash_id, hash, hash_len, sig, sizeof(sig), info);
     if (ret == 0 || ret > sig_len) {
         return 0;
     }
 
-    copy_host_buffer(sig_addr, sig, ret);
+    copy_host_buffer(p_sig, sig, ret);
 
     return ret;
 }
 
-static void sys_mult(uint32_t r_addr, uint32_t a_addr, uint32_t b_addr, size_t len)
+static void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, size_t len)
 {
     uint8_t r[64], a[32], b[32];
 
@@ -127,15 +127,15 @@ static void sys_mult(uint32_t r_addr, uint32_t a_addr, uint32_t b_addr, size_t l
         fatal("invalid size for mult");
     }
 
-    copy_guest_buffer(a_addr, a, len);
-    copy_guest_buffer(b_addr, b, len);
+    copy_guest_buffer(p_a, a, len);
+    copy_guest_buffer(p_b, b, len);
 
     cx_math_mult(r, a, b, len);
 
-    copy_host_buffer(r_addr, r, len * 2);
+    copy_host_buffer(p_r, r, len * 2);
 }
 
-static void sys_multm(uint32_t r_addr, uint32_t a_addr, uint32_t b_addr, uint32_t m_addr, size_t len)
+static void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len)
 {
     uint8_t r[64], a[32], b[32], m[32];
 
@@ -144,16 +144,16 @@ static void sys_multm(uint32_t r_addr, uint32_t a_addr, uint32_t b_addr, uint32_
         fatal("invalid size for multm");
     }
 
-    copy_guest_buffer(a_addr, a, len);
-    copy_guest_buffer(b_addr, b, len);
-    copy_guest_buffer(m_addr, m, len);
+    copy_guest_buffer(p_a, a, len);
+    copy_guest_buffer(p_b, b, len);
+    copy_guest_buffer(p_m, m, len);
 
     cx_math_multm(r, a, b, m, len);
 
-    copy_host_buffer(r_addr, r, len * 2);
+    copy_host_buffer(p_r, r, len * 2);
 }
 
-static bool sys_tostring256(const uint32_t number_addr, const unsigned int base, uint32_t out_addr, size_t len)
+static bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, guest_pointer_t p_out, size_t len)
 {
     uint256_t number;
     char buf[100];
@@ -162,13 +162,13 @@ static bool sys_tostring256(const uint32_t number_addr, const unsigned int base,
         len = sizeof(buf);
     }
 
-    copy_guest_buffer(number_addr, &number, sizeof(number));
+    copy_guest_buffer(p_number, &number, sizeof(number));
 
     if (!tostring256(&number, base, buf, len)) {
         return false;
     }
 
-    copy_host_buffer(out_addr, buf, len);
+    copy_host_buffer(p_out, buf, len);
 
     return true;
 }
@@ -183,37 +183,37 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
 
     switch (nr) {
     case ECALL_SHA256SUM:
-        sys_sha256sum(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        sys_sha256sum(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
         break;
     case ECALL_DERIVE_NODE_BIP32:
-        cpu->regs[RV_REG_A0] = sys_derive_node_bip32(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
+        cpu->regs[RV_REG_A0] = sys_derive_node_bip32(cpu->regs[RV_REG_A0], GP(RV_REG_A1), cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4));
         break;
     case ECALL_CX_ECFP_GENERATE_PAIR:
-        cpu->regs[RV_REG_A0] = sys_ecfp_generate_pair(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        cpu->regs[RV_REG_A0] = sys_ecfp_generate_pair(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
         break;
     case ECALL_CX_ECFP_GET_PUBKEY:
-        cpu->regs[RV_REG_A0] = sys_ecfp_get_pubkey(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        cpu->regs[RV_REG_A0] = sys_ecfp_get_pubkey(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
         break;
     case ECALL_CX_SHA3_256:
-        sys_sha3_256(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        sys_sha3_256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
         break;
     case ECALL_ECDSA_SIGN:
-        cpu->regs[RV_REG_A0] = sys_ecdsa_sign(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4], cpu->regs[RV_REG_A5]);
+        cpu->regs[RV_REG_A0] = sys_ecdsa_sign(GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4), cpu->regs[RV_REG_A5]);
         break;
     case ECALL_MULT:
-        sys_mult(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
+        sys_mult(GP(RV_REG_A0), GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
     case ECALL_MULTM:
-        sys_multm(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
+        sys_multm(GP(RV_REG_A0), GP(RV_REG_A1), GP(RV_REG_A2), GP(RV_REG_A3), cpu->regs[RV_REG_A4]);
         break;
     case ECALL_TOSTRING256:
-        cpu->regs[RV_REG_A0] = sys_tostring256(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
+        cpu->regs[RV_REG_A0] = sys_tostring256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
     case ECALL_HASH_UPDATE:
-        cpu->regs[RV_REG_A0] = sys_hash_update(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
+        cpu->regs[RV_REG_A0] = sys_hash_update(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
     case ECALL_HASH_FINAL:
-        cpu->regs[RV_REG_A0] = sys_hash_final(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        cpu->regs[RV_REG_A0] = sys_hash_final(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
         break;
     default:
         sys_exit(0xdeaddead);
