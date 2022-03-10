@@ -6,4 +6,4 @@
 - implement settings ui
 - BLE
 - loading improvement (ticker?)
-- move common things between the VM and the native SDK to a shared folder
+- out of band `io_exchange()` which reply to special APDUs such as `APDU_IS_APP_RUNNING` or `APDU_QUIT_APP`
