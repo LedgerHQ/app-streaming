@@ -12,6 +12,9 @@
 #include "sdk.h"
 #include "sha256.h"
 
+__attribute__((section(".app_name"))) char app_name[32] = "SHA256";
+__attribute__((section(".app_version"))) char app_version[16] = "1.0";
+
 static void hexdump(const uint8_t *in, char *out, size_t size)
 {
     char hex[16] = "0123456789abcdef";
@@ -25,6 +28,8 @@ static void hexdump(const uint8_t *in, char *out, size_t size)
 
 int main(void)
 {
+    ux_idle();
+
     uint32_t size;
     xrecvall((uint8_t *)&size, sizeof(size));
 

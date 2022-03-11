@@ -11,6 +11,7 @@ add_executable(app-ethereum
   src/sign_tx.c
   src/ui.c
   src/utils.c
+  src/version.c
   protobuf/message.pb.h
   protobuf/message.pb.c
   ${NANOPB_PATH}/pb_decode.c

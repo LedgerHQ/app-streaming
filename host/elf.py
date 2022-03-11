@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from elftools.elf.elffile import ELFFile
 from encryption import Encryption
@@ -43,9 +44,30 @@ class Elf:
         with open(path, "rb") as fp:
             elf = ELFFile(fp)
             assert elf.get_machine_arch() == "RISC-V"
+            self.app_infos = Elf._get_app_infos(elf)
             self.segments = Elf._parse_segments(elf)
             self.entrypoint = elf.header["e_entry"]
 
+    @staticmethod
+    def _get_app_infos(elf):
+        """
+        Retrieve the sections .app_name and .app_version.
+        """
+        infos = {"name": "", "version": ""}
+        for name in infos.keys():
+            section_name = f".app_{name}"
+            section = elf.get_section_by_name(section_name)
+            if section is None:
+                logger.critical(f"failed to get section {section_name}")
+                sys.exit(1)
+            infos[name] = section.data()
+
+        assert len(infos["name"]) == 32
+        assert len(infos["version"]) == 16
+
+        return infos
+
+    @staticmethod
     def _parse_segments(elf):
         segments = list(filter(lambda segment: segment["p_type"] == "PT_LOAD", elf.iter_segments()))
         segments = sorted(segments, key=lambda segment: segment["p_flags"])

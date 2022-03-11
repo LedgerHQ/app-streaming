@@ -118,6 +118,8 @@ class Stream:
 
         sdata_start, sdata_end = self.elf.get_section_range("data")
         scode_start, scode_end = self.elf.get_section_range("code")
+        app_name = self.elf.app_infos["name"]
+        assert len(app_name) == 32
 
         bss = sdata_end
 
@@ -138,7 +140,7 @@ class Stream:
         logger.debug(f"stack: {self.stack_start:#x} - {self.stack_end:#x}")
 
         data = b"\x00" * 3  # for alignment
-        data += b"Ethereum".ljust(32, b"\x00") # XXX TODO: set the correct name
+        data += app_name
         data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
         data += self.merkletree.root_hash()
         data += len(self.merkletree.entries).to_bytes(4, "little")
