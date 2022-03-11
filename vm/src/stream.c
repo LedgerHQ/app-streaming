@@ -74,6 +74,8 @@ struct app_s {
 /* this message comes from the client */
 struct cmd_app_init_s {
     char name[32];
+    uint8_t hmac_key[32];
+    uint8_t encryption_key[32];
     uint32_t pc;
     uint32_t bss;
 
@@ -334,15 +336,10 @@ void stream_commit_page(struct page_s *page, bool insert)
     }
 }
 
-static void init_static_keys(void)
+static void init_static_keys(uint8_t *hmac_key, uint8_t *encryption_key)
 {
-    memset(app.static_key.hmac, 'k', sizeof(app.static_key.hmac));
-
-    uint8_t encryption_key[32];
-    memset(encryption_key, 'K', sizeof(encryption_key));
-    cx_aes_init_key_no_throw(encryption_key, sizeof(encryption_key), &app.static_key.aes);
-
-    explicit_bzero(encryption_key, sizeof(encryption_key));
+    memcpy(app.static_key.hmac, hmac_key, sizeof(app.static_key.hmac));
+    cx_aes_init_key_no_throw(encryption_key, 32, &app.static_key.aes);
 }
 
 static void init_dynamic_keys(void)
@@ -362,10 +359,15 @@ void stream_init_app(uint8_t *buffer)
 {
     memset(&app, '\x00', sizeof(app));
 
-    init_static_keys();
+    struct cmd_app_init_s *cmd = (struct cmd_app_init_s *)buffer;
+
+    init_static_keys(cmd->hmac_key, cmd->encryption_key);
+
+    explicit_bzero(cmd->hmac_key, sizeof(cmd->hmac_key));
+    explicit_bzero(cmd->encryption_key, sizeof(cmd->encryption_key));
+
     init_dynamic_keys();
 
-    struct cmd_app_init_s *cmd = (struct cmd_app_init_s *)buffer;
     memcpy(app.sections, cmd->sections, sizeof(app.sections));
 
     uint32_t sp = app.sections[SECTION_STACK].end;

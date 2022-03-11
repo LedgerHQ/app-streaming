@@ -41,6 +41,7 @@ class Segment:
 
 class Elf:
     def __init__(self, path):
+        self.enc = Encryption()
         with open(path, "rb") as fp:
             elf = ELFFile(fp)
             assert elf.get_machine_arch() == "RISC-V"
@@ -88,8 +89,7 @@ class Elf:
 
     def get_encrypted_pages(self, name, iv=0):
         segment = self._get_segment(name)
-        enc = Encryption()
-        pages = enc.encrypt_segment(segment, Segment.PAGE_SIZE, iv)
+        pages = self.enc.encrypt_segment(segment, Segment.PAGE_SIZE, iv)
         for addr, (data, digest) in pages.items():
             yield addr, (data, digest)
 
@@ -125,6 +125,8 @@ class Elf:
 
         data = b""
         data += app_name
+        data += self.enc.hmac_key
+        data += self.enc.encryption_key
         data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
         data += merkletree.root_hash()
         data += len(merkletree.entries).to_bytes(4, "little")
