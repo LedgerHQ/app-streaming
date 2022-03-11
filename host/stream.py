@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 
-from elf import Elf
+from encryption import EncryptedApp
 from merkletree import Entry, MerkleTree
 from server import Server
 
@@ -70,23 +70,23 @@ class Stream:
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
     def __init__(self, path):
-        elf = Elf(path)
+        app = EncryptedApp(path)
 
         self.pages = {}
         self.merkletree = MerkleTree()
-        self.manifest = elf.get_manifest()
+        self.manifest = app.manifest
 
-        for addr, (data, mac) in elf.get_encrypted_pages("code"):
-            assert addr not in self.pages
+        for page in app.code_pages:
+            assert page.addr not in self.pages
             # Since this pages are read-only, don't call _write_page() to avoid
             # inserting them in the merkle tree.
-            self.pages[addr] = Page(data, mac, read_only=True)
+            self.pages[page.addr] = Page(page.data, page.mac, read_only=True)
 
-        for addr, (data, mac) in elf.get_encrypted_pages("data"):
-            assert addr not in self.pages
+        for page in app.data_pages:
+            assert page.addr not in self.pages
             # The IV is set to 0. It allows the VM to tell which key should be
             # used for decryption and HMAC verification.
-            self._write_page(addr, data, mac, 0)
+            self._write_page(page.addr, page.data, page.mac, 0)
 
         self.send_buffer = b""
         self.send_buffer_counter = 0

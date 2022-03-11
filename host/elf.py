@@ -2,8 +2,6 @@ import logging
 import sys
 
 from elftools.elf.elffile import ELFFile
-from merkletree import Entry, MerkleTree
-from encryption import Encryption
 
 
 logger = logging.getLogger("elf")
@@ -45,7 +43,6 @@ class Elf:
     STACK_SIZE = 0x10000
 
     def __init__(self, path):
-        self.enc = Encryption()
         with open(path, "rb") as fp:
             elf = ELFFile(fp)
             assert elf.get_machine_arch() == "RISC-V"
@@ -86,71 +83,11 @@ class Elf:
 
         return [Segment(segment) for segment in segments]
 
-    def _get_segment(self, name):
+    def get_segment(self, name):
         keys = {"code": 0, "data": 1}
         assert name in keys.keys()
         return self.segments[keys[name]]
 
-    def get_encrypted_pages(self, name, iv=0):
-        segment = self._get_segment(name)
-        pages = self.enc.encrypt_segment(segment, Segment.PAGE_SIZE, iv)
-        # ensure pages are sorted to compute the merkletree deterministically
-        for addr in sorted(pages.keys()):
-            (data, digest) = pages[addr]
-            yield addr, (data, digest)
-
     def get_section_range(self, name):
-        segment = self._get_segment(name)
+        segment = self.get_segment(name)
         return segment.start, segment.end
-
-    def _compute_initial_merkle_tree(self):
-        pages = {}
-        merkletree = MerkleTree()
-        iv = 0
-
-        for addr, (data, mac) in self.get_encrypted_pages("data"):
-            assert addr not in pages
-            merkletree.insert(Entry.from_values(addr, iv))
-
-        return merkletree
-
-    def get_manifest(self):
-        entrypoint = self.entrypoint
-
-        sdata_start, sdata_end = self.get_section_range("data")
-        scode_start, scode_end = self.get_section_range("code")
-        app_name = self.app_infos["name"]
-        assert len(app_name) == 32
-
-        stack_end = 0x80000000
-        stack_start = stack_end - Elf.STACK_SIZE
-        bss = sdata_end
-
-        addresses = [
-            entrypoint,
-            bss,
-            scode_start,
-            scode_end,
-            stack_start,
-            stack_end,
-            sdata_start,
-            sdata_end + Elf.HEAP_SIZE,
-        ]
-
-        logger.debug(f"bss:   {bss:#x}")
-        logger.debug(f"code:  {scode_start:#x} - {scode_end:#x}")
-        logger.debug(f"data:  {sdata_start:#x} - {sdata_end + Elf.HEAP_SIZE:#x}")
-        logger.debug(f"stack: {stack_start:#x} - {stack_end:#x}")
-
-        merkletree = self._compute_initial_merkle_tree()
-
-        data = b""
-        data += app_name
-        data += self.enc.hmac_key
-        data += self.enc.encryption_key
-        data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
-        data += merkletree.root_hash()
-        data += len(merkletree.entries).to_bytes(4, "little")
-        data += bytes(merkletree.entries[-1])
-
-        return data
