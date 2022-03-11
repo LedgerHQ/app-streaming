@@ -69,30 +69,24 @@ class Stream:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    HEAP_SIZE = 0x10000
-    STACK_SIZE = 0x10000
-
     def __init__(self, path):
-        self.elf = Elf(path)
+        elf = Elf(path)
 
         self.pages = {}
         self.merkletree = MerkleTree()
+        self.manifest = elf.get_manifest()
 
-        for addr, (data, mac) in self.elf.get_encrypted_pages("code"):
+        for addr, (data, mac) in elf.get_encrypted_pages("code"):
             assert addr not in self.pages
             # Since this pages are read-only, don't call _write_page() to avoid
             # inserting them in the merkle tree.
             self.pages[addr] = Page(data, mac, read_only=True)
 
-        for addr, (data, mac) in self.elf.get_encrypted_pages("data"):
+        for addr, (data, mac) in elf.get_encrypted_pages("data"):
             assert addr not in self.pages
             # The IV is set to 0. It allows the VM to tell which key should be
-            # use for decryption and HMAC verification.
+            # used for decryption and HMAC verification.
             self._write_page(addr, data, mac, 0)
-
-        stack_end = 0x80000000
-        stack_start = stack_end - Stream.STACK_SIZE
-        self.manifest = self.elf.get_manifest(stack_start, stack_end, Stream.HEAP_SIZE, self.merkletree)
 
         self.send_buffer = b""
         self.send_buffer_counter = 0

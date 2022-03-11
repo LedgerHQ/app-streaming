@@ -2,6 +2,7 @@ import logging
 import sys
 
 from elftools.elf.elffile import ELFFile
+from merkletree import Entry, MerkleTree
 from encryption import Encryption
 
 
@@ -40,6 +41,9 @@ class Segment:
 
 
 class Elf:
+    HEAP_SIZE = 0x10000
+    STACK_SIZE = 0x10000
+
     def __init__(self, path):
         self.enc = Encryption()
         with open(path, "rb") as fp:
@@ -90,14 +94,27 @@ class Elf:
     def get_encrypted_pages(self, name, iv=0):
         segment = self._get_segment(name)
         pages = self.enc.encrypt_segment(segment, Segment.PAGE_SIZE, iv)
-        for addr, (data, digest) in pages.items():
+        # ensure pages are sorted to compute the merkletree deterministically
+        for addr in sorted(pages.keys()):
+            (data, digest) = pages[addr]
             yield addr, (data, digest)
 
     def get_section_range(self, name):
         segment = self._get_segment(name)
         return segment.start, segment.end
 
-    def get_manifest(self, stack_start, stack_end, heap_size, merkletree):
+    def _compute_initial_merkle_tree(self):
+        pages = {}
+        merkletree = MerkleTree()
+        iv = 0
+
+        for addr, (data, mac) in self.get_encrypted_pages("data"):
+            assert addr not in pages
+            merkletree.insert(Entry.from_values(addr, iv))
+
+        return merkletree
+
+    def get_manifest(self):
         entrypoint = self.entrypoint
 
         sdata_start, sdata_end = self.get_section_range("data")
@@ -105,6 +122,8 @@ class Elf:
         app_name = self.app_infos["name"]
         assert len(app_name) == 32
 
+        stack_end = 0x80000000
+        stack_start = stack_end - Elf.STACK_SIZE
         bss = sdata_end
 
         addresses = [
@@ -115,13 +134,15 @@ class Elf:
             stack_start,
             stack_end,
             sdata_start,
-            sdata_end + heap_size,
+            sdata_end + Elf.HEAP_SIZE,
         ]
 
         logger.debug(f"bss:   {bss:#x}")
         logger.debug(f"code:  {scode_start:#x} - {scode_end:#x}")
-        logger.debug(f"data:  {sdata_start:#x} - {sdata_end + heap_size:#x}")
+        logger.debug(f"data:  {sdata_start:#x} - {sdata_end + Elf.HEAP_SIZE:#x}")
         logger.debug(f"stack: {stack_start:#x} - {stack_end:#x}")
+
+        merkletree = self._compute_initial_merkle_tree()
 
         data = b""
         data += app_name
