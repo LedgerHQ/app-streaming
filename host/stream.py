@@ -90,9 +90,9 @@ class Stream:
             # use for decryption and HMAC verification.
             self._write_page(addr, data, mac, 0)
 
-        self.stack = {}
-        self.stack_end = 0x80000000
-        self.stack_start = self.stack_end - Stream.STACK_SIZE
+        stack_end = 0x80000000
+        stack_start = stack_end - Stream.STACK_SIZE
+        self.manifest = self.elf.get_manifest(stack_start, stack_end, Stream.HEAP_SIZE, self.merkletree)
 
         self.send_buffer = b""
         self.send_buffer_counter = 0
@@ -114,37 +114,8 @@ class Stream:
             self.merkletree.update(Entry.from_values(addr, iv))
 
     def init_app(self):
-        entrypoint = self.elf.entrypoint
-
-        sdata_start, sdata_end = self.elf.get_section_range("data")
-        scode_start, scode_end = self.elf.get_section_range("code")
-        app_name = self.elf.app_infos["name"]
-        assert len(app_name) == 32
-
-        bss = sdata_end
-
-        addresses = [
-            entrypoint,
-            bss,
-            scode_start,
-            scode_end,
-            self.stack_start,
-            self.stack_end,
-            sdata_start,
-            sdata_end + Stream.HEAP_SIZE,
-        ]
-
-        logger.debug(f"bss:   {bss:#x}")
-        logger.debug(f"code:  {scode_start:#x} - {scode_end:#x}")
-        logger.debug(f"data:  {sdata_start:#x} - {sdata_end + Stream.HEAP_SIZE:#x}")
-        logger.debug(f"stack: {self.stack_start:#x} - {self.stack_end:#x}")
-
         data = b"\x00" * 3  # for alignment
-        data += app_name
-        data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
-        data += self.merkletree.root_hash()
-        data += len(self.merkletree.entries).to_bytes(4, "little")
-        data += bytes(self.merkletree.entries[-1])
+        data += self.manifest
         status_word, data = exchange(client, ins=0x00, data=data)
         return status_word, data
 

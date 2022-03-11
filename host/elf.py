@@ -96,3 +96,38 @@ class Elf:
     def get_section_range(self, name):
         segment = self._get_segment(name)
         return segment.start, segment.end
+
+    def get_manifest(self, stack_start, stack_end, heap_size, merkletree):
+        entrypoint = self.entrypoint
+
+        sdata_start, sdata_end = self.get_section_range("data")
+        scode_start, scode_end = self.get_section_range("code")
+        app_name = self.app_infos["name"]
+        assert len(app_name) == 32
+
+        bss = sdata_end
+
+        addresses = [
+            entrypoint,
+            bss,
+            scode_start,
+            scode_end,
+            stack_start,
+            stack_end,
+            sdata_start,
+            sdata_end + heap_size,
+        ]
+
+        logger.debug(f"bss:   {bss:#x}")
+        logger.debug(f"code:  {scode_start:#x} - {scode_end:#x}")
+        logger.debug(f"data:  {sdata_start:#x} - {sdata_end + heap_size:#x}")
+        logger.debug(f"stack: {stack_start:#x} - {stack_end:#x}")
+
+        data = b""
+        data += app_name
+        data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
+        data += merkletree.root_hash()
+        data += len(merkletree.entries).to_bytes(4, "little")
+        data += bytes(merkletree.entries[-1])
+
+        return data
