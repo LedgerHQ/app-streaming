@@ -72,7 +72,7 @@ struct app_s {
 };
 
 /* this message comes from the client */
-struct cmd_app_init_s {
+struct cmd_app_manifest_s {
     char name[32];
     uint8_t hmac_key[32];
     uint8_t encryption_key[32];
@@ -353,13 +353,23 @@ static void init_dynamic_keys(void)
     explicit_bzero(encryption_key, sizeof(encryption_key));
 }
 
+/* XXX - TODO: temporary xor encryption until a correct scheme is found. */
+static void decrypt_manifest(uint8_t *data, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        data[i] ^= 0x47;
+    }
+}
+
 /* TODO: encrypt received parameters */
 /* TODO: use different hmac keys for read-only data and else */
 void stream_init_app(uint8_t *buffer)
 {
     memset(&app, '\x00', sizeof(app));
 
-    struct cmd_app_init_s *cmd = (struct cmd_app_init_s *)buffer;
+    struct cmd_app_manifest_s *cmd = (struct cmd_app_manifest_s *)buffer;
+
+    decrypt_manifest((uint8_t *)cmd, sizeof(*cmd));
 
     init_static_keys(cmd->hmac_key, cmd->encryption_key);
 

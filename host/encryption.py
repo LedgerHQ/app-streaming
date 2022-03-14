@@ -85,7 +85,11 @@ class Manifest:
         self.data_start = data_start
         self.data_size = data_size
 
-    def export_binary(self):
+    def export_encrypted(self, device_key):
+        def encrypt_manifest(data, device_key):
+            """XXX - TODO: temporary xor encryption until a correct scheme is found."""
+            return bytes([c ^ device_key for c in data])
+
         assert len(self.name) == 32
 
         stack_end = 0x80000000
@@ -112,7 +116,7 @@ class Manifest:
         data += len(self.merkletree.entries).to_bytes(4, "little")
         data += bytes(self.merkletree.entries[-1])
 
-        return data
+        return encrypt_manifest(data, device_key)
 
     def export_json(self):
         """
@@ -123,7 +127,7 @@ class Manifest:
         manifest = {
             # the name and version could be omitted but are convenient
             "name": self.name.decode("ascii").rstrip("\x00"),
-            "version": self.name.decode("ascii").rstrip("\x00"),
+            "version": self.version.decode("ascii").rstrip("\x00"),
             "code_start": self.code_start,
             "data_start": self.data_start,
         }
@@ -131,7 +135,7 @@ class Manifest:
 
 
 class EncryptedApp:
-    def __init__(self, path):
+    def __init__(self, path, device_key):
         elf = Elf(path)
         enc = Encryption()
 
@@ -139,7 +143,7 @@ class EncryptedApp:
         self.data_pages = EncryptedApp._get_encrypted_pages(enc, elf, "data")
 
         manifest = EncryptedApp._get_manifest(enc, elf, self.data_pages)
-        self.binary_manifest = manifest.export_binary()
+        self.binary_manifest = manifest.export_encrypted(device_key)
         self.json_manifest = manifest.export_json()
 
     @classmethod

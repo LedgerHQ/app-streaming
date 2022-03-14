@@ -70,9 +70,10 @@ class Stream:
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
     def __init__(self, path):
-        app = EncryptedApp(path)
+        device_key = 0x47
+        app = EncryptedApp(path, device_key)
 
-        if False:
+        if True:
             app.export_zip("/tmp/app.zip")
             app = EncryptedApp.from_zip("/tmp/app.zip")
 
