@@ -72,9 +72,13 @@ class Stream:
     def __init__(self, path):
         app = EncryptedApp(path)
 
+        if False:
+            app.export_zip("/tmp/app.zip")
+            app = EncryptedApp.from_zip("/tmp/app.zip")
+
         self.pages = {}
         self.merkletree = MerkleTree()
-        self.manifest = app.manifest
+        self.manifest = app.binary_manifest
 
         for page in app.code_pages:
             assert page.addr not in self.pages
