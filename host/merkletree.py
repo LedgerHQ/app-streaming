@@ -2,8 +2,10 @@
 
 import hashlib
 
+from typing import List, Tuple
 
-def hash(data):
+
+def hash(data: bytes) -> bytes:
     return hashlib.sha256(data).digest()
 
 
@@ -13,40 +15,40 @@ class Entry:
     """
 
     @staticmethod
-    def from_values(addr, counter=0):
+    def from_values(addr: int, counter=0) -> "Entry":
         return Entry(int(addr).to_bytes(4, "little") + int(counter).to_bytes(4, "little"))
 
-    def __init__(self, data):
+    def __init__(self, data: bytes) -> None:
         assert len(data) == 8
         self.data = data
         self.addr = int.from_bytes(data[:4], "little")
         self.counter = int.from_bytes(data[4:], "little")
 
-    def update_counter(self, counter):
+    def update_counter(self, counter: int) -> None:
         self.counter = counter
         self.data = self.data[:4] + counter.to_bytes(4, "little")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return self.data
 
     def __repr__(self):
         return f"<addr:{self.addr:#x}, counter:{self.counter:#x}>"
 
 
-def largest_power_of_two(n):
+def largest_power_of_two(n) -> int:
     """https://codereview.stackexchange.com/a/105918"""
     return 1 << (n.bit_length() - 1)
 
 
-def is_power_of_two(n):
+def is_power_of_two(n) -> bool:
     return n and (not(n & (n - 1)))
 
 
 class MerkleTree:
-    def __init__(self):
-        self.entries = []
+    def __init__(self) -> None:
+        self.entries: List[bytes] = []
 
-    def _find_index_by_addr(self, addr):
+    def _find_index_by_addr(self, addr: int) -> int:
         for i, data in enumerate(self.entries):
             e = Entry(data)
             if e.addr == addr:
@@ -54,7 +56,7 @@ class MerkleTree:
 
         return -1
 
-    def update(self, value):
+    def update(self, value: Entry) -> None:
         assert type(value) == Entry
 
         i = self._find_index_by_addr(value.addr)
@@ -64,7 +66,7 @@ class MerkleTree:
         e.update_counter(value.counter)
         self.entries[i] = bytes(e)
 
-    def insert(self, value):
+    def insert(self, value: Entry) -> None:
         assert type(value) == Entry
 
         i = self._find_index_by_addr(value.addr)
@@ -72,11 +74,11 @@ class MerkleTree:
 
         self.entries.append(bytes(value))
 
-    def root_hash(self):
+    def root_hash(self) -> bytes:
         return MerkleTree.mth(self.entries)
 
     @staticmethod
-    def mth(entries):
+    def mth(entries: List[bytes]) -> bytes:
         n = len(entries)
         if n == 0:
             return hash(b"")
@@ -90,7 +92,7 @@ class MerkleTree:
             return hash(b"\x01" + left + right)
 
     @staticmethod
-    def _path(m, entries):
+    def _path(m: int, entries: List[bytes]) -> bytes:
         n = len(entries)
         if n == 1:
             return b""
@@ -102,7 +104,7 @@ class MerkleTree:
             else:
                 return MerkleTree._path(m - k, entries[k:]) + b"L" + MerkleTree.mth(entries[:k])
 
-    def get_proof(self, addr):
+    def get_proof(self, addr: int) -> Tuple[Entry, bytes]:
         m = self._find_index_by_addr(addr)
         assert m != -1
 
@@ -111,7 +113,7 @@ class MerkleTree:
 
         return Entry(self.entries[m]), proof
 
-    def get_proof_of_last_entry(self):
+    def get_proof_of_last_entry(self) -> Tuple[Entry, bytes]:
         assert len(self.entries) > 0
 
         m = len(self.entries) - 1
@@ -120,7 +122,7 @@ class MerkleTree:
 
         return Entry(self.entries[m]), proof
 
-    def has_addr(self, addr):
+    def has_addr(self, addr: int) -> bool:
         m = self._find_index_by_addr(addr)
         return m != -1
 

@@ -2,6 +2,8 @@ import logging
 import sys
 
 from elftools.elf.elffile import ELFFile
+from elftools.elf.segments import Segment as ElfSegment
+from typing import List, Tuple
 
 
 logger = logging.getLogger("elf")
@@ -12,7 +14,7 @@ class Segment:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    def __init__(self, segment):
+    def __init__(self, segment: ElfSegment) -> None:
         if segment["p_flags"] == 5:
             self.name = "data"
         elif segment["p_flags"] == 6:
@@ -42,7 +44,7 @@ class Elf:
     HEAP_SIZE = 0x10000
     STACK_SIZE = 0x10000
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         with open(path, "rb") as fp:
             elf = ELFFile(fp)
             assert elf.get_machine_arch() == "RISC-V"
@@ -51,7 +53,7 @@ class Elf:
             self.entrypoint = elf.header["e_entry"]
 
     @staticmethod
-    def _get_app_infos(elf):
+    def _get_app_infos(elf: ELFFile) -> dict:
         """
         Retrieve the sections .app_name and .app_version.
         """
@@ -70,11 +72,11 @@ class Elf:
         return infos
 
     @staticmethod
-    def _parse_segments(elf):
+    def _parse_segments(elf: ELFFile) -> List[Segment]:
         segments = list(filter(lambda segment: segment["p_type"] == "PT_LOAD", elf.iter_segments()))
         segments = sorted(segments, key=lambda segment: segment["p_flags"])
 
-        #print([segment.header for segment in segments])
+        # print([segment.header for segment in segments])
 
         assert len(segments) == 2
         assert segments[0]["p_flags"] != segments[1]["p_flags"]
@@ -83,11 +85,11 @@ class Elf:
 
         return [Segment(segment) for segment in segments]
 
-    def get_segment(self, name):
+    def get_segment(self, name: str) -> Segment:
         keys = {"code": 0, "data": 1}
         assert name in keys.keys()
         return self.segments[keys[name]]
 
-    def get_section_range(self, name):
+    def get_section_range(self, name: str) -> Tuple[int, int]:
         segment = self.get_segment(name)
         return segment.start, segment.end

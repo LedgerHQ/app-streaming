@@ -11,16 +11,21 @@ import sys
 
 from encryption import EncryptedApp
 from merkletree import Entry, MerkleTree
+from typing import Dict, Tuple
 from server import Server
+
+from ledgerwallet.client import LedgerClient
+from ledgerwallet.transport import enumerate_devices
+from ledgerwallet.utils import serialize
 
 
 class Page:
-    def __init__(self, data, mac, iv=0, read_only=False):
+    def __init__(self, data: bytes, mac: bytes, iv=0, read_only=False) -> None:
         self.read_only = False
         self.update(data, mac, iv)
         self.read_only = read_only
 
-    def update(self, data, mac, iv):
+    def update(self, data: bytes, mac: bytes, iv: int) -> None:
         assert not self.read_only
         self.data = data
         self.mac = mac
@@ -29,7 +34,6 @@ class Page:
 
 def import_ledgerwallet(use_speculos: bool) -> None:
     global LedgerClient
-    global CommException
     global enumerate_devices
     global serialize
 
@@ -37,16 +41,12 @@ def import_ledgerwallet(use_speculos: bool) -> None:
         os.environ["LEDGER_PROXY_ADDRESS"] = "127.0.0.1"
         os.environ["LEDGER_PROXY_PORT"] = "9999"
 
-    from ledgerwallet.client import LedgerClient, CommException
-    from ledgerwallet.transport import enumerate_devices
-    from ledgerwallet.utils import serialize
-
     if False:
         logger = logging.getLogger("ledgerwallet")
         logger.setLevel(logging.DEBUG)
 
 
-def get_client():
+def get_client() -> LedgerClient:
     CLA = 0x12
     devices = enumerate_devices()
     if len(devices) == 0:
@@ -56,7 +56,7 @@ def get_client():
     return LedgerClient(devices[0], cla=CLA)
 
 
-def exchange(client, ins, data=b"", p1=0, p2=0):
+def exchange(client: LedgerClient, ins: int, data=b"", p1=0, p2=0) -> Tuple[int, bytes]:
     apdu = bytes([client.cla, ins, p1, p2])
     apdu += serialize(data)
     response = client.raw_exchange(apdu)
@@ -69,7 +69,7 @@ class Stream:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         device_key = 0x47
         app = EncryptedApp(path, device_key)
 
@@ -77,7 +77,7 @@ class Stream:
             app.export_zip("/tmp/app.zip")
             app = EncryptedApp.from_zip("/tmp/app.zip")
 
-        self.pages = {}
+        self.pages: Dict[int, Page] = {}
         self.merkletree = MerkleTree()
         self.manifest = app.binary_manifest
 
@@ -98,11 +98,11 @@ class Stream:
         self.recv_buffer = b""
         self.recv_buffer_counter = 0
 
-    def _get_page(self, addr):
+    def _get_page(self, addr: int) -> Page:
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
         return self.pages[addr]
 
-    def _write_page(self, addr, data, mac, iv):
+    def _write_page(self, addr: int, data: bytes, mac: bytes, iv: int) -> None:
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
         assert len(data) == Stream.PAGE_SIZE
         if addr not in self.pages:
@@ -112,13 +112,13 @@ class Stream:
             self.pages[addr].update(data, mac, iv)
             self.merkletree.update(Entry.from_values(addr, iv))
 
-    def init_app(self):
+    def init_app(self) -> Tuple[int, bytes]:
         data = b"\x00" * 3  # for alignment
         data += self.manifest
         status_word, data = exchange(client, ins=0x00, data=data)
         return status_word, data
 
-    def handle_read_access(self, data):
+    def handle_read_access(self, data: bytes) -> Tuple[int, bytes]:
         # 1. addr was received
         assert len(data) == 4
         addr = int.from_bytes(data, "little")
@@ -148,7 +148,7 @@ class Stream:
 
         return status_word, data
 
-    def handle_write_access(self, data):
+    def handle_write_access(self, data: bytes) -> Tuple[int, bytes]:
         # 1. encrypted page data was received
         assert len(data) == Stream.PAGE_SIZE
         page_data = data
@@ -181,7 +181,7 @@ class Stream:
         status_word, data = exchange(client, 0x02, data=proof)
         return status_word, data
 
-    def handle_send_buffer(self, data):
+    def handle_send_buffer(self, data: bytes) -> Tuple[int, bytes]:
         logger.info(f"got buffer {data}")
         assert len(data) == 254
 
@@ -202,7 +202,7 @@ class Stream:
         status_word, data = exchange(client, 0x00, data=b"")
         return status_word, data
 
-    def handle_recv_buffer(self, data):
+    def handle_recv_buffer(self, data: bytes) -> Tuple[int, bytes]:
         assert len(data) == 6
 
         if len(self.recv_buffer) == 0:
@@ -235,19 +235,18 @@ class Stream:
         status_word, data = exchange(client, 0x00, p1=last, p2=p2, data=buf)
         return status_word, data
 
-    def handle_exit(self, data):
+    def handle_exit(self, data: bytes) -> None:
         assert len(data) == 4
 
         code = int.from_bytes(data[:4], "little")
         logger.warn(f"app exited with code {code}")
 
-    def handle_fatal(self, data):
+    def handle_fatal(self, data: bytes) -> None:
         assert len(data) == 254
 
         n = data.find(b"\x00")
         if n != -1:
             data = data[:n]
-        code = int.from_bytes(data[:4], "little")
         logger.warn(f"app encountered a fatal error: {data}")
 
 
