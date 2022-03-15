@@ -9,9 +9,10 @@ import logging
 import os
 import sys
 
+from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from encryption import EncryptedApp
 from merkletree import Entry, MerkleTree
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 from server import Server
 
 from ledgerwallet.client import LedgerClient
@@ -118,28 +119,31 @@ class Stream:
         status_word, data = exchange(client, ins=0x00, data=data)
         return status_word, data
 
+    @staticmethod
+    def _parse_request(struct: Struct, data: bytes) -> Any:
+        assert len(data) == struct.sizeof()
+        return struct.parse(data)
+
     def handle_read_access(self, data: bytes) -> Tuple[int, bytes]:
+        request = Stream._parse_request(Struct("addr" / Int32ul), data)
         # 1. addr was received
-        assert len(data) == 4
-        addr = int.from_bytes(data, "little")
-        logger.debug(f"read access: {addr:#x}")
+        logger.debug(f"read access: {request.addr:#x}")
 
         # 2. send encrypted page data
-        page = self._get_page(addr)
+        page = self._get_page(request.addr)
         assert len(page.data) == Stream.PAGE_SIZE
         status_word, data = exchange(client, 0x01, data=page.data[1:], p2=page.data[0])
         assert status_word == 0x6102
 
         # 4. send iv and mac
-        assert len(page.mac) == 32
-        data = page.iv.to_bytes(4, "little") + page.mac
+        data = Struct("iv" / Int32ul, "mac" / Bytes(32)).build(dict(iv=page.iv, mac=page.mac))
         status_word, data = exchange(client, 0x02, data=data)
 
         # 5. send merkle proof
         if not page.read_only:
             assert status_word == 0x6103
-            entry, proof = self.merkletree.get_proof(addr)
-            assert entry.addr == addr
+            entry, proof = self.merkletree.get_proof(request.addr)
+            assert entry.addr == request.addr
             assert entry.counter == page.iv
 
             # TODO: handle larger proofs
@@ -156,24 +160,22 @@ class Stream:
         # 2. receive addr, iv and mac
         status_word, data = exchange(client, 0x01)
         assert status_word == 0x6202
-        assert len(data) == 4 + 4 + 32
 
-        addr = int.from_bytes(data[:4], "little") & Stream.PAGE_MASK
-        iv = int.from_bytes(data[4:8], "little")
-        mac = data[8:]
-        logger.debug(f"write access: {addr:#x} {iv:#x} {mac.hex()}")
+        request = Stream._parse_request(Struct("addr" / Int32ul, "iv" / Int32ul, "mac" / Bytes(32)), data)
+        assert (request.addr & Stream.PAGE_MASK_INVERT) == 0
+        logger.debug(f"write access: {request.addr:#x} {request.iv:#x} {request.mac.hex()}")
 
         # 3. commit page and send merkle proof
-        if self.merkletree.has_addr(addr):
+        if self.merkletree.has_addr(request.addr):
             # proof of previous value
-            entry, proof = self.merkletree.get_proof(addr)
-            assert entry.addr == addr
-            assert entry.counter + 1 == iv
+            entry, proof = self.merkletree.get_proof(request.addr)
+            assert entry.addr == request.addr
+            assert entry.counter + 1 == request.iv
         else:
             # proof of last entry
             entry, proof = self.merkletree.get_proof_of_last_entry()
 
-        self._write_page(addr, page_data, mac, iv)
+        self._write_page(request.addr, page_data, request.mac, request.iv)
 
         # TODO: handle larger proofs
         assert len(proof) <= 250
@@ -183,15 +185,15 @@ class Stream:
 
     def handle_send_buffer(self, data: bytes) -> Tuple[int, bytes]:
         logger.info(f"got buffer {data}")
-        assert len(data) == 254
 
-        n = int.from_bytes(data[250:254], "little")
-        stop = (n & 0x80000000) != 0
-        assert self.send_buffer_counter == (n & 0x7fffffff)
+        request = Stream._parse_request(Struct("data" / Bytes(249), "size" / Int8ul, "counter" / Int32ul), data)
+
+        stop = (request.counter & 0x80000000) != 0
+        assert self.send_buffer_counter == (request.counter & 0x7fffffff)
         self.send_buffer_counter += 1
 
-        size = data[249]
-        self.send_buffer += data[:size]
+        assert request.size <= 249
+        self.send_buffer += request.data[:request.size]
 
         if stop:
             logger.info(f"received buffer: {self.send_buffer} (len: {len(self.send_buffer)})")
@@ -203,24 +205,21 @@ class Stream:
         return status_word, data
 
     def handle_recv_buffer(self, data: bytes) -> Tuple[int, bytes]:
-        assert len(data) == 6
+        request = Stream._parse_request(Struct("counter" / Int32ul, "maxsize" / Int16ul), data)
 
         if len(self.recv_buffer) == 0:
             self.server = Server()
             self.recv_buffer = self.server.recv_request()
 
-        counter = int.from_bytes(data[:4], "little")
-        maxsize = int.from_bytes(data[4:], "little")
-
-        assert self.recv_buffer_counter == counter
+        assert self.recv_buffer_counter == request.counter
         self.recv_buffer_counter += 1
 
-        buf = self.recv_buffer[:maxsize]
-        self.recv_buffer = self.recv_buffer[maxsize:]
+        buf = self.recv_buffer[:request.maxsize]
+        self.recv_buffer = self.recv_buffer[request.maxsize:]
         print(f"buf: {buf}")
         print(f"buffer: {self.recv_buffer}")
         if len(self.recv_buffer) == 0:
-            logger.debug(f"recv buffer last (size: {maxsize}, {len(buf)})")
+            logger.debug(f"recv buffer last (size: {request.maxsize}, {len(buf)})")
             self.recv_buffer_counter = 0
             last = 0x01
         else:
@@ -236,18 +235,13 @@ class Stream:
         return status_word, data
 
     def handle_exit(self, data: bytes) -> None:
-        assert len(data) == 4
-
-        code = int.from_bytes(data[:4], "little")
-        logger.warn(f"app exited with code {code}")
+        request = Stream._parse_request(Struct("code" / Int32ul), data)
+        logger.warn(f"app exited with code {request.code}")
 
     def handle_fatal(self, data: bytes) -> None:
-        assert len(data) == 254
-
-        n = data.find(b"\x00")
-        if n != -1:
-            data = data[:n]
-        logger.warn(f"app encountered a fatal error: {data}")
+        request = Stream._parse_request(Struct("message" / Bytes(254)), data)
+        message = request.message.rstrip(b"\x00")
+        logger.warn(f"app encountered a fatal error: {message}")
 
 
 if __name__ == "__main__":
