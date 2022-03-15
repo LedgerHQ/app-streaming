@@ -4,6 +4,7 @@ import json
 import logging
 import secrets
 
+from construct import Bytes, Int32ul, Struct
 from elf import Elf, Segment
 from merkletree import Entry, MerkleTree
 
@@ -94,6 +95,23 @@ class Manifest:
     The manifest embeds info required by the VM to execute an app.
     """
 
+    MANIFEST_STRUCT = Struct(
+        "name" / Bytes(32),
+        "hmac_key" / Bytes(32),
+        "encryption_key" / Bytes(32),
+        "entrypoint" / Int32ul,
+        "bss" / Int32ul,
+        "code_start" / Int32ul,
+        "code_end" / Int32ul,
+        "stack_start" / Int32ul,
+        "stack_end" / Int32ul,
+        "data_start" / Int32ul,
+        "data_end" / Int32ul,
+        "mt_root_hash" / Bytes(32),
+        "mt_size" / Int32ul,
+        "mt_last_entry" / Bytes(8),
+    )
+
     def __init__(self, enc: Encryption, name: bytes, version: bytes, merkletree: MerkleTree, entrypoint: int, code_start: int, code_size: int, data_start: int, data_size: int) -> None:
         self.enc = enc
         self.name = name
@@ -116,25 +134,22 @@ class Manifest:
         stack_start = stack_end - Elf.STACK_SIZE
         bss = self.data_start + self.data_size
 
-        addresses = [
-            self.entrypoint,
-            bss,
-            self.code_start,
-            self.code_start + self.code_size,
-            stack_start,
-            stack_end,
-            self.data_start,
-            self.data_start + self.data_size + Elf.HEAP_SIZE,
-        ]
-
-        data = b""
-        data += self.name
-        data += self.enc.hmac_key
-        data += self.enc.encryption_key
-        data += b"".join([addr.to_bytes(4, "little") for addr in addresses])
-        data += self.merkletree.root_hash()
-        data += len(self.merkletree.entries).to_bytes(4, "little")
-        data += bytes(self.merkletree.entries[-1])
+        data = Manifest.MANIFEST_STRUCT.build(dict({
+            "name": self.name,
+            "hmac_key": self.enc.hmac_key,
+            "encryption_key": self.enc.encryption_key,
+            "entrypoint": self.entrypoint,
+            "bss": bss,
+            "code_start": self.code_start,
+            "code_end": self.code_start + self.code_size,
+            "stack_start": stack_start,
+            "stack_end": stack_end,
+            "data_start": self.data_start,
+            "data_end": self.data_start + self.data_size + Elf.HEAP_SIZE,
+            "mt_root_hash": self.merkletree.root_hash(),
+            "mt_size": len(self.merkletree.entries),
+            "mt_last_entry": bytes(self.merkletree.entries[-1]),
+        }))
 
         return encrypt_manifest(data, device_key)
 
