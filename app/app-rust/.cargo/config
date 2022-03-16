@@ -1,0 +1,11 @@
+[target.riscv32i-unknown-none-elf]
+rustflags = [
+  "-l", "sdk", "-L", "../build/sdk",
+
+  #"-C", "llvm-args=--target-abi=riscv32",
+  #"-C", "link-arg=-Tscript.ld",
+  #"-Clink-arg=-znoseparate-code"
+]
+
+[build]
+target = "riscv32i-unknown-none-elf"
