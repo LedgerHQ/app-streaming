@@ -104,6 +104,7 @@ struct jsmntok;
 typedef struct jsmntok jsmntok_t;
 
 const hash_struct_t *eip712_example_mail(const char *json_string, jsmntok_t *t, int token_count);
+const hash_struct_t *eip712_opensea(const char *json_string, jsmntok_t *t, int token_count);
 const char *eip712_hash_struct(const char *json_string,
                                size_t size,
                                const uint8_t *domain,

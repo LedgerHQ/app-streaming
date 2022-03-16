@@ -14,6 +14,9 @@
 #define EIP712_DOMAIN_EXAMPLE_MAIL                                                                 \
     "\xf2\xce\xe3\x75\xfa\x42\xb4\x21\x43\x80\x40\x25\xfc\x44\x9d\xea\xfd\x50\xcc\x03\x1c\xa2\x57" \
     "\xe0\xb1\x94\xa6\x50\xa9\x12\x09\x0f"
+#define EIP712_DOMAIN_OPENSEA                                                                      \
+    "\x72\x98\x2d\x92\x44\x9b\xfb\x3d\x33\x84\x12\xce\x47\x38\x76\x1a\xff\x47\xfb\x97\x5c\xeb\x17" \
+    "\xa1\xbc\x37\x12\xec\x71\x6a\x5a\x68"
 
 static void encode_data(const member_data_t *data, uint8_t *result);
 static void hash_struct(const hash_struct_t *hstruct, uint8_t *digest);
@@ -390,6 +393,8 @@ const char *eip712_hash_struct(const char *json_string,
     const hash_struct_t *hstruct;
     if (memcmp(domain, EIP712_DOMAIN_EXAMPLE_MAIL, 32) == 0) {
         hstruct = eip712_example_mail(json_string, &t[1], token_count - 1);
+    } else if (memcmp(domain, EIP712_DOMAIN_OPENSEA, 32) == 0) {
+        hstruct = eip712_opensea(json_string, &t[1], token_count - 1);
     } else {
         return "unknown EIP712 domain";
     }
