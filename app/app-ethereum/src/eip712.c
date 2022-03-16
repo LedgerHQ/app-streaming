@@ -5,6 +5,7 @@
 
 #include <jsmn.h>
 
+#include "app-ethereum.h"
 #include "crypto.h"
 #include "eip712.h"
 #include "sdk.h"
@@ -26,13 +27,13 @@ static uint8_t unhex_helper(char c)
     } else if (c >= 'A' && c <= 'F') {
         return c - 'A' + 10;
     } else {
-        return 0;
+        fatal("invalid hex character");
     }
 }
 
-static void unhex(const char *hex, uint8_t *bin, size_t size)
+static void unhex(const char *hex, uint8_t *bin, size_t bin_size)
 {
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0; i < bin_size; i++) {
         uint8_t c;
         c = unhex_helper(hex[i * 2]) << 4;
         c |= unhex_helper(hex[i * 2 + 1]);
@@ -44,6 +45,17 @@ static bool is_hex_string(const char *string, size_t size)
 {
     for (size_t i = 0; i < size; i++) {
         if (!isxdigit(string[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool is_digit_string(const char *string, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        if (!isdigit(string[i])) {
             return false;
         }
     }
@@ -65,20 +77,35 @@ static void encode_bytes_n(const eip712_bytes_n_t *bytes, uint8_t *result)
     memset(result + bytes->count, '\x00', 32 - bytes->count);
 }
 
+static void encode_bytes(const eip712_bytes_t *bytes, uint8_t *result)
+{
+    const size_t size = bytes->hex_size / 2;
+
+    uint8_t *p = malloc(size);
+    if (p == NULL) {
+        fatal("malloc failed");
+    }
+
+    unhex(bytes->hex_buffer, p, size);
+    sha3_256(p, size, result);
+
+    free(p);
+}
+
 static void encode_uint_n(const eip712_uint_n_t *uint, uint8_t *result)
 {
-    memset(result, '\x00', 32 - uint->count);
-    unhex(uint->hex, result + 32 - uint->count, uint->count);
+    memcpy(result, uint->bin, 32);
 }
 
 static void encode_int_n(const eip712_int_n_t *sint, uint8_t *result)
 {
+    /* XXX */
     if (sint->positive) {
         memset(result, '\x00', 32 - sint->count);
-        unhex(sint->hex, result + 32 - sint->count, sint->count);
+        memcpy(result + 32 - sint->count, sint->bin, sint->count);
     } else {
         memset(result, '\xff', 32 - sint->count);
-        unhex(sint->hex, result + 32 - sint->count, sint->count);
+        memcpy(result + 32 - sint->count, sint->bin, sint->count);
         result[32 - sint->count] |= 0x80;
     }
 }
@@ -112,14 +139,14 @@ static void encode_data(const member_data_t *data, uint8_t *result)
     case TYPE_BYTES_N:
         encode_bytes_n(&data->bytes_n, result);
         break;
+    case TYPE_BYTES:
+        encode_bytes(&data->bytes, result);
+        break;
     case TYPE_BOOL:
         encode_bool(data->boolean, result);
         break;
     case TYPE_STRING:
         sha3_256((const uint8_t *)data->string.value, data->string.length, result);
-        break;
-    case TYPE_BYTES:
-        sha3_256(data->bytes.value, data->bytes.size, result);
         break;
     case TYPE_STRUCT:
         hash_struct(data->hstruct, result);
@@ -173,24 +200,68 @@ static void set_string(eip712_string_t *string, const char *value, const size_t 
     string->length = size;
 }
 
-static bool set_address(eip712_address_t *address, const char *value, const size_t size)
+static bool set_bytes(eip712_bytes_t *bytes, const char *value, const size_t size)
 {
-    if (size == 40) {
-        memcpy(address->value, value, sizeof(address->value));
-    } else if (size == 42 && strncmp(value, "0x", 2) == 0) {
-        memcpy(address->value, value + 2, sizeof(address->value));
-    } else {
+    if (size < 2 || strncmp(value, "0x", 2) != 0) {
         return false;
     }
 
-    if (!is_hex_string(address->value, sizeof(address->value))) {
+    const char *p = value + 2;
+    const size_t n = size - 2;
+
+    if (n % 2 != 0 || !is_hex_string(p, n)) {
+        return false;
+    }
+
+    bytes->hex_buffer = p;
+    bytes->hex_size = n;
+
+    return true;
+}
+
+static bool set_address(eip712_address_t *address, const char *value, const size_t size)
+{
+    if (size != 42 || strncmp(value, "0x", 2) != 0) {
+        return false;
+    }
+
+    if (!is_hex_string(value + 2, 40)) {
+        return false;
+    }
+
+    memcpy(address->value, value + 2, sizeof(address->value));
+
+    return true;
+}
+
+static bool set_uint_n(eip712_uint_n_t *uint_n, const char *value, const size_t size)
+{
+    if (size >= 2 && strncmp(value, "0x", 2) == 0) {
+        const char *p = value + 2;
+        size_t n = size - 2;
+        if (!is_hex_string(p, n)) {
+            return false;
+        }
+        if (n % 2 != 0) {
+            fatal("hex uint length must be a multiple of 2 (add a leading 0)");
+        }
+        n /= 2;
+        if (n > uint_n->count) {
+            return false;
+        }
+        size_t r = uint_n->count - n;
+        memset(uint_n->bin, '\x00', sizeof(uint_n->bin) - uint_n->count);
+        unhex(p, uint_n->bin + r, n);
+    } else if (is_digit_string(value, size)) {
+        fatal("digit uint aren't recognized, convert them to hex");
+    } else {
         return false;
     }
 
     return true;
 }
 
-bool set_value(member_data_t *member, const char *value, const size_t size)
+static bool set_value(member_data_t *member, const char *value, const size_t size)
 {
     bool success = true;
 
@@ -201,8 +272,13 @@ bool set_value(member_data_t *member, const char *value, const size_t size)
     case TYPE_ADDRESS:
         success = set_address(&member->address, value, size);
         break;
-    case TYPE_BYTES_N:
+    case TYPE_UINT_N:
+        success = set_uint_n(&member->uint_n, value, size);
+        break;
     case TYPE_BYTES:
+        set_bytes(&member->bytes, value, size);
+        break;
+    case TYPE_BYTES_N:
     default:
         fatal("set_value: unsupported type (WIP)");
         break;
@@ -229,6 +305,24 @@ void copy_address(char *dst, size_t size, eip712_address_t *address)
     }
     strncpy(dst, address->value, len);
     dst[len - 1] = '\x00';
+}
+
+void copy_amount(uint64_t chain_id, char *dst, size_t size, eip712_uint_n_t *uint)
+{
+    _Static_assert(sizeof(uint->bin) == INT256_LENGTH, "invalid uint->bin size");
+
+    uint256_t n;
+
+    /* TODO: improve format */
+    if (uint->count == INT256_LENGTH) {
+        readu256BE(uint->bin, &n);
+    } else {
+        uint8_t buf[INT256_LENGTH];
+        memcpy(buf + INT256_LENGTH - uint->count, uint->bin, uint->count);
+        memset(buf, '\x00', INT256_LENGTH - uint->count);
+        readu256BE(buf, &n);
+    }
+    compute_amount(chain_id, &n, dst, size);
 }
 
 static bool validate_field(json_field_t *field, const char *value, const size_t size)

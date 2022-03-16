@@ -7,7 +7,8 @@
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#define DIGEST_SIZE 32
+#define DIGEST_SIZE    32
+#define MAX_BYTES_SIZE 1024
 
 typedef enum {
     TYPE_BYTES_N,
@@ -44,23 +45,23 @@ typedef struct eip712_string_s {
 } eip712_string_t;
 
 typedef struct eip712_bytes_s {
-    const uint8_t *value;
-    size_t size;
+    const char *hex_buffer;
+    size_t hex_size;
 } eip712_bytes_t;
 
 typedef struct eip712_bytes_n_s {
-    const char hex[64];
-    size_t count; // [1;32]
+    char hex[64];
+    const size_t count; // [1;32]
 } eip712_bytes_n_t;
 
 typedef struct eip712_uint_n_s {
-    const char hex[64];
-    size_t count; // [1;32]
+    uint8_t bin[32];
+    const size_t count; // [1;32]
 } eip712_uint_n_t;
 
 typedef struct eip712_int_n_s {
-    const char hex[64];
-    size_t count; // [1;32]
+    uint8_t bin[32];
+    const size_t count; // [1;32]
     bool positive;
 } eip712_int_n_t;
 
@@ -95,9 +96,9 @@ typedef struct json_field_s {
     };
 } json_field_t;
 
-bool set_value(member_data_t *member, const char *value, const size_t size);
 void copy_string(char *dst, size_t size, eip712_string_t *string);
 void copy_address(char *dst, size_t size, eip712_address_t *address);
+void copy_amount(uint64_t chain_id, char *dst, size_t size, eip712_uint_n_t *uint);
 
 struct jsmntok;
 typedef struct jsmntok jsmntok_t;

@@ -63,4 +63,5 @@ target_link_libraries(fuzz_rlp PRIVATE
   sdk)
 
 add_test(NAME get_pubkey COMMAND ./test_pubkey)
+add_test(NAME test_eip712 COMMAND ./test_eip712)
 add_test(NAME utils COMMAND ./test_utils)
