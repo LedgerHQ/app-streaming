@@ -16,7 +16,7 @@ git submodule update --init
 Build the RISC-V app using the `docker.sh` script:
 
 ```console
-$ ./docker.sh
+$ ./docker.sh riscv
 [root:/app] # cmake -Bbuild -H.
 [root:/app] # make -C build/
 ```

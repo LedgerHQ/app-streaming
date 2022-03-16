@@ -8,17 +8,18 @@ Build the docker image:
 docker build -t native -f native.Dockerfile .
 ```
 
-Configure CMake to build the native binaries into `build/native/`:
-```
-SPECULOS_DIR=/speculos cmake -Bbuild/native/ -H. -DNATIVE=1
-```
-
 ## Build
+
+From the docker image `./docker.sh native`, configure CMake to build the native binaries into `build/native/`:
+
+```console
+cmake -Bbuild/native/ -H. -DNATIVE=1
+```
 
 Build everything:
 
 ```console
-SPECULOS_DIR=/speculos make -C build/native/
+make -C build/native/
 ```
 
 Launch and communicate with a native binary:
