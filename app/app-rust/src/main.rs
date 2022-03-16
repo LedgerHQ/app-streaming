@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::arch::asm;
+//use core::arch::asm;
 
 #[used]
 #[no_mangle]
@@ -21,6 +21,12 @@ fn my_panic(_info: &core::panic::PanicInfo) -> ! {
 extern "C" {
     pub fn ecall_fatal(msg: *const str);
     //pub fn ecall_fatal(msg: &[char; 32]);
+}
+
+#[no_mangle]
+pub fn atexit(f: *const u8) {
+    /* required by libcrypto */
+    panic!("atexit called");
 }
 
 #[no_mangle]

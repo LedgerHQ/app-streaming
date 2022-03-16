@@ -3,9 +3,6 @@ name = "foo"
 version = "0.1.0"
 authors = ["greenknot"]
 
-[dependencies]
-libc = "0.2.120"
-
 [[bin]]
 name = "demo"
 path = "src/main.rs"
