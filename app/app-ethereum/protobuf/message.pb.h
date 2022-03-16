@@ -25,7 +25,7 @@ typedef struct _RequestSignEip712 {
     pb_size_t path_count;
     uint32_t path[10]; 
     pb_byte_t domain_separator[32]; 
-    char message[1024]; 
+    char message[2048]; 
 } RequestSignEip712;
 
 typedef PB_BYTES_ARRAY_T(1024) RequestSignMsg_message_t;
@@ -299,10 +299,10 @@ extern const pb_msgdesc_t Response_msg;
 /* Maximum encoded size of messages (where known) */
 #define RequestGetPubKey_size                    64
 #define RequestGetVersion_size                   0
-#define RequestSignEip712_size                   1120
+#define RequestSignEip712_size                   2144
 #define RequestSignMsg_size                      1087
 #define RequestSignTx_size                       1098
-#define Request_size                             1123
+#define Request_size                             2147
 #define ResponseError_size                       66
 #define ResponseGetPubKey_size                   145
 #define ResponseGetVersion_size                  42

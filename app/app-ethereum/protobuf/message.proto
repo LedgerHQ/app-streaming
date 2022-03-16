@@ -52,7 +52,7 @@ message ResponseSignMsg {
 message RequestSignEip712 {
   repeated uint32 path = 1 [(nanopb).max_count = 10];
   bytes domain_separator = 2 [(nanopb).max_size = 32, (nanopb).fixed_length = true];
-  string message = 3 [(nanopb).max_size = 1024];
+  string message = 3 [(nanopb).max_size = 2048];
 };
 
 message ResponseSignEip712 {
