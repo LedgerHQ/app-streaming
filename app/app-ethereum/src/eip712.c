@@ -17,11 +17,25 @@
 static void encode_data(const member_data_t *data, uint8_t *result);
 static void hash_struct(const hash_struct_t *hstruct, uint8_t *digest);
 
+static uint8_t unhex_helper(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else {
+        return 0;
+    }
+}
+
 static void unhex(const char *hex, uint8_t *bin, size_t size)
 {
     for (size_t i = 0; i < size; i++) {
-        unsigned int c;
-        sscanf(&hex[i * 2], "%02x", &c);
+        uint8_t c;
+        c = unhex_helper(hex[i * 2]) << 4;
+        c |= unhex_helper(hex[i * 2 + 1]);
         bin[i] = c;
     }
 }
