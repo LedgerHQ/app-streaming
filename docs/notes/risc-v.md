@@ -11,6 +11,16 @@
 - [“C” Standard Extension for Compressed Instructions, Version 2.0](https://five-embeddev.com/riscv-isa-manual/latest/c.html]
 - https://riscv.org/wp-content/uploads/2015/11/riscv-compressed-spec-v1.9.pdf
 
+```
+  # RV32I    Base Integer Instruction Set, 32-bit
+  # M    Standard Extension for Integer Multiplication and Division
+  # A    Standard Extension for Atomic Instructions
+  # F    Standard Extension for Single-Precision Floating-Point    2.2    Ratified    26 (RV32) / 30 (RV64)
+  # D    Standard Extension for Double-Precision Floating-Point
+  # G    Shorthand for the IMAFDZicsr Zifencei base and extensions, intended to represent a standard general-purpose ISA
+  # C    Standard Extension for Compressed Instructions
+```
+
 
 
 ```

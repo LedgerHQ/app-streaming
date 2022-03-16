@@ -14,16 +14,17 @@ if (NOT NATIVE)
     set(CMAKE_C_COMPILER /usr/bin/clang)
     set(CMAKE_ASM_COMPILER /usr/bin/clang)
     add_compile_options(--target=riscv32 -Oz)
+    add_compile_options(-march=rv32im)
     # use gcc linker
     add_link_options(-fuse-ld=/usr/xcc/riscv32-unknown-linux-gnu/bin/riscv32-unknown-linux-gnu-ld --target=riscv32)
     add_link_options(-L/usr/xcc/riscv32-unknown-linux-gnu/lib/gcc/riscv32-unknown-linux-gnu/11.2.0/)
   else ()
     set(CMAKE_C_COMPILER /usr/xcc/riscv32-unknown-linux-gnu/bin/riscv32-unknown-linux-gnu-gcc)
     add_compile_options(-mno-div -mno-fdiv -mstrict-align -Os)
+    add_compile_options(-march=rv32g -mabi=ilp32)
     message(STATUS "Using default compiler ${CMAKE_C_COMPILER}")
   endif ()
 
-  add_compile_options(-march=rv32g)
   add_link_options(-z noseparate-code -static -nostdlib)
 
   include_directories(/usr/local/riscv32-unknown-linux-gnu/include/ sdk/risc-v/)

@@ -1,0 +1,17 @@
+[package]
+name = "foo"
+version = "0.1.0"
+authors = ["greenknot"]
+
+[dependencies]
+libc = "0.2.120"
+
+[[bin]]
+name = "demo"
+path = "src/main.rs"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

@@ -1,6 +1,7 @@
 import logging
 import sys
 
+from elftools.elf.constants import P_FLAGS
 from elftools.elf.elffile import ELFFile
 from elftools.elf.segments import Segment as ElfSegment
 from typing import List, Tuple
@@ -15,13 +16,6 @@ class Segment:
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
     def __init__(self, segment: ElfSegment) -> None:
-        if segment["p_flags"] == 5:
-            self.name = "data"
-        elif segment["p_flags"] == 6:
-            self.name = "code"
-        else:
-            assert False
-
         assert (segment["p_align"] % Segment.PAGE_SIZE) == 0
 
         data = segment.data()
@@ -78,12 +72,22 @@ class Elf:
 
         # print([segment.header for segment in segments])
 
+        # ensure there's one code and one data section
         assert len(segments) == 2
-        assert segments[0]["p_flags"] != segments[1]["p_flags"]
         flags = [segment["p_flags"] for segment in segments]
-        assert flags == [5, 6]
 
-        return [Segment(segment) for segment in segments]
+        ro = P_FLAGS.PF_R
+        rx = P_FLAGS.PF_R | P_FLAGS.PF_X
+        rw = P_FLAGS.PF_R | P_FLAGS.PF_W
+        assert sorted(flags) in [[rx, rw], [ro, rx]]
+
+        # ensure that the code segment is the first one
+        if segments[0]["p_flags"] & P_FLAGS.PF_X:
+            code, data = (segments[0], segments[1])
+        else:
+            code, data = (segments[1], segments[0])
+
+        return [Segment(code), Segment(data)]
 
     def get_segment(self, name: str) -> Segment:
         keys = {"code": 0, "data": 1}

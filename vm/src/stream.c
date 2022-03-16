@@ -315,7 +315,7 @@ void stream_commit_page(struct page_s *page, bool insert)
     response = (struct response_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
 
-    if (response->lc == 0 || (response->lc % sizeof(struct proof_s)) != 0) {
+    if ((response->lc % sizeof(struct proof_s)) != 0) {
         fatal("invalid proof size\n");
     }
 
