@@ -110,7 +110,7 @@ static bool validate_ui(void)
 const hash_struct_t *eip712_example_mail(const char *json_string, jsmntok_t *t, int token_count)
 {
     if (token_count != ARRAY_SIZE(mail_fields)) {
-        return false;
+        return NULL;
     }
 
     if (!extract_fields(mail_fields, json_string, t, token_count)) {

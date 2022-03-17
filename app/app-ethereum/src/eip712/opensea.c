@@ -140,7 +140,7 @@ static bool validate_ui(void)
 const hash_struct_t *eip712_opensea(const char *json_string, jsmntok_t *t, int token_count)
 {
     if (token_count != ARRAY_SIZE(order_fields)) {
-        return false;
+        return NULL;
     }
 
     if (!extract_fields(order_fields, json_string, t, token_count)) {
