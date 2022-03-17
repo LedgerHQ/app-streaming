@@ -12,7 +12,7 @@
 #include "sdk.h"
 #include "ui.h"
 
-#define MAX_REQ_SIZE 1024
+#define MAX_REQ_SIZE 4096
 
 static const char *handle_get_version(const RequestGetVersion *req, ResponseGetVersion *response)
 {

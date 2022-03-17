@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -6,6 +7,37 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 # apt install python3-protobuf
 from protobuf import message_pb2  # noqa: E402
+
+def tohex(n):
+    result = f"{n:x}"
+    if len(result) % 2 != 0:
+        result = "0" + result
+    return f"0x{result}"
+
+def convert_int(item):
+    """
+    XXX: this is plain wrong and the JSON schema should be used.
+    """
+    if isinstance(item, dict):
+        for k, v in item.items():
+            item[k] = convert_int(v)
+        return item
+    elif isinstance(item, list):
+        return [convert_int(v) for v in item]
+    elif isinstance(item, str):
+        if not item.isnumeric():
+            return item
+        return tohex(int(item, 10))
+    elif isinstance(item, int):
+        return tohex(item)
+    else:
+        return item
+
+
+def eip712_encode_json(message):
+    v = json.loads(message)
+    v = convert_int(v)
+    return json.dumps(v, separators=(',', ':'))
 
 
 class Plugin:
@@ -80,8 +112,13 @@ class Plugin:
     def sign_eip712_prepare_request(self):
         sign_eip712 = message_pb2.RequestSignEip712()
         sign_eip712.path.extend(self.path)
-        sign_eip712.domain_separator = bytes.fromhex("f2cee375fa42b42143804025fc449deafd50cc031ca257e0b194a650a912090f")
-        sign_eip712.message = '{"from": {"name": "Cow", "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"}, "to": {"name": "Bob", "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"}, "contents": "Hello, Bob!"}'
+        if False:
+            sign_eip712.domain_separator = bytes.fromhex("f2cee375fa42b42143804025fc449deafd50cc031ca257e0b194a650a912090f")
+            sign_eip712.message = '{"from": {"name": "Cow", "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"}, "to": {"name": "Bob", "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"}, "contents": "Hello, Bob!"}'
+        else:
+            sign_eip712.domain_separator = bytes.fromhex("72982d92449bfb3d338412ce4738761aff47fb975ceb17a1bc3712ec716a5a68")
+            message = '{"exchange": "0x7f268357a8c2552623316e2562d90e642bb538e5", "maker": "0x112f0732e59e7600768dfc35ba744b89f2356cd8", "taker": "0x0000000000000000000000000000000000000000", "makerRelayerFee": "1250", "takerRelayerFee": "0", "makerProtocolFee": "0", "takerProtocolFee": "0", "feeRecipient": "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073", "feeMethod": 1, "side": 1, "saleKind": 0, "target": "0xbaf2127b49fc93cbca6269fade0f7f31df4c88a7", "howToCall": 1, "calldata": "0x96809f90000000000000000000000000112f0732e59e7600768dfc35ba744b89f2356cd80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000495f947276749ce646f68ac8c248420045cb7b5ebdf2657ffc1fadfd73cf0a8cde95d50b62d3df8c0000000000000700000000320000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000000", "replacementPattern": "0x000000000000000000000000000000000000000000000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "staticTarget": "0x0000000000000000000000000000000000000000", "staticExtradata": "0x", "paymentToken": "0x0000000000000000000000000000000000000000", "basePrice": "2000000000000000000", "extra": "0", "listingTime": "1645484541", "expirationTime": "1646089435", "salt": "21014297276898013168171430966355369260039074692095359200549020767078729356431", "nonce": 0}'
+            sign_eip712.message = eip712_encode_json(message)
         message = message_pb2.Request()
         message.sign_eip712.CopyFrom(sign_eip712)
         assert message.WhichOneof("message_oneof") == "sign_eip712"
