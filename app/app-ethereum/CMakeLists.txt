@@ -27,7 +27,8 @@ add_dependencies(app-ethereum
 target_link_libraries(app-ethereum PRIVATE
   eip712
   ux
-  sdk)
+  sdk
+  c)
 
 add_subdirectory(src/eip712)
 

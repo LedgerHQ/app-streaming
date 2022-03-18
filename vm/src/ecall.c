@@ -421,6 +421,74 @@ void sys_ux_idle(void)
     ui_app_idle();
 }
 
+static uint32_t sys_memset(uint32_t s_addr, int c, size_t size)
+{
+    const uint32_t s = s_addr;
+
+    while (size > 0) {
+        size_t n;
+        n = PAGE_SIZE - (s_addr - PAGE_START(s_addr));
+        n = MIN(size, n);
+
+        uint8_t *buffer = get_buffer(s_addr, n, true);
+        memset(buffer, c, n);
+
+        s_addr += n;
+        size -= n;
+    }
+
+    return s;
+}
+
+static uint32_t sys_memcpy(uint32_t dst_addr, uint32_t src_addr, size_t size)
+{
+    const uint32_t dst = dst_addr;
+
+    while (size > 0) {
+        size_t n, a, b;
+        a = PAGE_SIZE - (dst_addr - PAGE_START(dst_addr));
+        b = PAGE_SIZE - (src_addr - PAGE_START(src_addr));
+        n = MIN(size, MIN(a, b));
+
+        uint8_t *buffer_src = get_buffer(src_addr, n, false);
+
+        /* a temporary buffer is required because get_buffer() might unlikely
+         * return the same page if dst_addr or src_addr isn't in the cache. */
+        uint8_t tmp[PAGE_SIZE];
+        memcpy(tmp, buffer_src, n);
+
+        uint8_t *buffer_dst = get_buffer(dst_addr, n, true);
+        memcpy(buffer_dst, tmp, n);
+
+        dst_addr += n;
+        src_addr += n;
+        size -= n;
+    }
+
+    return dst;
+}
+
+static size_t sys_strlen(uint32_t s_addr)
+{
+    size_t size = 0;
+
+    while (true) {
+        size_t n;
+        n = PAGE_SIZE - (s_addr - PAGE_START(s_addr));
+
+        char *buffer = (char *)get_buffer(s_addr, n, false);
+        size_t tmp_size = strnlen(buffer, n);
+
+        s_addr += n;
+        size += tmp_size;
+
+        if (tmp_size < n) {
+            break;
+        }
+    }
+
+    return size;
+}
 /*
  * Return true if the ecall either exit() or unsupported, false otherwise.
  */
@@ -469,6 +537,15 @@ bool ecall(struct rv_cpu *cpu)
         break;
     case ECALL_UX_IDLE:
         sys_ux_idle();
+        break;
+    case ECALL_MEMSET:
+        cpu->regs[RV_REG_A0] = sys_memset(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        break;
+    case ECALL_MEMCPY:
+        cpu->regs[RV_REG_A0] = sys_memcpy(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        break;
+    case ECALL_STRLEN:
+        cpu->regs[RV_REG_A0] = sys_strlen(cpu->regs[RV_REG_A0]);
         break;
     default:
         stop = ecall_bolos(cpu, nr);
