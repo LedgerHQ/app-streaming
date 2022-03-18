@@ -13,6 +13,9 @@
 #define ECALL_LOADING_START    11
 #define ECALL_LOADING_STOP     12
 #define ECALL_UX_IDLE          13
+#define ECALL_MEMSET           14
+#define ECALL_MEMCPY           15
+#define ECALL_STRLEN           16
 
 #define ECALL_DERIVE_NODE_BIP32     100
 #define ECALL_CX_ECFP_GENERATE_PAIR 101
