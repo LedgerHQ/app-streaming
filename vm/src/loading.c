@@ -4,13 +4,15 @@
 #include "loading.h"
 #include "ux.h"
 
-#define HOST_EXCHANGES_THRESHOLD 5
-#define INSTRUCTIONS_THRESHOLD 500
+#include "os_io_seproxyhal.h"
+
+#define TICKER_THRESHOLD       175
+#define INSTRUCTIONS_THRESHOLD 2000
 
 #define ARRAYLEN(array) (sizeof(array) / sizeof(array[0]))
 
 static size_t app_loading_counter;
-static size_t host_exchanges_counter;
+static size_t app_loading_ticker;
 static bool app_loading;
 
 typedef struct ux_layout_p_params_s {
@@ -90,7 +92,6 @@ void sys_app_loading_start(uint32_t status_addr)
 {
     app_loading = true;
     app_loading_counter = 0;
-    host_exchanges_counter = 0;
 
     if (status_addr == 0) {
         loading_status[0] = '\x00';
@@ -122,19 +123,18 @@ void app_loading_update_ui(bool host_exchange)
         return;
     }
 
-    bool update_ui = true;
+    bool update_ui = false;
 
     /* UI updates slow down the app. Don't update the UI for each exchange with
-     * the host. */
+     * the host but use the ticker. */
     if (host_exchange) {
-        host_exchanges_counter++;
-
-        if (host_exchanges_counter % HOST_EXCHANGES_THRESHOLD != 0) {
-            update_ui = false;
+        if (G_io_app.ms >= app_loading_ticker + TICKER_THRESHOLD) {
+            app_loading_ticker = G_io_app.ms;
+            update_ui = true;
         }
     } else {
-        if (app_loading_counter % INSTRUCTIONS_THRESHOLD != 0) {
-            update_ui = false;
+        if (app_loading_counter % INSTRUCTIONS_THRESHOLD == 0) {
+            update_ui = true;
         }
     }
 
