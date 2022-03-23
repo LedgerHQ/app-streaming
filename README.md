@@ -1,6 +1,6 @@
 ## App Streaming
 
-The **App Streaming* project is still a Proof of Concept.
+The *App Streaming* project is still a Proof of Concept.
 
 Once the project will be mature, it will be split into several repositories. Meanwhile, it's more convenient to work on a single repository.
 
