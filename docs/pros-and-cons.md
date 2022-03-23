@@ -13,7 +13,7 @@
 ### For app developers
 
 - **App development is made easy. WAY WAY MORE EASIER.** Anyone can now develop an app. For real.
-- **There are no specific knowledge to have anymore.** No more `PIC()`. No more misaligned instructions. No more exceptions. No more weird linker scripts. Standard toolchains can be used. Apps can be developed in memory safe language (eg. Rust) as long as the compiler supports the RISC-V target.
+- **There are no specific knowledge to have anymore.** No more `PIC()`. No more misaligned memory access. No more exceptions. No more weird linker scripts. Standard toolchains can be used. Apps can be developed in memory safe language (eg. Rust) as long as the compiler supports the RISC-V target.
 - **There are no memory constraints anymore.** Unlimited RAM. Unlimited heap. Unlimited code size. `malloc()` is now available.
 - **Standard libraries can be used.** Since there now is a heap and no memory constraints (and `PIC()` doesn't exist), parsing libraries can be used.
 - **No weird APDU format.** Since standard libraries can be used, JSON or protobuf can be used to encode messages.
