@@ -51,13 +51,28 @@ static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, uint32_t pubkey_addr, u
     cx_ecfp_public_key_t pubkey;
     cx_ecfp_private_key_t privkey;
 
-    bool keep_private = false;
-    if (privkey_addr != 0) {
-        keep_private = true;
-        copy_guest_buffer(privkey_addr, &privkey, sizeof(privkey));
+    cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, false);
+    if (err != CX_OK) {
+        goto error;
     }
 
-    cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, keep_private);
+    copy_host_buffer(pubkey_addr, &pubkey, sizeof(pubkey));
+    copy_host_buffer(privkey_addr, &privkey, sizeof(privkey));
+
+ error:
+    explicit_bzero(&privkey, sizeof(privkey));
+
+    return err;
+}
+
+static cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, uint32_t pubkey_addr, uint32_t privkey_addr)
+{
+    cx_ecfp_public_key_t pubkey;
+    cx_ecfp_private_key_t privkey;
+
+    copy_guest_buffer(privkey_addr, &privkey, sizeof(privkey));
+
+    cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, true);
     if (err != CX_OK) {
         goto error;
     }
@@ -175,6 +190,9 @@ bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
         break;
     case ECALL_CX_ECFP_GENERATE_PAIR:
         cpu->regs[RV_REG_A0] = sys_ecfp_generate_pair(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        break;
+    case ECALL_CX_ECFP_GET_PUBKEY:
+        cpu->regs[RV_REG_A0] = sys_ecfp_get_pubkey(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
         break;
     case ECALL_CX_SHA3_256:
         sys_sha3_256(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);

@@ -138,8 +138,16 @@ cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve,
                                   cx_ecfp_public_key_t *pubkey,
                                   cx_ecfp_private_key_t *privkey)
 {
-    bool keep_private = (privkey != NULL);
-    sys_cx_ecfp_generate_pair(curve, pubkey, privkey, keep_private);
+    sys_cx_ecfp_generate_pair(curve, pubkey, privkey, true);
+    /* XXX */
+    return CX_OK;
+}
+
+cx_err_t ecall_ecfp_get_pubkey(cx_curve_t curve,
+                               cx_ecfp_public_key_t *pubkey,
+                               const cx_ecfp_private_key_t *privkey)
+{
+    sys_cx_ecfp_generate_pair(curve, pubkey, (cx_ecfp_private_key_t *)privkey, false);
     /* XXX */
     return CX_OK;
 }

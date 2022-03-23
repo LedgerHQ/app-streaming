@@ -19,10 +19,11 @@
 
 #define ECALL_DERIVE_NODE_BIP32     100
 #define ECALL_CX_ECFP_GENERATE_PAIR 101
-#define ECALL_CX_SHA3_256           102
-#define ECALL_ECDSA_SIGN            103
-#define ECALL_MULT                  104
-#define ECALL_MULTM                 105
-#define ECALL_TOSTRING256           106
-#define ECALL_HASH_UPDATE           107
-#define ECALL_HASH_FINAL            108
+#define ECALL_CX_ECFP_GET_PUBKEY    102
+#define ECALL_CX_SHA3_256           103
+#define ECALL_ECDSA_SIGN            104
+#define ECALL_MULT                  105
+#define ECALL_MULTM                 106
+#define ECALL_TOSTRING256           107
+#define ECALL_HASH_UPDATE           108
+#define ECALL_HASH_FINAL            109
