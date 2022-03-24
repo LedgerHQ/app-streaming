@@ -2,22 +2,15 @@
 
 import argparse
 import logging
-import os
-import sys
+import zipfile
 
-from collections import namedtuple
 from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
-from encryption import EncryptedApp
-from merkletree import Entry, MerkleTree
 from typing import Any, Dict
+
+from comm import Apdu, exchange, get_client, import_ledgerwallet
+from encryption import EncryptedApp, get_device_pubkey
+from merkletree import Entry, MerkleTree
 from server import Server
-
-from ledgerwallet.client import LedgerClient
-from ledgerwallet.transport import enumerate_devices
-from ledgerwallet.utils import serialize
-
-
-Apdu = namedtuple("Apdu", "status data")
 
 
 class Page:
@@ -33,68 +26,13 @@ class Page:
         self.iv = iv
 
 
-def import_ledgerwallet(use_speculos: bool) -> None:
-    if use_speculos:
-        os.environ["LEDGER_PROXY_ADDRESS"] = "127.0.0.1"
-        os.environ["LEDGER_PROXY_PORT"] = "9999"
-
-    if False:
-        logger = logging.getLogger("ledgerwallet")
-        logger.setLevel(logging.DEBUG)
-
-
-def get_client() -> LedgerClient:
-    CLA = 0x12
-    devices = enumerate_devices()
-    if len(devices) == 0:
-        logger.error("No Ledger device has been found.")
-        sys.exit(0)
-
-    return LedgerClient(devices[0], cla=CLA)
-
-
-def exchange(client: LedgerClient, ins: int, data=b"", p1=0, p2=0, cla=0) -> Apdu:
-    if cla == 0:
-        cla = client.cla
-    apdu = bytes([cla, ins, p1, p2])
-    apdu += serialize(data)
-    response = client.raw_exchange(apdu)
-    status_word = int.from_bytes(response[-2:], "big")
-    return Apdu(status_word, response[:-2])
-
-
-def get_device_pubkey(client):
-    """Retrieve the pubkey from the cache if it exists, from the device otherwise."""
-
-    pubkey_path = "/tmp/device.pubkey"
-    if os.path.exists(pubkey_path):
-        with open(pubkey_path, "rb") as fp:
-            pubkey = fp.read()
-    else:
-        # The app name and version aren't used for now.
-        name = b"a" * 32
-        version = b"b" * 16
-        data = name + version
-        apdu = exchange(client, ins=0x10, data=data, cla=0x34)
-        assert apdu.status == 0x9000
-        pubkey = apdu.data
-        with open(pubkey_path, "wb") as fp:
-            fp.write(pubkey)
-
-    return pubkey
-
-
 class Stream:
     PAGE_SIZE = 0x00000100
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    def __init__(self, path: str, device_pubkey: bytes) -> None:
-        app = EncryptedApp(path, device_pubkey)
-
-        if True:
-            app.export_zip("/tmp/app.zip")
-            app = EncryptedApp.from_zip("/tmp/app.zip")
+    def __init__(self, zip_path: str) -> None:
+        app = EncryptedApp.from_zip(zip_path)
 
         self.pages: Dict[int, Page] = {}
         self.merkletree = MerkleTree()
@@ -267,7 +205,7 @@ if __name__ == "__main__":
     logger = logging.getLogger("stream")
 
     parser = argparse.ArgumentParser(description="RISC-V vm companion.")
-    parser.add_argument("--app", type=str, required=True, help="application path")
+    parser.add_argument("--app", type=str, required=True, help="encrypted application path (.zip)")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
     parser.add_argument("--verbose", action="store_true", help="")
 
@@ -278,9 +216,18 @@ if __name__ == "__main__":
 
     import_ledgerwallet(args.speculos)
 
+    if zipfile.is_zipfile(args.app):
+        zip_path = args.app
+    else:
+        logger.warn("app doesn't seem to be encrypted... encrypting it")
+        output_pubkey_file = "/tmp/device-pubkey.der"
+        zip_path = "/tmp/app.zip"
+        pubkey = get_device_pubkey(output_pubkey_file)
+        app = EncryptedApp(args.app, pubkey)
+        app.export_zip(zip_path)
+
     client = get_client()
-    pubkey = get_device_pubkey(client)
-    stream = Stream(args.app, pubkey)
+    stream = Stream(zip_path)
 
     apdu = stream.init_app()
     while True:

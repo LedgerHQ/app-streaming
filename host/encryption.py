@@ -1,13 +1,18 @@
+#!/usr/bin/env python3
+
+import argparse
 import hashlib
 import hmac
 import json
 import logging
 import secrets
+import sys
 
-from construct import Bytes, Int32ul, Struct
+from comm import exchange, get_client, import_ledgerwallet
 from elf import Elf, Segment
 from merkletree import Entry, MerkleTree
 
+from construct import Bytes, Int32ul, Struct
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes, serialization
@@ -15,8 +20,6 @@ from Crypto.Cipher import AES
 from typing import List, Tuple, Type
 from zipfile import ZipFile
 
-
-logger = logging.getLogger("encryption")
 
 # >>> privkey = ec.generate_private_key(ec.SECP256K1(), default_backend())
 # >>> hex(privkey.private_numbers().private_value)
@@ -274,5 +277,58 @@ class EncryptedApp:
             zf.writestr("data.bin", EncryptedPage.export(self.data_pages))
 
 
+def get_device_pubkey(output_pubkey_file=None) -> bytes:
+    client = get_client()
+
+    name = b"a" * 32
+    version = b"b" * 16
+    data = name + version
+    apdu = exchange(client, ins=0x10, data=data, cla=0x34)
+    assert apdu.status == 0x9000
+    pubkey = apdu.data
+
+    if output_pubkey_file:
+        with open(output_pubkey_file, "wb") as fp:
+            fp.write(pubkey)
+
+    return pubkey
+
+
 if __name__ == "__main__":
-    print(f"{get_hsm_pubkey().hex()}")
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
+    logger = logging.getLogger("encryption")
+
+    parser = argparse.ArgumentParser(description="Tool to encrypt app ELF binaries.")
+    parser.add_argument("--app-file", type=str, help="application path (.elf)")
+    parser.add_argument("--output-file", type=str, help="path to the encrypted app (.zip)")
+    parser.add_argument("--output-pubkey-file", type=str, help="write the device public key path (.der)")
+    parser.add_argument("--pubkey-file", type=str, help="device public key path (.der)")
+    parser.add_argument("--print-hsm-pubkey", action="store_true", help="print HSM public key")
+    parser.add_argument("--speculos", action="store_true", help="use speculos")
+
+    args = parser.parse_args()
+
+    if args.print_hsm_pubkey:
+        print(f"{get_hsm_pubkey().hex()}")
+        sys.exit(0)
+
+    if not args.app_file or not args.output_file:
+        logger.error("--app-file and --output-file are required")
+        sys.exit(1)
+
+    if args.pubkey_file:
+        if args.output_pubkey_file:
+            logger.error("it doesn't make sense to use --pubkey-file with --output-pubkey-file")
+            sys.exit(1)
+
+        with open(args.pubkey_file, "rb") as fp:
+            pubkey = fp.read()
+    else:
+        import_ledgerwallet(args.speculos)
+        pubkey = get_device_pubkey(args.output_pubkey_file)
+
+    app = EncryptedApp(args.app_file, pubkey)
+    app.export_zip(args.output_file)
+
+    # ensure that the generated file is valid
+    EncryptedApp.from_zip(args.output_file)
