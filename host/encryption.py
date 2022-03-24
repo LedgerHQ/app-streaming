@@ -149,8 +149,9 @@ class Manifest:
         private_key = ec.derive_private_key(int.from_bytes(PRIVATE_KEY_BYTES, "big"), ec.SECP256K1(), default_backend())
 
         secret = private_key.exchange(ec.ECDH(), peer)
+        secret_key = hashlib.sha256(secret).digest()
         iv = b"\x00" * 16
-        aes = AES.new(secret, AES.MODE_CBC, iv)
+        aes = AES.new(secret_key, AES.MODE_CBC, iv)
 
         header, body = data[:32+16], data[32+16:]  # XXX
         encrypted_body = aes.encrypt(body)

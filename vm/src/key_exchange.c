@@ -23,9 +23,12 @@ static void get_privkey_data(const char *name, const char *version, uint8_t *pri
     uint32_t path[13];
 
     memset(path, 0, sizeof(path));
-    path[0] = 0x52495343 | 0x80000000; /* RISC */
-    // strncpy((char *)&path[1], name, 32);
-    // strncpy((char *)&path[9], version, 16);
+    path[0] = 0x52495343 | 0x80000000; /* b"RISC".hex() */
+
+    if (0) {
+        strncpy((char *)&path[1], name, 32);
+        strncpy((char *)&path[9], version, 16);
+    }
 
     /* XXX: handle THROW */
     os_perso_derive_node_bip32(CX_CURVE_256K1, path, 13, privkey_data, NULL);
@@ -82,6 +85,11 @@ static bool get_shared_secret(const char *name,
     if (ret != CX_OK) {
         return false;
     }
+
+    /* apply a secure key derivation function to the raw Diffie–Hellman shared
+     * secret to avoid leaking information about the static private key */
+    _Static_assert(SECRET_SIZE == CX_SHA256_SIZE, "invalid SECRET_SIZE");
+    cx_hash_sha256(secret, SECRET_SIZE, secret, CX_SHA256_SIZE);
 
     return true;
 }
