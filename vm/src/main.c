@@ -55,11 +55,12 @@ static void app_main_(void)
 {
     command_t cmd;
     int ret;
+    int tx = 0;
 
     memset(&cmd, 0, sizeof(cmd));
 
     while (1) {
-        ret = io_exchange(CHANNEL_APDU, 0);
+        ret = io_exchange(CHANNEL_APDU, tx);
 
         if (!apdu_parser(&cmd, G_io_apdu_buffer, ret)) {
             //PRINTF("=> /!\\ BAD LENGTH: %.*H\n", ret, G_io_apdu_buffer);
@@ -67,7 +68,12 @@ static void app_main_(void)
             continue;
         }
 
-        stream_init_app(&G_io_apdu_buffer[OFFSET_CDATA + 3]);
+        if (cmd.cla == CLA_GENERAL) {
+            tx = handle_general_apdu(cmd.ins, &G_io_apdu_buffer[OFFSET_CDATA + 3]);
+            continue;
+        }
+
+        stream_init_app(&G_io_apdu_buffer[OFFSET_CDATA], cmd.lc);
         vm_running = true;
         stream_run_app();
         vm_running = false;

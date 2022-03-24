@@ -1,11 +1,16 @@
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+
 #define OFFSET_CLA 0
 #define OFFSET_INS 1
 #define OFFSET_P1 2
 #define OFFSET_P2 3
 #define OFFSET_LC 4
 #define OFFSET_CDATA 5
+
+#define CLA_GENERAL    0x34
 
 enum cmd_stream_e {
     CMD_REQUEST_PAGE = 0x6101,
@@ -17,5 +22,7 @@ enum cmd_stream_e {
     CMD_RECV_BUFFER = 0x6401,
     CMD_EXIT = 0x6501,
     CMD_FATAL = 0x6601,
+    CMD_REQUEST_MANIFEST = 0x6701,
 };
 
+size_t handle_general_apdu(uint8_t ins, uint8_t *data);
