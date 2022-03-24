@@ -56,6 +56,8 @@ class Stream:
         self.recv_buffer = b""
         self.recv_buffer_counter = 0
 
+        self.client = get_client()
+
     def _get_page(self, addr: int) -> Page:
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
         return self.pages[addr]
@@ -76,11 +78,11 @@ class Stream:
         return struct.parse(data)
 
     def init_app(self) -> Apdu:
-        apdu = exchange(client, ins=0x00, data=self.signature)
+        apdu = exchange(self.client, ins=0x00, data=self.signature)
         assert apdu.status == 0x6701
         # pad with 3 bytes because of alignment
         data = b"\x00" * 3 + self.manifest
-        return exchange(client, ins=0x00, data=data)
+        return exchange(self.client, ins=0x00, data=data)
 
     def handle_read_access(self, data: bytes) -> Apdu:
         request = Stream._parse_request(Struct("addr" / Int32ul), data)
@@ -90,12 +92,12 @@ class Stream:
         # 2. send encrypted page data
         page = self._get_page(request.addr)
         assert len(page.data) == Stream.PAGE_SIZE
-        apdu = exchange(client, 0x01, data=page.data[1:], p2=page.data[0])
+        apdu = exchange(self.client, 0x01, data=page.data[1:], p2=page.data[0])
         assert apdu.status == 0x6102
 
         # 4. send iv and mac
         data = Struct("iv" / Int32ul, "mac" / Bytes(32)).build(dict(iv=page.iv, mac=page.mac))
-        apdu = exchange(client, 0x02, data=data)
+        apdu = exchange(self.client, 0x02, data=data)
 
         # 5. send merkle proof
         if not page.read_only:
@@ -106,7 +108,7 @@ class Stream:
 
             # TODO: handle larger proofs
             assert len(proof) <= 250
-            apdu = exchange(client, 0x03, data=proof)
+            apdu = exchange(self.client, 0x03, data=proof)
 
         return apdu
 
@@ -116,7 +118,7 @@ class Stream:
         page_data = data
 
         # 2. receive addr, iv and mac
-        apdu = exchange(client, 0x01)
+        apdu = exchange(self.client, 0x01)
         assert apdu.status == 0x6202
 
         request = Stream._parse_request(Struct("addr" / Int32ul, "iv" / Int32ul, "mac" / Bytes(32)), apdu.data)
@@ -138,7 +140,7 @@ class Stream:
         # TODO: handle larger proofs
         assert len(proof) <= 250
 
-        return exchange(client, 0x02, data=proof)
+        return exchange(self.client, 0x02, data=proof)
 
     def handle_send_buffer(self, data: bytes) -> Apdu:
         logger.info(f"got buffer {data}")
@@ -158,7 +160,7 @@ class Stream:
             self.send_buffer = b""
             self.send_buffer_counter = 0
 
-        return exchange(client, 0x00, data=b"")
+        return exchange(self.client, 0x00, data=b"")
 
     def handle_recv_buffer(self, data: bytes) -> Apdu:
         request = Stream._parse_request(Struct("counter" / Int32ul, "maxsize" / Int16ul), data)
@@ -188,7 +190,7 @@ class Stream:
         else:
             p2 = 0x00
 
-        return exchange(client, 0x00, p1=last, p2=p2, data=buf)
+        return exchange(self.client, 0x00, p1=last, p2=p2, data=buf)
 
     def handle_exit(self, data: bytes) -> None:
         request = Stream._parse_request(Struct("code" / Int32ul), data)
@@ -226,10 +228,9 @@ if __name__ == "__main__":
         app = EncryptedApp(args.app, pubkey)
         app.export_zip(zip_path)
 
-    client = get_client()
     stream = Stream(zip_path)
-
     apdu = stream.init_app()
+
     while True:
         logger.debug(f"[<] {apdu.status:#06x} {apdu.data[:8].hex()}...")
         if apdu.status == 0x6101:
