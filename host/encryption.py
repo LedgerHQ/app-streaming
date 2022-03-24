@@ -8,12 +8,27 @@ from construct import Bytes, Int32ul, Struct
 from elf import Elf, Segment
 from merkletree import Entry, MerkleTree
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes, serialization
 from Crypto.Cipher import AES
-from typing import List, Type
+from typing import List, Tuple, Type
 from zipfile import ZipFile
 
 
 logger = logging.getLogger("encryption")
+
+# >>> privkey = ec.generate_private_key(ec.SECP256K1(), default_backend())
+# >>> hex(privkey.private_numbers().private_value)
+PRIVATE_KEY_BYTES = bytes.fromhex("893d0436b796d91c47d6c463ec49802f4b7c6bbae03fdba0fe70d1c57da7056c")
+
+
+def get_hsm_pubkey() -> bytes:
+    private_key = ec.derive_private_key(int.from_bytes(PRIVATE_KEY_BYTES, "big"), ec.SECP256K1(), default_backend())
+    public_key = private_key.public_key()
+    format = serialization.PublicFormat.UncompressedPoint
+    encoding = serialization.Encoding.X962
+    return public_key.public_bytes(encoding=encoding, format=format)
 
 
 class EncryptedPage:
@@ -97,6 +112,7 @@ class Manifest:
 
     MANIFEST_STRUCT = Struct(
         "name" / Bytes(32),
+        "version" / Bytes(16),
         "hmac_key" / Bytes(32),
         "encryption_key" / Bytes(32),
         "entrypoint" / Int32ul,
@@ -110,6 +126,7 @@ class Manifest:
         "mt_root_hash" / Bytes(32),
         "mt_size" / Int32ul,
         "mt_last_entry" / Bytes(8),
+        "padding" / Bytes(4),
     )
 
     def __init__(self, enc: Encryption, name: bytes, version: bytes, merkletree: MerkleTree, entrypoint: int, code_start: int, code_size: int, data_start: int, data_size: int) -> None:
@@ -123,19 +140,35 @@ class Manifest:
         self.data_start = data_start
         self.data_size = data_size
 
-    def export_encrypted(self, device_key: int):
-        def encrypt_manifest(data, device_key):
-            """XXX - TODO: temporary xor encryption until a correct scheme is found."""
-            return bytes([c ^ device_key for c in data])
+    @staticmethod
+    def encrypt_and_sign(data: bytes, pubkey: bytes) -> Tuple[bytes, bytes]:
+        """
+        Encrypt the manifest of an app using the public key of the device.
+        """
+        peer = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), pubkey)
+        private_key = ec.derive_private_key(int.from_bytes(PRIVATE_KEY_BYTES, "big"), ec.SECP256K1(), default_backend())
 
-        assert len(self.name) == 32
+        secret = private_key.exchange(ec.ECDH(), peer)
+        secret_key = hashlib.sha256(secret).digest()
+        iv = b"\x00" * 16
+        aes = AES.new(secret_key, AES.MODE_CBC, iv)
 
+        header, body = data[:32+16], data[32+16:]  # XXX
+        encrypted_body = aes.encrypt(body)
+        encrypted_manifest = header + encrypted_body
+
+        signature = private_key.sign(encrypted_manifest, ec.ECDSA(hashes.SHA256()))
+
+        return encrypted_manifest, signature
+
+    def export_encrypted(self, device_pubkey: bytes) -> Tuple[bytes, bytes]:
         stack_end = 0x80000000
         stack_start = stack_end - Elf.STACK_SIZE
         bss = self.data_start + self.data_size
 
         data = Manifest.MANIFEST_STRUCT.build(dict({
             "name": self.name,
+            "version": self.version,
             "hmac_key": self.enc.hmac_key,
             "encryption_key": self.enc.encryption_key,
             "entrypoint": self.entrypoint,
@@ -149,9 +182,12 @@ class Manifest:
             "mt_root_hash": self.merkletree.root_hash(),
             "mt_size": len(self.merkletree.entries),
             "mt_last_entry": bytes(self.merkletree.entries[-1]),
+            "padding": b"\x00" * 4,
         }))
 
-        return encrypt_manifest(data, device_key)
+        assert len(data) % AES.block_size == 0
+
+        return Manifest.encrypt_and_sign(data, device_pubkey)
 
     def export_json(self) -> str:
         """
@@ -170,7 +206,7 @@ class Manifest:
 
 
 class EncryptedApp:
-    def __init__(self, path: str, device_key: int) -> None:
+    def __init__(self, path: str, device_pubkey: bytes) -> None:
         elf = Elf(path)
         enc = Encryption()
 
@@ -178,7 +214,7 @@ class EncryptedApp:
         self.data_pages = EncryptedApp._get_encrypted_pages(enc, elf, "data")
 
         manifest = EncryptedApp._get_manifest(enc, elf, self.data_pages)
-        self.binary_manifest = manifest.export_encrypted(device_key)
+        self.binary_manifest, self.binary_manifest_signature = manifest.export_encrypted(device_pubkey)
         self.json_manifest = manifest.export_json()
 
     @classmethod
@@ -189,6 +225,7 @@ class EncryptedApp:
             app.code_pages = EncryptedPage.load(m["code_start"], zf.read("code.bin"))
             app.data_pages = EncryptedPage.load(m["data_start"], zf.read("data.bin"))
             app.binary_manifest = zf.read("manifest.bin")
+            app.binary_manifest_signature = zf.read("manifest.sig.bin")
             app.json_manifest = zf.read("manifest.json")
 
         return app
@@ -232,5 +269,10 @@ class EncryptedApp:
         with ZipFile(zip_path, "w") as zf:
             zf.writestr("manifest.json", self.json_manifest)
             zf.writestr("manifest.bin", self.binary_manifest)
+            zf.writestr("manifest.sig.bin", self.binary_manifest_signature)
             zf.writestr("code.bin", EncryptedPage.export(self.code_pages))
             zf.writestr("data.bin", EncryptedPage.export(self.data_pages))
+
+
+if __name__ == "__main__":
+    print(f"{get_hsm_pubkey().hex()}")

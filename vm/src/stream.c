@@ -11,6 +11,7 @@
 #include "error.h"
 #include "lfsr.h"
 #include "loading.h"
+#include "manifest.h"
 #include "merkle.h"
 #include "stream.h"
 #include "ui.h"
@@ -30,24 +31,12 @@ enum page_prot_e {
     PAGE_PROT_RW,
 };
 
-enum section_e {
-    SECTION_CODE,
-    SECTION_STACK,
-    SECTION_DATA,
-    NUM_SECTIONS,
-};
-
 struct page_s {
     uint32_t addr;
     uint8_t data[PAGE_SIZE];
     uint32_t iv;
     size_t usage;
 };
-
-struct section_s {
-    uint32_t start;
-    uint32_t end;
-} __attribute__((packed));
 
 struct key_s {
     cx_aes_key_t aes;
@@ -71,23 +60,12 @@ struct app_s {
     struct key_s dynamic_key;
 };
 
-/* this message comes from the client */
-struct cmd_app_manifest_s {
-    char name[32];
-    uint8_t hmac_key[32];
-    uint8_t encryption_key[32];
-    uint32_t pc;
-    uint32_t bss;
-
-    struct section_s sections[NUM_SECTIONS];
-
-    uint8_t merkle_tree_root_hash[CX_SHA256_SIZE];
-    uint32_t merkle_tree_size;
-    uint8_t last_entry_init[8];
-} __attribute__((packed));
-
 struct cmd_request_page_s {
     uint32_t addr;
+    uint16_t cmd;
+} __attribute__((packed));
+
+struct cmd_request_manifest_s {
     uint16_t cmd;
 } __attribute__((packed));
 
@@ -353,32 +331,49 @@ static void init_dynamic_keys(void)
     explicit_bzero(encryption_key, sizeof(encryption_key));
 }
 
-/* XXX - TODO: temporary xor encryption until a correct scheme is found. */
-static void decrypt_manifest(uint8_t *data, size_t size)
+void stream_init_app(uint8_t *buffer, size_t signature_size)
 {
-    for (size_t i = 0; i < size; i++) {
-        data[i] ^= 0x47;
-    }
-}
+    uint8_t signature[128];
 
-/* TODO: encrypt received parameters */
-/* TODO: use different hmac keys for read-only data and else */
-void stream_init_app(uint8_t *buffer)
-{
+    if (signature_size > sizeof(signature)) {
+        fatal("invalid signature\n");
+    }
+
+    memcpy(signature, buffer, signature_size);
+
+    struct cmd_request_manifest_s *cmd = (struct cmd_request_manifest_s *)G_io_apdu_buffer;
+    cmd->cmd = (CMD_REQUEST_MANIFEST >> 8) | ((CMD_REQUEST_MANIFEST & 0xff) << 8);
+
+    size_t size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
+
+    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
+    parse_apdu(response, size);
+
+    const size_t alignment_offset = 3;
+    if (response->lc != alignment_offset + sizeof(struct manifest_s)) {
+        fatal("invalid manifest APDU\n");
+    }
+
+    struct manifest_s *manifest = (struct manifest_s *)(response->data + alignment_offset);
+
+    if (!decrypt_manifest(manifest, signature, signature_size)) {
+        fatal("invalid manifest\n");
+    }
+
+    if (memcmp(manifest->e.padding, "\x00\x00\x00\x00", sizeof(manifest->e.padding)) != 0) {
+        fatal("invalid manifest padding\n");
+    }
+
     memset(&app, '\x00', sizeof(app));
 
-    struct cmd_app_manifest_s *cmd = (struct cmd_app_manifest_s *)buffer;
+    init_static_keys(manifest->e.hmac_key, manifest->e.encryption_key);
 
-    decrypt_manifest((uint8_t *)cmd, sizeof(*cmd));
-
-    init_static_keys(cmd->hmac_key, cmd->encryption_key);
-
-    explicit_bzero(cmd->hmac_key, sizeof(cmd->hmac_key));
-    explicit_bzero(cmd->encryption_key, sizeof(cmd->encryption_key));
+    explicit_bzero(manifest->e.hmac_key, sizeof(manifest->e.hmac_key));
+    explicit_bzero(manifest->e.encryption_key, sizeof(manifest->e.encryption_key));
 
     init_dynamic_keys();
 
-    memcpy(app.sections, cmd->sections, sizeof(app.sections));
+    memcpy(app.sections, manifest->e.sections, sizeof(app.sections));
 
     uint32_t sp = app.sections[SECTION_STACK].end;
     if (PAGE_START(sp) != sp) {
@@ -386,17 +381,17 @@ void stream_init_app(uint8_t *buffer)
     }
 
     app.stack_min = sp;
-    app.bss_max = PAGE_START(cmd->bss);
+    app.bss_max = PAGE_START(manifest->e.bss);
 
-    app.cpu.pc = cmd->pc;
+    app.cpu.pc = manifest->e.pc;
     app.cpu.regs[RV_REG_SP] = sp - 4;
     app.current_code_page = NULL;
 
-    init_merkle_tree(cmd->merkle_tree_root_hash, cmd->merkle_tree_size, (struct entry_s *)cmd->last_entry_init);
+    init_merkle_tree(manifest->e.merkle_tree_root_hash, manifest->e.merkle_tree_size, (struct entry_s *)manifest->e.last_entry_init);
 
     lfsr_init();
     sys_app_loading_stop();
-    set_app_name(cmd->name);
+    set_app_name(manifest->c.name);
 }
 
 static void u32hex(uint32_t n, char *buf)
