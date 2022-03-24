@@ -21,17 +21,22 @@ const uint8_t hsm_pubkey_bytes[] = { 0x04, 0xc5, 0x41, 0x1c, 0xc0, 0x15, 0x4a, 0
 static void get_privkey_data(const char *name, const char *version, uint8_t *privkey_data)
 {
     uint32_t path[13];
+    size_t path_count;
 
     memset(path, 0, sizeof(path));
     path[0] = 0x52495343 | 0x80000000; /* b"RISC".hex() */
 
     if (0) {
+        /* it makes the path derivation way more longer */
         strncpy((char *)&path[1], name, 32);
         strncpy((char *)&path[9], version, 16);
+        path_count = 13;
+    } else {
+        path_count = 1;
     }
 
     /* XXX: handle THROW */
-    os_perso_derive_node_bip32(CX_CURVE_256K1, path, 13, privkey_data, NULL);
+    os_perso_derive_node_bip32(CX_CURVE_256K1, path, path_count, privkey_data, NULL);
 
     /* XXX: privkey_data should be xored with a random value stored in the flash
      * to prevent the owner of the seed from decrypting manifests */
