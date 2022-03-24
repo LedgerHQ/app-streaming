@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-https://github.com/LedgerHQ/ledgerctl/blob/master/ledgerwallet/client.py
-"""
-
 import argparse
 import logging
 import os
@@ -57,12 +53,22 @@ def get_client() -> LedgerClient:
     return LedgerClient(devices[0], cla=CLA)
 
 
-def exchange(client: LedgerClient, ins: int, data=b"", p1=0, p2=0) -> Apdu:
-    apdu = bytes([client.cla, ins, p1, p2])
+def exchange(client: LedgerClient, ins: int, data=b"", p1=0, p2=0, cla=0) -> Apdu:
+    if cla == 0:
+        cla = client.cla
+    apdu = bytes([cla, ins, p1, p2])
     apdu += serialize(data)
     response = client.raw_exchange(apdu)
     status_word = int.from_bytes(response[-2:], "big")
     return Apdu(status_word, response[:-2])
+
+
+def get_device_pubkey():
+    data = b"a" * 32
+    data += b"b" * 16
+    apdu = exchange(client, ins=0x10, data=data, cla=0x34)
+    assert apdu.status == 0x9000
+    return apdu.data
 
 
 class Stream:
@@ -70,9 +76,8 @@ class Stream:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    def __init__(self, path: str) -> None:
-        device_key = 0x47
-        app = EncryptedApp(path, device_key)
+    def __init__(self, path: str, device_pubkey: bytes) -> None:
+        app = EncryptedApp(path, device_pubkey)
 
         if True:
             app.export_zip("/tmp/app.zip")
@@ -81,6 +86,7 @@ class Stream:
         self.pages: Dict[int, Page] = {}
         self.merkletree = MerkleTree()
         self.manifest = app.binary_manifest
+        self.signature = app.binary_manifest_signature
 
         for page in app.code_pages:
             assert page.addr not in self.pages
@@ -119,6 +125,8 @@ class Stream:
         return struct.parse(data)
 
     def init_app(self) -> Apdu:
+        apdu = exchange(client, ins=0x00, data=self.signature)
+        assert apdu.status == 0x6701
         # pad with 3 bytes because of alignment
         data = b"\x00" * 3 + self.manifest
         return exchange(client, ins=0x00, data=data)
@@ -257,8 +265,9 @@ if __name__ == "__main__":
 
     import_ledgerwallet(args.speculos)
 
-    stream = Stream(args.app)
     client = get_client()
+    pubkey = get_device_pubkey()
+    stream = Stream(args.app, pubkey)
 
     apdu = stream.init_app()
     while True:
