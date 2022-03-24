@@ -63,12 +63,25 @@ def exchange(client: LedgerClient, ins: int, data=b"", p1=0, p2=0, cla=0) -> Apd
     return Apdu(status_word, response[:-2])
 
 
-def get_device_pubkey():
-    data = b"a" * 32
-    data += b"b" * 16
-    apdu = exchange(client, ins=0x10, data=data, cla=0x34)
-    assert apdu.status == 0x9000
-    return apdu.data
+def get_device_pubkey(client):
+    """Retrieve the pubkey from the cache if it exists, from the device otherwise."""
+
+    pubkey_path = "/tmp/device.pubkey"
+    if os.path.exists(pubkey_path):
+        with open(pubkey_path, "rb") as fp:
+            pubkey = fp.read()
+    else:
+        # The app name and version aren't used for now.
+        name = b"a" * 32
+        version = b"b" * 16
+        data = name + version
+        apdu = exchange(client, ins=0x10, data=data, cla=0x34)
+        assert apdu.status == 0x9000
+        pubkey = apdu.data
+        with open(pubkey_path, "wb") as fp:
+            fp.write(pubkey)
+
+    return pubkey
 
 
 class Stream:
@@ -266,7 +279,7 @@ if __name__ == "__main__":
     import_ledgerwallet(args.speculos)
 
     client = get_client()
-    pubkey = get_device_pubkey()
+    pubkey = get_device_pubkey(client)
     stream = Stream(args.app, pubkey)
 
     apdu = stream.init_app()
