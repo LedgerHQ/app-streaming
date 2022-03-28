@@ -8,7 +8,7 @@ from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from typing import Any, Dict
 
 from comm import Apdu, exchange, get_client, import_ledgerwallet
-from encryption import EncryptedApp, get_device_pubkey
+from encryption import EncryptedApp, get_device_keys
 from merkletree import Entry, MerkleTree
 from server import Server
 
@@ -224,8 +224,8 @@ if __name__ == "__main__":
         logger.warn("app doesn't seem to be encrypted... encrypting it")
         output_pubkey_file = "/tmp/device-pubkey.der"
         zip_path = "/tmp/app.zip"
-        pubkey = get_device_pubkey(output_pubkey_file)
-        app = EncryptedApp(args.app, pubkey)
+        device_keys = get_device_keys(args.app)
+        app = EncryptedApp(args.app, device_keys)
         app.export_zip(zip_path)
 
     stream = Stream(zip_path)

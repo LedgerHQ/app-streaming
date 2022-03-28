@@ -3,9 +3,7 @@
 import argparse
 import hashlib
 import hmac
-import json
 import logging
-import secrets
 import sys
 
 from comm import exchange, get_client, import_ledgerwallet
@@ -15,23 +13,61 @@ from merkletree import Entry, MerkleTree
 from construct import Bytes, Int32ul, Struct
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives import hashes, serialization
 from Crypto.Cipher import AES
-from typing import List, Tuple, Type
+from typing import List, Type
 from zipfile import ZipFile
 
 
-# >>> privkey = ec.generate_private_key(ec.SECP256K1(), default_backend())
-# >>> hex(privkey.private_numbers().private_value)
-PRIVATE_KEY_BYTES = bytes.fromhex("893d0436b796d91c47d6c463ec49802f4b7c6bbae03fdba0fe70d1c57da7056c")
+class HSM:
+    # >>> privkey = ec.generate_private_key(ec.SECP256K1(), default_backend())
+    # >>> hex(privkey.private_numbers().private_value)
+    PRIVATE_KEY_BYTES = bytes.fromhex("893d0436b796d91c47d6c463ec49802f4b7c6bbae03fdba0fe70d1c57da7056c")
 
+    def __init__(self):
+        pass
 
-def get_hsm_pubkey() -> bytes:
-    private_key = ec.derive_private_key(int.from_bytes(PRIVATE_KEY_BYTES, "big"), ec.SECP256K1(), default_backend())
-    public_key = private_key.public_key()
-    format = serialization.PublicFormat.UncompressedPoint
-    encoding = serialization.Encoding.X962
-    return public_key.public_bytes(encoding=encoding, format=format)
+    @staticmethod
+    def _get_private_key() -> EllipticCurvePrivateKey:
+        private_value = int.from_bytes(HSM.PRIVATE_KEY_BYTES, "big")
+        private_key = ec.derive_private_key(private_value, ec.SECP256K1(), default_backend())
+        return private_key
+
+    @staticmethod
+    def get_pubkey() -> bytes:
+        private_key = HSM._get_private_key()
+        public_key = private_key.public_key()
+        format = serialization.PublicFormat.UncompressedPoint
+        encoding = serialization.Encoding.X962
+        return public_key.public_bytes(encoding=encoding, format=format)
+
+    @staticmethod
+    def sign_manifest(data: bytes) -> bytes:
+        private_key = HSM._get_private_key()
+        signature = private_key.sign(data, ec.ECDSA(hashes.SHA256()))
+        return signature
+
+    @staticmethod
+    def decrypt_device_keys(app_hash: bytes, device_keys: Struct) -> "Encryption":
+        """
+        Decrypt the HMAC and encryption keys sent by the device.
+
+        The shared secret used to encrypt these keys is established through ECDH.
+        """
+
+        peer = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), device_keys.pubkey)
+        private_key = HSM._get_private_key()
+
+        secret = private_key.exchange(ec.ECDH(), peer)
+        secret_key = hashlib.sha256(secret + app_hash).digest()
+
+        iv = b"\x00" * 16
+        aes = AES.new(secret_key, AES.MODE_CBC, iv)
+        decrypted_keys = aes.decrypt(device_keys.encrypted_keys)
+        hmac_key, encryption_key = decrypted_keys[:32], decrypted_keys[32:]
+
+        return Encryption(hmac_key, encryption_key)
 
 
 class EncryptedPage:
@@ -65,16 +101,9 @@ class EncryptedPage:
 class Encryption:
     """Encrypt and authenticate the pages (code and data) of an app."""
 
-    def __init__(self) -> None:
-        """
-        Generates random static AES and HMAC keys.
-
-        These (symmetric) secret keys are shared with the VM using the app
-        manifest.
-        """
-
-        self.hmac_key = secrets.token_bytes(32)
-        self.encryption_key = secrets.token_bytes(32)
+    def __init__(self, hmac_key, encryption_key) -> None:
+        self.hmac_key = hmac_key
+        self.encryption_key = encryption_key
 
     def _hmac(self, addr: int, data: bytes, iv: int) -> bytes:
         msg = data + addr.to_bytes(4, "little") + iv.to_bytes(4, "little")
@@ -116,8 +145,7 @@ class Manifest:
     MANIFEST_STRUCT = Struct(
         "name" / Bytes(32),
         "version" / Bytes(16),
-        "hmac_key" / Bytes(32),
-        "encryption_key" / Bytes(32),
+        "app_hash" / Bytes(32),
         "entrypoint" / Int32ul,
         "bss" / Int32ul,
         "code_start" / Int32ul,
@@ -129,42 +157,43 @@ class Manifest:
         "mt_root_hash" / Bytes(32),
         "mt_size" / Int32ul,
         "mt_last_entry" / Bytes(8),
-        "padding" / Bytes(4),
     )
 
-    def __init__(self, enc: Encryption, name: bytes, version: bytes, merkletree: MerkleTree, entrypoint: int, code_start: int, code_size: int, data_start: int, data_size: int) -> None:
-        self.enc = enc
+    def __init__(self, name: bytes, version: bytes, app_hash: bytes, merkletree: MerkleTree, entrypoint: int, code_start: int, code_size: int, data_start: int, data_size: int) -> None:
         self.name = name
         self.version = version
-        self.merkletree = merkletree
+        self.app_hash = app_hash
         self.entrypoint = entrypoint
         self.code_start = code_start
         self.code_size = code_size
         self.data_start = data_start
         self.data_size = data_size
 
-    @staticmethod
-    def encrypt_and_sign(data: bytes, pubkey: bytes) -> Tuple[bytes, bytes]:
-        """
-        Encrypt the manifest of an app using the public key of the device.
-        """
-        peer = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), pubkey)
-        private_key = ec.derive_private_key(int.from_bytes(PRIVATE_KEY_BYTES, "big"), ec.SECP256K1(), default_backend())
+        self.mt_root_hash = merkletree.root_hash()
+        self.mt_size = len(merkletree.entries)
+        self.mt_last_entry = bytes(merkletree.entries[-1])
 
-        secret = private_key.exchange(ec.ECDH(), peer)
-        secret_key = hashlib.sha256(secret).digest()
-        iv = b"\x00" * 16
-        aes = AES.new(secret_key, AES.MODE_CBC, iv)
+    @classmethod
+    def from_binary(cls: Type[object], data: bytes) -> "Manifest":
+        assert len(data) == Manifest.MANIFEST_STRUCT.sizeof()
+        m = Manifest.MANIFEST_STRUCT.parse(data)
 
-        header, body = data[:32+16], data[32+16:]  # XXX
-        encrypted_body = aes.encrypt(body)
-        encrypted_manifest = header + encrypted_body
+        manifest = cls.__new__(cls)
+        manifest.name = m.name
+        manifest.version = m.version
+        manifest.app_hash = m.app_hash
+        manifest.entrypoint = m.entrypoint
+        manifest.code_start = m.code_start
+        manifest.code_size = m.code_end - m.code_start
+        manifest.data_start = m.data_start
+        manifest.data_size = m.data_end - m.data_start
+        manifest.mt_root_hash = m.mt_root_hash
+        manifest.mt_size = m.mt_size
+        manifest.mt_last_entry = m.mt_last_entry
 
-        signature = private_key.sign(encrypted_manifest, ec.ECDSA(hashes.SHA256()))
+        return manifest
 
-        return encrypted_manifest, signature
-
-    def export_encrypted(self, device_pubkey: bytes) -> Tuple[bytes, bytes]:
+    def export_binary(self) -> bytes:
         stack_end = 0x80000000
         stack_start = stack_end - Elf.STACK_SIZE
         bss = self.data_start + self.data_size
@@ -172,8 +201,7 @@ class Manifest:
         data = Manifest.MANIFEST_STRUCT.build(dict({
             "name": self.name,
             "version": self.version,
-            "hmac_key": self.enc.hmac_key,
-            "encryption_key": self.enc.encryption_key,
+            "app_hash": self.app_hash,
             "entrypoint": self.entrypoint,
             "bss": bss,
             "code_start": self.code_start,
@@ -182,54 +210,38 @@ class Manifest:
             "stack_end": stack_end,
             "data_start": self.data_start,
             "data_end": self.data_start + self.data_size + Elf.HEAP_SIZE,
-            "mt_root_hash": self.merkletree.root_hash(),
-            "mt_size": len(self.merkletree.entries),
-            "mt_last_entry": bytes(self.merkletree.entries[-1]),
-            "padding": b"\x00" * 4,
+            "mt_root_hash": self.mt_root_hash,
+            "mt_size": self.mt_size,
+            "mt_last_entry": self.mt_last_entry,
         }))
 
-        assert len(data) % AES.block_size == 0
-
-        return Manifest.encrypt_and_sign(data, device_pubkey)
-
-    def export_json(self) -> str:
-        """
-        Export public information from a manifest file as JSON.
-
-        These information are required to load an app from a zip file.
-        """
-        manifest = {
-            # the name and version could be omitted but are convenient
-            "name": self.name.decode("ascii").rstrip("\x00"),
-            "version": self.version.decode("ascii").rstrip("\x00"),
-            "code_start": self.code_start,
-            "data_start": self.data_start,
-        }
-        return json.dumps(manifest, indent=4)
+        return data
 
 
 class EncryptedApp:
-    def __init__(self, path: str, device_pubkey: bytes) -> None:
+    def __init__(self, path: str, device_keys: bytes) -> None:
         elf = Elf(path)
-        enc = Encryption()
+        enc = HSM.decrypt_device_keys(elf.app_hash(), device_keys)
 
         self.code_pages = EncryptedApp._get_encrypted_pages(enc, elf, "code")
         self.data_pages = EncryptedApp._get_encrypted_pages(enc, elf, "data")
 
-        manifest = EncryptedApp._get_manifest(enc, elf, self.data_pages)
-        self.binary_manifest, self.binary_manifest_signature = manifest.export_encrypted(device_pubkey)
-        self.json_manifest = manifest.export_json()
+        manifest = EncryptedApp._get_manifest(elf, self.data_pages)
+        self.binary_manifest = manifest.export_binary()
+        self.binary_manifest_signature = HSM.sign_manifest(self.binary_manifest)
 
     @classmethod
     def from_zip(cls: Type[object], zip_path: str):
         app = cls.__new__(cls)
         with ZipFile(zip_path, "r") as zf:
-            m = json.loads(zf.read("manifest.json"))
-            app.code_pages = EncryptedPage.load(m["code_start"], zf.read("code.bin"))
-            app.data_pages = EncryptedPage.load(m["data_start"], zf.read("data.bin"))
             app.binary_manifest = zf.read("manifest.bin")
             app.binary_manifest_signature = zf.read("manifest.sig.bin")
-            app.json_manifest = zf.read("manifest.json")
+
+            manifest = Manifest.from_binary(app.binary_manifest)
+            # TODO: verify sig?
+
+            app.code_pages = EncryptedPage.load(manifest.code_start, zf.read("code.bin"))
+            app.data_pages = EncryptedPage.load(manifest.data_start, zf.read("data.bin"))
 
         return app
 
@@ -254,7 +266,7 @@ class EncryptedApp:
         return merkletree
 
     @staticmethod
-    def _get_manifest(enc: Encryption, elf: Elf, data_pages: List[EncryptedPage]) -> Manifest:
+    def _get_manifest(elf: Elf, data_pages: List[EncryptedPage]) -> Manifest:
         code_start, code_end = elf.get_section_range("code")
         data_start, data_end = elf.get_section_range("data")
         code_size = code_end - code_start
@@ -266,32 +278,27 @@ class EncryptedApp:
         data_addresses = [page.addr for page in data_pages]
         merkletree = EncryptedApp.compute_initial_merkle_tree(data_addresses)
 
-        return Manifest(enc, name, version, merkletree, elf.entrypoint, code_start, code_size, data_start, data_size)
+        return Manifest(name, version, elf.app_hash(), merkletree, elf.entrypoint, code_start, code_size, data_start, data_size)
 
     def export_zip(self, zip_path: str) -> None:
         with ZipFile(zip_path, "w") as zf:
-            zf.writestr("manifest.json", self.json_manifest)
             zf.writestr("manifest.bin", self.binary_manifest)
             zf.writestr("manifest.sig.bin", self.binary_manifest_signature)
             zf.writestr("code.bin", EncryptedPage.export(self.code_pages))
             zf.writestr("data.bin", EncryptedPage.export(self.data_pages))
 
 
-def get_device_pubkey(output_pubkey_file=None) -> bytes:
+def get_device_keys(app_file) -> Struct:
     client = get_client()
 
-    name = b"a" * 32
-    version = b"b" * 16
-    data = name + version
+    data = Elf(app_file).app_hash()
     apdu = exchange(client, ins=0x10, data=data, cla=0x34)
     assert apdu.status == 0x9000
-    pubkey = apdu.data
 
-    if output_pubkey_file:
-        with open(output_pubkey_file, "wb") as fp:
-            fp.write(pubkey)
+    struct = Struct("pubkey" / Bytes(65), "encrypted_keys" / Bytes(64))
+    assert len(apdu.data) == struct.sizeof()
 
-    return pubkey
+    return struct.parse(apdu.data)
 
 
 if __name__ == "__main__":
@@ -301,33 +308,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Tool to encrypt app ELF binaries.")
     parser.add_argument("--app-file", type=str, help="application path (.elf)")
     parser.add_argument("--output-file", type=str, help="path to the encrypted app (.zip)")
-    parser.add_argument("--output-pubkey-file", type=str, help="write the device public key path (.der)")
-    parser.add_argument("--pubkey-file", type=str, help="device public key path (.der)")
     parser.add_argument("--print-hsm-pubkey", action="store_true", help="print HSM public key")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
 
     args = parser.parse_args()
 
     if args.print_hsm_pubkey:
-        print(f"{get_hsm_pubkey().hex()}")
+        print(f"{HSM.get_pubkey().hex()}")
         sys.exit(0)
 
     if not args.app_file or not args.output_file:
         logger.error("--app-file and --output-file are required")
         sys.exit(1)
 
-    if args.pubkey_file:
-        if args.output_pubkey_file:
-            logger.error("it doesn't make sense to use --pubkey-file with --output-pubkey-file")
-            sys.exit(1)
+    import_ledgerwallet(args.speculos)
+    device_keys = get_device_keys(args.app_file)
 
-        with open(args.pubkey_file, "rb") as fp:
-            pubkey = fp.read()
-    else:
-        import_ledgerwallet(args.speculos)
-        pubkey = get_device_pubkey(args.output_pubkey_file)
-
-    app = EncryptedApp(args.app_file, pubkey)
+    app = EncryptedApp(args.app_file, device_keys)
     app.export_zip(args.output_file)
 
     # ensure that the generated file is valid

@@ -3,10 +3,11 @@
 #include <string.h>
 
 #include "os.h"
-#include "ux.h"
 #include "os_io_seproxyhal.h"
+#include "ux.h"
 
 #include "apdu.h"
+#include "keys.h"
 #include "stream.h"
 #include "ui.h"
 
@@ -69,7 +70,7 @@ static void app_main_(void)
         }
 
         if (cmd.cla == CLA_GENERAL) {
-            tx = handle_general_apdu(cmd.ins, &G_io_apdu_buffer[OFFSET_CDATA + 3]);
+            tx = handle_general_apdu(cmd.ins, &G_io_apdu_buffer[OFFSET_CDATA]);
             continue;
         }
 
@@ -129,6 +130,8 @@ __attribute__((section(".boot"))) int main() {
     __asm volatile("cpsie i");
 
     os_boot();
+
+    nv_app_state_init();
 
     for (;;) {
         // Reset UI

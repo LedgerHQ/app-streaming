@@ -9,9 +9,9 @@
 
 #include "apdu.h"
 #include "error.h"
+#include "keys.h"
 #include "lfsr.h"
 #include "loading.h"
-#include "manifest.h"
 #include "merkle.h"
 #include "stream.h"
 #include "ui.h"
@@ -314,10 +314,10 @@ void stream_commit_page(struct page_s *page, bool insert)
     }
 }
 
-static void init_static_keys(uint8_t *hmac_key, uint8_t *encryption_key)
+static void init_static_keys(struct app_keys_s *app_keys)
 {
-    memcpy(app.static_key.hmac, hmac_key, sizeof(app.static_key.hmac));
-    cx_aes_init_key_no_throw(encryption_key, 32, &app.static_key.aes);
+    memcpy(app.static_key.hmac, app_keys->hmac_key, sizeof(app.static_key.hmac));
+    cx_aes_init_key_no_throw(app_keys->encryption_key, 32, &app.static_key.aes);
 }
 
 static void init_dynamic_keys(void)
@@ -333,6 +333,7 @@ static void init_dynamic_keys(void)
 
 void stream_init_app(uint8_t *buffer, size_t signature_size)
 {
+    /* 1. store the manifest signature */
     uint8_t signature[128];
 
     if (signature_size > sizeof(signature)) {
@@ -341,6 +342,7 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     memcpy(signature, buffer, signature_size);
 
+    /* 2. receive the manifest */
     struct cmd_request_manifest_s *cmd = (struct cmd_request_manifest_s *)G_io_apdu_buffer;
     cmd->cmd = (CMD_REQUEST_MANIFEST >> 8) | ((CMD_REQUEST_MANIFEST & 0xff) << 8);
 
@@ -356,24 +358,23 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     struct manifest_s *manifest = (struct manifest_s *)(response->data + alignment_offset);
 
-    if (!decrypt_manifest(manifest, signature, signature_size)) {
+    /* 3. verify manifest signature */
+    if (!verify_manifest_signature((uint8_t *)manifest, sizeof(*manifest), signature, signature_size)) {
         fatal("invalid manifest\n");
-    }
-
-    if (memcmp(manifest->e.padding, "\x00\x00\x00\x00", sizeof(manifest->e.padding)) != 0) {
-        fatal("invalid manifest padding\n");
     }
 
     memset(&app, '\x00', sizeof(app));
 
-    init_static_keys(manifest->e.hmac_key, manifest->e.encryption_key);
-
-    explicit_bzero(manifest->e.hmac_key, sizeof(manifest->e.hmac_key));
-    explicit_bzero(manifest->e.encryption_key, sizeof(manifest->e.encryption_key));
+    /* 4. derive and init keys depending on the app hash */
+    struct app_keys_s app_keys;
+    derive_app_keys(manifest->app_hash, &app_keys);
+    init_static_keys(&app_keys);
+    explicit_bzero(&app_keys, sizeof(app_keys));
 
     init_dynamic_keys();
 
-    memcpy(app.sections, manifest->e.sections, sizeof(app.sections));
+    /* 5. initialize app characteristics from the manifest */
+    memcpy(app.sections, manifest->sections, sizeof(app.sections));
 
     uint32_t sp = app.sections[SECTION_STACK].end;
     if (PAGE_START(sp) != sp) {
@@ -381,17 +382,17 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
     }
 
     app.stack_min = sp;
-    app.bss_max = PAGE_START(manifest->e.bss);
+    app.bss_max = PAGE_START(manifest->bss);
 
-    app.cpu.pc = manifest->e.pc;
+    app.cpu.pc = manifest->pc;
     app.cpu.regs[RV_REG_SP] = sp - 4;
     app.current_code_page = NULL;
 
-    init_merkle_tree(manifest->e.merkle_tree_root_hash, manifest->e.merkle_tree_size, (struct entry_s *)manifest->e.last_entry_init);
+    init_merkle_tree(manifest->merkle_tree_root_hash, manifest->merkle_tree_size, (struct entry_s *)manifest->last_entry_init);
 
     lfsr_init();
     sys_app_loading_stop();
-    set_app_name(manifest->c.name);
+    set_app_name(manifest->name);
 }
 
 static void u32hex(uint32_t n, char *buf)
