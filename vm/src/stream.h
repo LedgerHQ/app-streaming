@@ -20,26 +20,18 @@ struct section_s {
 } __attribute__((packed));
 
 struct manifest_s {
-    /* cleartext */
-    struct {
-        char name[32];
-        char version[16];
-    } c;
-    /* encrypted */
-    struct {
-        uint8_t hmac_key[32];
-        uint8_t encryption_key[32];
-        uint32_t pc;
-        uint32_t bss;
+    char name[32];
+    char version[16];
+    uint8_t app_hash[32];
+    uint8_t pubkey_hash[32];
+    uint32_t pc;
+    uint32_t bss;
 
-        struct section_s sections[NUM_SECTIONS];
+    struct section_s sections[NUM_SECTIONS];
 
-        uint8_t merkle_tree_root_hash[32];
-        uint32_t merkle_tree_size;
-        uint8_t last_entry_init[8];
-
-        uint8_t padding[4];
-    } e;
+    uint8_t merkle_tree_root_hash[32];
+    uint32_t merkle_tree_size;
+    uint8_t last_entry_init[8];
 } __attribute__((packed));
 
 void stream_init_app(uint8_t *buffer, size_t size);

@@ -4,30 +4,32 @@
 #include "os_io.h"
 
 #include "apdu.h"
-#include "manifest.h"
+#include "keys.h"
 
-#define INS_GET_PUBKEY 0x10
+#define INS_GET_DEVICE_KEYS 0x10
 
-struct request_get_pubkey_s {
-    char name[32];
-    char version[16];
+struct request_get_device_keys_s {
+    uint8_t app_hash[32];
 };
 
-struct response_get_pubkey_s {
+struct response_get_device_keys_s {
     uint8_t pubkey_bytes[65];
+    struct encrypted_keys_s encrypted_keys;
 };
 
-static bool handle_get_pubkey(struct request_get_pubkey_s *request, size_t *tx)
+static bool handle_get_device_keys(struct request_get_device_keys_s *request, size_t *tx)
 {
     cx_ecfp_public_key_t pubkey;
-    if (!get_manifest_pubkey(request->name, request->version, &pubkey)) {
+    struct encrypted_keys_s encrypted_keys;
+    if (!get_device_keys(request->app_hash, &pubkey, &encrypted_keys)) {
         return false;
     }
 
-    struct response_get_pubkey_s *response = (struct response_get_pubkey_s *)G_io_apdu_buffer;
+    struct response_get_device_keys_s *response = (struct response_get_device_keys_s *)G_io_apdu_buffer;
     memcpy(response->pubkey_bytes, pubkey.W, sizeof(response->pubkey_bytes));
+    memcpy(&response->encrypted_keys, &encrypted_keys, sizeof(response->encrypted_keys));
 
-    *tx = sizeof(response->pubkey_bytes);
+    *tx = sizeof(*response);
 
     return true;
 }
@@ -38,8 +40,8 @@ size_t handle_general_apdu(uint8_t ins, uint8_t *data)
     bool success;
 
     switch (ins) {
-    case INS_GET_PUBKEY:
-        success = handle_get_pubkey((struct request_get_pubkey_s *)data, &tx);
+    case INS_GET_DEVICE_KEYS:
+        success = handle_get_device_keys((struct request_get_device_keys_s *)data, &tx);
         break;
     default:
         success = false;
