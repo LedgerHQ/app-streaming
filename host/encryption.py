@@ -239,7 +239,7 @@ class EncryptedApp:
         app = cls.__new__(cls)
         with ZipFile(zip_path, "r") as zf:
             app.binary_manifest = zf.read("manifest.bin")
-            app.binary_manifest_signature = zf.read("manifest.sig.bin")
+            app.binary_manifest_signature = zf.read("manifest.bin.sig")
 
             pubkey = HSM.get_pubkey()
             pubkey.verify(app.binary_manifest_signature, app.binary_manifest, ec.ECDSA(hashes.SHA256()))
@@ -289,7 +289,7 @@ class EncryptedApp:
     def export_zip(self, zip_path: str) -> None:
         with ZipFile(zip_path, "w") as zf:
             zf.writestr("manifest.bin", self.binary_manifest)
-            zf.writestr("manifest.sig.bin", self.binary_manifest_signature)
+            zf.writestr("manifest.bin.sig", self.binary_manifest_signature)
             zf.writestr("code.bin", EncryptedPage.export(self.code_pages))
             zf.writestr("data.bin", EncryptedPage.export(self.data_pages))
 
