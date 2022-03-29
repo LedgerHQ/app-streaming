@@ -4,7 +4,7 @@ These sections are divided into pages of 256 bytes. A page has an address (4 byt
 
 The encryption of an app by Ledger HSMs results into:
 
-- A manifest which contain in particular the entrypoint address of the ELF binary and the key used to encrypt the pages. (The manifest is encrypted using the device public key, more details later.)
+- A manifest which contain in particular the entrypoint address of the ELF binary, the app name and version, etc.
 - The set of encrypted pages with their addresses.
 
 The host (ie. the PC or the smartphone) isn't trusted and has no knowledge over the keys.
@@ -16,7 +16,7 @@ The host (ie. the PC or the smartphone) isn't trusted and has no knowledge over 
  Host                                  Device
 ──────────────────────────────────────────────
 
-       Send the encrypted manifest
+       Send the manifest
       ──────────────────────────────►
 
        Ask for the page containing
@@ -57,13 +57,13 @@ The host (ie. the PC or the smartphone) isn't trusted and has no knowledge over 
 
 All pages exchanged between the host and the VM are:
 
-- encrypted using AES-256. The page data (256 bytes) is encrypted. The IV is `addr || counter || '\x00' * 8` where `addr` and `counter` are 4 bytes each, encoded in little-endian.
+- encrypted using AES-256-CBC. The page data (256 bytes) is encrypted. The IV is `addr || counter || '\x00' * 8` where `addr` and `counter` are 4 bytes each, encoded in little-endian.
 - authenticated using HMAC-SHA256. The following message is authenticated: `encrypted_data || addr || counter` where `encrypted_data` is the page data (256 bytes) encrypted using AES followed by `addr` and `counter` which are 4 bytes each and encoded in little-endian.
 
 There are 2 sets of 2 keys for AES encryption/decryption and HMAC authentication:
 
-1. A static set (`KeyAES1`, `KeyHMAC1`) embedded in the manifest.
-2. A dynamic set (`KeyAES2`, `KeyHMAC2`): initialized randomly by the VM each time an app is launched.
+1. A static set (`KeyAES1`, `KeyHMAC1`) used to encrypt and authenticate the read-only pages of the app.
+2. A dynamic set (`KeyAES2`, `KeyHMAC2`) initialized randomly by the VM each time an app is launched.
 
 
 ## Exchanges
@@ -80,8 +80,7 @@ The manifest contains:
 
 - the entrypoint address
 - the code, stack and data sections addresses
-- the application name
-- `KeyAES1` and `KeyHMAC1` keys
+- the application name and version
 - the merkle tree root hash, size and last entry
 
 
@@ -98,7 +97,7 @@ Code and read-only data pages are encrypted and authenticated using the static k
 
 ### Initialized data
 
-Initialized data pages are encrypted and authenticated using the static key set. The counter of these pages is initialized to `0` and is incremented over time when the VM modifies these pages. The VM will then use the dynamic key set.
+Initialized data pages are encrypted and authenticated using the static key set. The counter of these pages is initialized to `0` and is incremented over time when the VM modifies these pages. The VM will then switch to the dynamic key set.
 
 ### Stack and heap
 
@@ -107,29 +106,12 @@ Stack and heap pages don't exist initially. They're created by the VM and encryp
 
 ## Anti-replay
 
-Thanks to encryption, an attacker has no knowledge over the content of pages. Thanks to authentication, an attacker can't forge invalid pages. However an attacker could replay valid pages that where later modified by the VM.
+Thanks to encryption, an attacker has no knowledge over the content of pages. Thanks to authentication, an attacker can't forge invalid pages. However an attacker could replay valid pages that were later modified by the VM.
 
 Each writeable page is part of a merkle tree whose root hash is kept by the VM. The merkle tree is initialized with the writeable pages from the app. Each time the VM commit a page, this page is either inserted in the merkle tree (for a new stack page or heap page) or the corresponding node in the merkle tree is updated.
 
-The nodes of these merkle tree are made of 8 bytes of data associated to a page: `addr || counter`. It's guaranteed that there's a unique node in the tree associated to an address.
+The nodes of these merkle tree are made of 8 bytes of data associated to a page: `addr || counter`. It's guaranteed that there's a unique node in the tree associated to an address. (To prevent second preimage attacks -- as designed by Certificate Transparency, a 0x00 byte is prepended to the hash data of leaf node hashes, while 0x01 is prepended when computing internal node hashes.)
 
-When the VM receives a writeable page from the host, the merkle tree is used to ensure that the node made of the associated address and counter is actually part of the tree. It guarantees that the counter associated to the page is valid.
+A merkle tree path for an address contains the shortest list of additional nodes in the tree required to compute the root hash for that tree. A node is either prefixed by the character `L` if it's the left child of its parent or `R` otherwise.
 
-
-## Key management (to be discussed)
-
-Once an app is built, pages are encrypted and authenticated using `KeyAES1` and `KeyHMAC1`. Several options are available:
-
-- A unique key could be shared by all apps and all Nanos.
-- A key derived for each app could be shared by all Nanos.
-- A key derived for each app and each Nano could be generated depending on the Nano ID when the user retrieve an app.
-
-If an attacker manages to compromise BOLOS, he might retrieve the key used to authenticate app pages (`KeyHMAC1`) and create malicious apps. In order to prevent that scenario a new authentication key should be generated for **each** Nano and **each** app.
-
-1. The host (Ledger Live or Python client) asks the Nano an ECDSA public key `pub1`, generated and signed (`sig1`) by BOLOS.
-2. `pub1` and `sig1` are sent to a Ledger HSM which verifies the signature.
-3. This Ledger HSM:
-    - Generates a new and random `KeyAES1` and `KeyHMAC1`
-    - Authenticates the app pages using `KeyHMAC1`
-    - Encrypts a manifesto which contains `KeyAES1` and `KeyHMAC1` using `pub1`
-    - Sends the encrypted manifesto and the app to the host
+When the VM receives a writeable page from the host, a merkle tree path is used to ensure that the node made of the associated address and counter is actually part of the tree. It guarantees that the counter associated to the page is valid.

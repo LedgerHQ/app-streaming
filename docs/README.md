@@ -2,8 +2,9 @@
 
 Big picture and concepts of the streaming idea:
 
-- [encryption overview](encryption-overview.md)
-- [threat model](threat-model.md)
+- [Encryption Overview](encryption-overview.md)
+- [Threat Model](threat-model.md)
+- [App Encryption](app-encryption.md)
 - [Pros and Cons](pros-and-cons.md)
 
 
