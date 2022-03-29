@@ -334,7 +334,7 @@ static void init_dynamic_keys(void)
 void stream_init_app(uint8_t *buffer, size_t signature_size)
 {
     /* 1. store the manifest signature */
-    uint8_t signature[128];
+    uint8_t signature[72];
 
     if (signature_size > sizeof(signature)) {
         fatal("invalid signature\n");
