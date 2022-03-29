@@ -58,11 +58,6 @@ static void derive_secret(const uint8_t *app_hash, const uint8_t *seed, uint8_t 
     explicit_bzero(secret, sizeof(secret));
 }
 
-static void get_privkey_data(const uint8_t *app_hash, uint8_t *privkey_data)
-{
-    derive_secret(app_hash, N_storage.ecdh_seed, privkey_data);
-}
-
 void derive_app_keys(const uint8_t *app_hash, struct app_keys_s *app_keys)
 {
     derive_secret(app_hash, N_storage.app_hmac_seed, app_keys->hmac_key);
@@ -72,11 +67,11 @@ void derive_app_keys(const uint8_t *app_hash, struct app_keys_s *app_keys)
 static bool get_privkey(const uint8_t *app_hash, cx_ecfp_private_key_t *privkey)
 {
     uint8_t privkey_data[32];
-    get_privkey_data(app_hash, privkey_data);
+    derive_secret(app_hash, N_storage.ecdh_seed, privkey_data);
 
     cx_err_t err = cx_ecfp_init_private_key_no_throw(CX_CURVE_256K1, privkey_data,
                                                      sizeof(privkey_data), privkey);
-    explicit_bzero(&privkey_data, sizeof(privkey_data));
+    explicit_bzero(privkey_data, sizeof(privkey_data));
 
     if (err != CX_OK) {
         return false;
@@ -90,13 +85,14 @@ static bool get_shared_secret(const uint8_t *app_hash,
                               uint8_t *secret_key)
 {
     cx_ecfp_private_key_t privkey;
+    if (!get_privkey(app_hash, &privkey)) {
+        return false;
+    }
+
     uint8_t secret[64];
-    cx_err_t ret;
-
-    get_privkey(app_hash, &privkey);
-    ret = cx_ecdh_no_throw(&privkey, CX_ECDH_X, pubkey->W, pubkey->W_len, secret, 32);
-
+    cx_err_t ret = cx_ecdh_no_throw(&privkey, CX_ECDH_X, pubkey->W, pubkey->W_len, secret, 32);
     explicit_bzero(&privkey, sizeof(privkey));
+
     if (ret != CX_OK) {
         return false;
     }
@@ -172,6 +168,7 @@ bool get_device_keys(const uint8_t *app_hash,
     cx_aes_iv_no_throw(&key, flag, iv, CX_AES_BLOCK_SIZE, (const uint8_t *)&app_keys,
                        sizeof(app_keys), encrypted_keys->bytes, &size);
     explicit_bzero(&key, sizeof(key));
+    explicit_bzero(&app_keys, sizeof(app_keys));
 
     return true;
 }
