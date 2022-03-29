@@ -13,7 +13,7 @@ from merkletree import Entry, MerkleTree
 from construct import Bytes, Int32ul, Struct
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from cryptography.hazmat.primitives import hashes, serialization
 from Crypto.Cipher import AES
 from typing import List, Type
@@ -35,12 +35,16 @@ class HSM:
         return private_key
 
     @staticmethod
-    def get_pubkey() -> bytes:
+    def get_pubkey() -> EllipticCurvePublicKey:
         private_key = HSM._get_private_key()
         public_key = private_key.public_key()
+        return public_key
+
+    @staticmethod
+    def get_pubkey_bytes() -> bytes:
         format = serialization.PublicFormat.UncompressedPoint
         encoding = serialization.Encoding.X962
-        return public_key.public_bytes(encoding=encoding, format=format)
+        return HSM.get_pubkey().public_bytes(encoding=encoding, format=format)
 
     @staticmethod
     def sign_manifest(data: bytes) -> bytes:
@@ -237,8 +241,10 @@ class EncryptedApp:
             app.binary_manifest = zf.read("manifest.bin")
             app.binary_manifest_signature = zf.read("manifest.sig.bin")
 
+            pubkey = HSM.get_pubkey()
+            pubkey.verify(app.binary_manifest_signature, app.binary_manifest, ec.ECDSA(hashes.SHA256()))
+
             manifest = Manifest.from_binary(app.binary_manifest)
-            # TODO: verify sig?
 
             app.code_pages = EncryptedPage.load(manifest.code_start, zf.read("code.bin"))
             app.data_pages = EncryptedPage.load(manifest.data_start, zf.read("data.bin"))
@@ -314,7 +320,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.print_hsm_pubkey:
-        print(f"{HSM.get_pubkey().hex()}")
+        print(f"{HSM.get_pubkey_bytes().hex()}")
         sys.exit(0)
 
     if not args.app_file or not args.output_file:
