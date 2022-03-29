@@ -221,6 +221,9 @@ class Manifest:
 
         return data
 
+    def __str__(self):
+        return str(Manifest.MANIFEST_STRUCT.parse(self.export_binary()))
+
 
 class EncryptedApp:
     def __init__(self, path: str, device_keys: bytes) -> None:
@@ -315,6 +318,7 @@ if __name__ == "__main__":
     parser.add_argument("--app-file", type=str, help="application path (.elf)")
     parser.add_argument("--output-file", type=str, help="path to the encrypted app (.zip)")
     parser.add_argument("--print-hsm-pubkey", action="store_true", help="print HSM public key")
+    parser.add_argument("--show-manifest", type=str, help="display an app manifest in a readable format (.zip)")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
 
     args = parser.parse_args()
@@ -322,6 +326,13 @@ if __name__ == "__main__":
     if args.print_hsm_pubkey:
         print(f"{HSM.get_pubkey_bytes().hex()}")
         sys.exit(0)
+
+    if args.show_manifest:
+        zip_file = args.show_manifest
+        app = EncryptedApp.from_zip(zip_file)
+        manifest = Manifest.from_binary(app.binary_manifest)
+        print(manifest)
+        sys.exit(1)
 
     if not args.app_file or not args.output_file:
         logger.error("--app-file and --output-file are required")
