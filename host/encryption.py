@@ -64,7 +64,7 @@ class HSM:
         private_key = HSM._get_private_key()
 
         secret = private_key.exchange(ec.ECDH(), peer)
-        secret_key = hashlib.sha256(secret + app_hash).digest()
+        secret_key = hashlib.sha256(secret).digest()
 
         iv = b"\x00" * 16
         aes = AES.new(secret_key, AES.MODE_CBC, iv)

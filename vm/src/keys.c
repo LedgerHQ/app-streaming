@@ -89,7 +89,7 @@ static bool get_shared_secret(const uint8_t *app_hash,
         return false;
     }
 
-    uint8_t secret[64];
+    uint8_t secret[32];
     cx_err_t ret = cx_ecdh_no_throw(&privkey, CX_ECDH_X, pubkey->W, pubkey->W_len, secret, 32);
     explicit_bzero(&privkey, sizeof(privkey));
 
@@ -97,8 +97,7 @@ static bool get_shared_secret(const uint8_t *app_hash,
         return false;
     }
 
-    memcpy(secret + 32, app_hash, 32);
-
+    /* kdf */
     cx_hash_sha256(secret, sizeof(secret), secret_key, CX_SHA256_SIZE);
     explicit_bzero(secret, sizeof(secret));
 
