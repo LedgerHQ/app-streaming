@@ -24,3 +24,4 @@ bool verify_manifest_signature(const uint8_t *manifest,
                                const size_t manifest_size,
                                const uint8_t *signature,
                                const size_t signature_size);
+bool verify_manifest_pubkey_hash(const uint8_t *app_hash, const uint8_t *pubkey_hash);

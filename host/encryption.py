@@ -71,7 +71,7 @@ class HSM:
         decrypted_keys = aes.decrypt(device_keys.encrypted_keys)
         hmac_key, encryption_key = decrypted_keys[:32], decrypted_keys[32:]
 
-        return Encryption(hmac_key, encryption_key)
+        return Encryption(peer, hmac_key, encryption_key)
 
 
 class EncryptedPage:
@@ -105,7 +105,8 @@ class EncryptedPage:
 class Encryption:
     """Encrypt and authenticate the pages (code and data) of an app."""
 
-    def __init__(self, hmac_key, encryption_key) -> None:
+    def __init__(self, public_key: EllipticCurvePublicKey, hmac_key: bytes, encryption_key: bytes) -> None:
+        self.public_key = public_key
         self.hmac_key = hmac_key
         self.encryption_key = encryption_key
 
@@ -150,6 +151,7 @@ class Manifest:
         "name" / Bytes(32),
         "version" / Bytes(16),
         "app_hash" / Bytes(32),
+        "pubkey_hash" / Bytes(32),
         "entrypoint" / Int32ul,
         "bss" / Int32ul,
         "code_start" / Int32ul,
@@ -163,10 +165,11 @@ class Manifest:
         "mt_last_entry" / Bytes(8),
     )
 
-    def __init__(self, name: bytes, version: bytes, app_hash: bytes, merkletree: MerkleTree, entrypoint: int, code_start: int, code_size: int, data_start: int, data_size: int) -> None:
+    def __init__(self, name: bytes, version: bytes, app_hash: bytes, pubkey_hash: bytes, merkletree: MerkleTree, entrypoint: int, code_start: int, code_size: int, data_start: int, data_size: int) -> None:
         self.name = name
         self.version = version
         self.app_hash = app_hash
+        self.pubkey_hash = pubkey_hash
         self.entrypoint = entrypoint
         self.code_start = code_start
         self.code_size = code_size
@@ -186,6 +189,7 @@ class Manifest:
         manifest.name = m.name
         manifest.version = m.version
         manifest.app_hash = m.app_hash
+        manifest.pubkey_hash = m.pubkey_hash
         manifest.entrypoint = m.entrypoint
         manifest.code_start = m.code_start
         manifest.code_size = m.code_end - m.code_start
@@ -206,6 +210,7 @@ class Manifest:
             "name": self.name,
             "version": self.version,
             "app_hash": self.app_hash,
+            "pubkey_hash": self.pubkey_hash,
             "entrypoint": self.entrypoint,
             "bss": bss,
             "code_start": self.code_start,
@@ -233,7 +238,7 @@ class EncryptedApp:
         self.code_pages = EncryptedApp._get_encrypted_pages(enc, elf, "code")
         self.data_pages = EncryptedApp._get_encrypted_pages(enc, elf, "data")
 
-        manifest = EncryptedApp._get_manifest(elf, self.data_pages)
+        manifest = EncryptedApp._get_manifest(elf, self.data_pages, enc.public_key)
         self.binary_manifest = manifest.export_binary()
         self.binary_manifest_signature = HSM.sign_manifest(self.binary_manifest)
 
@@ -275,7 +280,7 @@ class EncryptedApp:
         return merkletree
 
     @staticmethod
-    def _get_manifest(elf: Elf, data_pages: List[EncryptedPage]) -> Manifest:
+    def _get_manifest(elf: Elf, data_pages: List[EncryptedPage], pubkey: EllipticCurvePublicKey) -> Manifest:
         code_start, code_end = elf.get_section_range("code")
         data_start, data_end = elf.get_section_range("data")
         code_size = code_end - code_start
@@ -287,7 +292,11 @@ class EncryptedApp:
         data_addresses = [page.addr for page in data_pages]
         merkletree = EncryptedApp.compute_initial_merkle_tree(data_addresses)
 
-        return Manifest(name, version, elf.app_hash(), merkletree, elf.entrypoint, code_start, code_size, data_start, data_size)
+        format = serialization.PublicFormat.UncompressedPoint
+        encoding = serialization.Encoding.X962
+        pubkey_hash = hashlib.sha256(pubkey.public_bytes(encoding=encoding, format=format)).digest()
+
+        return Manifest(name, version, elf.app_hash(), pubkey_hash, merkletree, elf.entrypoint, code_start, code_size, data_start, data_size)
 
     def export_zip(self, zip_path: str) -> None:
         with ZipFile(zip_path, "w") as zf:

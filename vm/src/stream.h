@@ -23,6 +23,7 @@ struct manifest_s {
     char name[32];
     char version[16];
     uint8_t app_hash[32];
+    uint8_t pubkey_hash[32];
     uint32_t pc;
     uint32_t bss;
 

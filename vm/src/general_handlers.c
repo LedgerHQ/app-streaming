@@ -21,8 +21,6 @@ static bool handle_get_device_keys(struct request_get_device_keys_s *request, si
 {
     cx_ecfp_public_key_t pubkey;
     struct encrypted_keys_s encrypted_keys;
-    uint8_t sig[72] = { 0 };
-    size_t sig_size;
     if (!get_device_keys(request->app_hash, &pubkey, &encrypted_keys)) {
         return false;
     }

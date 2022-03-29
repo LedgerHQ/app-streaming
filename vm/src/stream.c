@@ -363,9 +363,14 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
         fatal("invalid manifest\n");
     }
 
+    /* 4. ensure that the manifest is generated for this device */
+    if (!verify_manifest_pubkey_hash(manifest->app_hash, manifest->pubkey_hash)) {
+        fatal("invalid manifest pubkey hash\n");
+    }
+
     memset(&app, '\x00', sizeof(app));
 
-    /* 4. derive and init keys depending on the app hash */
+    /* 5. derive and init keys depending on the app hash */
     struct app_keys_s app_keys;
     derive_app_keys(manifest->app_hash, &app_keys);
     init_static_keys(&app_keys);
@@ -373,7 +378,7 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     init_dynamic_keys();
 
-    /* 5. initialize app characteristics from the manifest */
+    /* 6. initialize app characteristics from the manifest */
     memcpy(app.sections, manifest->sections, sizeof(app.sections));
 
     uint32_t sp = app.sections[SECTION_STACK].end;

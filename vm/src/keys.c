@@ -119,9 +119,7 @@ static bool get_hsm_pubkey(cx_ecfp_public_key_t *pubkey)
     return true;
 }
 
-bool get_device_keys(const uint8_t *app_hash,
-                     cx_ecfp_public_key_t *pubkey,
-                     struct encrypted_keys_s *encrypted_keys)
+static bool get_device_pubkey(const uint8_t *app_hash, cx_ecfp_public_key_t *pubkey)
 {
     cx_ecfp_private_key_t privkey;
     if (!get_privkey(app_hash, &privkey)) {
@@ -132,6 +130,17 @@ bool get_device_keys(const uint8_t *app_hash,
     explicit_bzero(&privkey, sizeof(privkey));
 
     if (err != CX_OK) {
+        return false;
+    }
+
+    return true;
+}
+
+bool get_device_keys(const uint8_t *app_hash,
+                     cx_ecfp_public_key_t *pubkey,
+                     struct encrypted_keys_s *encrypted_keys)
+{
+    if (!get_device_pubkey(app_hash, pubkey)) {
         return false;
     }
 
@@ -180,6 +189,23 @@ bool verify_manifest_signature(const uint8_t *manifest,
     uint8_t digest[CX_SHA256_SIZE];
     cx_hash_sha256(manifest, manifest_size, digest, sizeof(digest));
     if (!cx_ecdsa_verify_no_throw(&hsm_pubkey, digest, sizeof(digest), signature, signature_size)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool verify_manifest_pubkey_hash(const uint8_t *app_hash, const uint8_t *pubkey_hash)
+{
+    cx_ecfp_public_key_t pubkey;
+    if (!get_device_pubkey(app_hash, &pubkey)) {
+        return false;
+    }
+
+    uint8_t digest[CX_SHA256_SIZE];
+    cx_hash_sha256(pubkey.W, pubkey.W_len, digest, sizeof(digest));
+
+    if (memcmp(digest, pubkey_hash, sizeof(digest)) != 0) {
         return false;
     }
 
