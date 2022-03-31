@@ -478,20 +478,6 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         npage = NPAGE_STACK;
         writeable = true;
     } else {
-        char buf[19];
-
-        memcpy(buf, "addr: ", 5);
-        u32hex(addr, &buf[5]);
-        buf[13] = '\n';
-        buf[14] = '\x00';
-        err(buf);
-
-        memcpy(buf, "gp: ", 4);
-        u32hex(app.cpu.regs[RV_REG_GP], &buf[4]);
-        buf[12] = '\n';
-        buf[13] = '\x00';
-        err(buf);
-
         fatal("invalid addr (no section found)\n");
         pages = NULL;
     }
@@ -545,21 +531,6 @@ static bool same_page(uint32_t addr1, uint32_t addr2)
 
 static void check_alignment(uint32_t addr, size_t size)
 {
-    /*switch (size) {
-    case 4:
-        if (addr & 3) {
-            fatal("invalid alignment\n");
-        }
-        break;
-    case 2:
-        if (addr & 1) {
-            fatal("invalid alignment\n");
-        }
-        break;
-    case 1:
-    default:
-        break;
-        }*/
     if (!same_page(addr, addr + size - 1)) {
         fatal("not on same page\n");
     }
@@ -613,17 +584,6 @@ uint32_t mem_read(uint32_t addr, size_t size)
         break;
     }
 
-    if (0) {
-        char buf[32];
-        memcpy(buf, "[*] read:  ", 11);
-        u32hex(value, &buf[11]);
-        buf[19] = '@';
-        u32hex(addr, &buf[20]);
-        buf[28] = '\n';
-        buf[29] = '\x00';
-        err(buf);
-    }
-
     return value;
 }
 
@@ -641,34 +601,18 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         fatal("invalid mem_write\n");
     }
 
-    if (0) {
-        char buf[32];
-        memcpy(buf, "[*] write: ", 11);
-    }
-
     switch (size) {
     case 1:
         *(uint8_t *)&page->data[offset] = value & 0xff;
-        //u32hex(value & 0xff, &buf[11]);
         break;
     case 2:
         *(uint16_t *)&page->data[offset] = value & 0xffff;
-        //u32hex(value & 0xffff, &buf[11]);
         break;
     case 4:
     default:
         *(uint32_t *)&page->data[offset] = value;
-        //u32hex(value, &buf[11]);
         break;
     }
-
-    /*if (0) {
-        buf[19] = '@';
-        u32hex(addr, &buf[20]);
-        buf[28] = '\n';
-        buf[29] = '\x00';
-        err(buf);
-        }*/
 }
 
 uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
