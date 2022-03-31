@@ -11,6 +11,7 @@ from ledgerwallet.utils import serialize
 
 Apdu = namedtuple("Apdu", "status data")
 logger = logging.getLogger("comm")
+client = None
 
 
 def import_ledgerwallet(use_speculos: bool) -> None:
@@ -23,13 +24,18 @@ def import_ledgerwallet(use_speculos: bool) -> None:
 
 
 def get_client() -> LedgerClient:
-    CLA = 0x12
-    devices = enumerate_devices()
-    if len(devices) == 0:
-        logger.error("No Ledger device has been found.")
-        sys.exit(0)
+    global client
 
-    return LedgerClient(devices[0], cla=CLA)
+    if client is None:
+        CLA = 0x12
+        devices = enumerate_devices()
+        if len(devices) == 0:
+            logger.error("No Ledger device has been found.")
+            sys.exit(0)
+
+        client = LedgerClient(devices[0], cla=CLA)
+
+    return client
 
 
 def exchange(client: LedgerClient, ins: int, data=b"", p1=0, p2=0, cla=0) -> Apdu:
