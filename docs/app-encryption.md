@@ -15,7 +15,7 @@ This derivation mechanism allows the VM to derive the same set of keys for a giv
 The encryption of an app is done through the following steps:
 
 1. The host (eg. Ledger Live) asks a Ledger server for the `app_hash` of the app to be encrypted. The Ledger server returns the `app_hash` (`SHA256(name || version || code || data)`).
-2. The host sends an APDU to the device to retrieve the keys derived this `app_hash`. The VM returns the following pieces of data:
+2. The host sends an APDU to the device to retrieve the keys derived with this `app_hash`. The VM returns the following pieces of data:
 
   - The public key `DevPubKey` (issued from the private key `DevPrivKey`) derived from `ECDHSeed`
   - `KeyAES1` and `KeyHMAC1` wrapped using AES-256-CBC with the ECDH shared secret key computed from `DevPrivKey`
