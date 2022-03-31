@@ -172,6 +172,29 @@ bool get_device_keys(const uint8_t *app_hash,
     return true;
 }
 
+bool sign_encrypted_keys(const uint8_t *app_hash,
+                         struct encrypted_keys_s *encrypted_keys,
+                         uint8_t *sig,
+                         size_t *sig_size)
+{
+    uint8_t digest[CX_SHA256_SIZE];
+    cx_hash_sha256((uint8_t *)encrypted_keys, sizeof(*encrypted_keys), digest, sizeof(digest));
+
+    cx_ecfp_private_key_t privkey;
+    if (!get_privkey(app_hash, &privkey)) {
+        return false;
+    }
+
+    cx_err_t err = cx_ecdsa_sign_no_throw(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
+                                          digest, sizeof(digest), sig, sig_size, NULL);
+    explicit_bzero(&privkey, sizeof(privkey));
+    if (err != CX_OK) {
+        return false;
+    }
+
+    return true;
+}
+
 bool verify_manifest_signature(const uint8_t *manifest,
                                const size_t manifest_size,
                                const uint8_t *signature,

@@ -10,7 +10,7 @@ from comm import exchange, get_client, import_ledgerwallet
 from elf import Elf, Segment
 from merkletree import Entry, MerkleTree
 
-from construct import Bytes, Int32ul, Struct
+from construct import Bytes, Int8ul, Int32ul, Struct
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
@@ -61,8 +61,11 @@ class HSM:
         """
 
         peer = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256K1(), device_keys.pubkey)
-        private_key = HSM._get_private_key()
 
+        signature = device_keys.signature[:device_keys.sig_size]
+        peer.verify(signature, device_keys.encrypted_keys, ec.ECDSA(hashes.SHA256()))
+
+        private_key = HSM._get_private_key()
         secret = private_key.exchange(ec.ECDH(), peer)
         secret_key = hashlib.sha256(secret).digest()
 
@@ -313,7 +316,7 @@ def get_device_keys(app_file) -> Struct:
     apdu = exchange(client, ins=0x10, data=data, cla=0x34)
     assert apdu.status == 0x9000
 
-    struct = Struct("pubkey" / Bytes(65), "encrypted_keys" / Bytes(64))
+    struct = Struct("pubkey" / Bytes(65), "encrypted_keys" / Bytes(64), "signature" / Bytes(72), "sig_size" / Int8ul)
     assert len(apdu.data) == struct.sizeof()
 
     return struct.parse(apdu.data)

@@ -15,6 +15,8 @@ struct request_get_device_keys_s {
 struct response_get_device_keys_s {
     uint8_t pubkey_bytes[65];
     struct encrypted_keys_s encrypted_keys;
+    uint8_t sig[72];
+    uint8_t sig_size;
 };
 
 static bool handle_get_device_keys(struct request_get_device_keys_s *request, size_t *tx)
@@ -25,9 +27,17 @@ static bool handle_get_device_keys(struct request_get_device_keys_s *request, si
         return false;
     }
 
+    uint8_t sig[72] = { 0 };
+    size_t sig_size = sizeof(sig);
+    if (!sign_encrypted_keys(request->app_hash, &encrypted_keys, sig, &sig_size)) {
+        return false;
+    }
+
     struct response_get_device_keys_s *response = (struct response_get_device_keys_s *)G_io_apdu_buffer;
     memcpy(response->pubkey_bytes, pubkey.W, sizeof(response->pubkey_bytes));
     memcpy(&response->encrypted_keys, &encrypted_keys, sizeof(response->encrypted_keys));
+    memcpy(response->sig, sig, sizeof(sig));
+    response->sig_size = sig_size;
 
     *tx = sizeof(*response);
 
