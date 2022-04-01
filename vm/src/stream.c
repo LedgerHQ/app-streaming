@@ -132,16 +132,9 @@ static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
     int flag = CX_CHAIN_CBC | CX_DECRYPT;
     size_t size = PAGE_SIZE;
     uint8_t iv[CX_AES_BLOCK_SIZE];
-    cx_aes_key_t *key;
-
-    if (iv32 == 0) {
-        key = &app.static_key.aes;
-    } else {
-        key = &app.dynamic_key.aes;
-    }
 
     compute_iv(iv, addr, iv32);
-    cx_aes_iv_no_throw(key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
 }
 
 static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
@@ -215,7 +208,9 @@ void stream_request_page(struct page_s *page, bool read_only)
     /* TODO: ideally, decryption should happen before IV verification */
 
     page->iv = r->iv;
-    decrypt_page(page->data, page->data, page->addr, page->iv);
+    if (page->iv != 0) {
+        decrypt_page(page->data, page->data, page->addr, page->iv);
+    }
 
     /* 4. verify iv thanks to the merkle tree if the page is writeable */
     if (read_only) {

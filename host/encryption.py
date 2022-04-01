@@ -72,9 +72,9 @@ class HSM:
         iv = b"\x00" * 16
         aes = AES.new(secret_key, AES.MODE_CBC, iv)
         decrypted_keys = aes.decrypt(device_keys.encrypted_keys)
-        hmac_key, encryption_key = decrypted_keys[:32], decrypted_keys[32:]
+        hmac_key, _ = decrypted_keys[:32], decrypted_keys[32:]
 
-        return Encryption(peer, hmac_key, encryption_key)
+        return Encryption(peer, hmac_key)
 
 
 class EncryptedPage:
@@ -108,21 +108,13 @@ class EncryptedPage:
 class Encryption:
     """Encrypt and authenticate the pages (code and data) of an app."""
 
-    def __init__(self, public_key: EllipticCurvePublicKey, hmac_key: bytes, encryption_key: bytes) -> None:
+    def __init__(self, public_key: EllipticCurvePublicKey, hmac_key: bytes) -> None:
         self.public_key = public_key
         self.hmac_key = hmac_key
-        self.encryption_key = encryption_key
 
     def _hmac(self, addr: int, data: bytes, iv: int) -> bytes:
         msg = data + addr.to_bytes(4, "little") + iv.to_bytes(4, "little")
         return hmac.new(self.hmac_key, msg, digestmod=hashlib.sha256).digest()
-
-    def _encrypt(self, data: bytes, addr: int, iv: int) -> bytes:
-        ivbin = addr.to_bytes(4, "little") + iv.to_bytes(4, "little")
-        ivbin = ivbin.ljust(16, b"\x00")
-
-        aes = AES.new(self.encryption_key, AES.MODE_CBC, ivbin)
-        return aes.encrypt(data)
 
     def encrypt_segment(self, segment: Segment) -> List[EncryptedPage]:
         pages = []
@@ -134,12 +126,9 @@ class Encryption:
             page = segment.data[offset:offset+page_size]
             assert len(page) == page_size
 
-            encrypted_page = self._encrypt(page, addr, iv)
-            assert len(encrypted_page) == page_size
+            mac = self._hmac(addr, page, iv)
 
-            mac = self._hmac(addr, encrypted_page, iv)
-
-            pages.append(EncryptedPage(addr, encrypted_page, mac))
+            pages.append(EncryptedPage(addr, page, mac))
             addr += page_size
 
         return pages
