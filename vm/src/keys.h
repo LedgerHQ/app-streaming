@@ -8,11 +8,10 @@ struct manifest_s;
 
 struct app_keys_s {
     uint8_t hmac_key[32];
-    uint8_t encryption_key[32];
 };
 
 struct encrypted_keys_s {
-    uint8_t bytes[64];
+    uint8_t bytes[32];
 };
 
 void nv_app_state_init(void);

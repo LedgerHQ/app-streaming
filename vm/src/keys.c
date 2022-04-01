@@ -14,7 +14,6 @@
 typedef struct internalStorage_t {
     uint8_t ecdh_seed[32];
     uint8_t app_hmac_seed[32];
-    uint8_t app_encryption_seed[32];
     uint8_t initialized;
 } internalStorage_t;
 
@@ -40,7 +39,6 @@ void nv_app_state_init(void)
 
     cx_get_random_bytes(storage.ecdh_seed, sizeof(storage.ecdh_seed));
     cx_get_random_bytes(storage.app_hmac_seed, sizeof(storage.app_hmac_seed));
-    cx_get_random_bytes(storage.app_encryption_seed, sizeof(storage.app_encryption_seed));
     storage.initialized = 0x01;
 
     nvm_write((internalStorage_t *)&N_storage, (void *)&storage, sizeof(internalStorage_t));
@@ -61,7 +59,6 @@ static void derive_secret(const uint8_t *app_hash, const uint8_t *seed, uint8_t 
 void derive_app_keys(const uint8_t *app_hash, struct app_keys_s *app_keys)
 {
     derive_secret(app_hash, N_storage.app_hmac_seed, app_keys->hmac_key);
-    derive_secret(app_hash, N_storage.app_encryption_seed, app_keys->encryption_key);
 }
 
 static bool get_privkey(const uint8_t *app_hash, cx_ecfp_private_key_t *privkey)

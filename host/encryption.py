@@ -71,20 +71,19 @@ class HSM:
 
         iv = b"\x00" * 16
         aes = AES.new(secret_key, AES.MODE_CBC, iv)
-        decrypted_keys = aes.decrypt(device_keys.encrypted_keys)
-        hmac_key, _ = decrypted_keys[:32], decrypted_keys[32:]
+        hmac_key = aes.decrypt(device_keys.encrypted_keys)
 
         return Encryption(peer, hmac_key)
 
 
-class EncryptedPage:
+class AuthenticatedPage:
     def __init__(self, addr: int, data: bytes, mac: bytes) -> None:
         self.addr = addr
         self.data = data
         self.mac = mac
 
     @staticmethod
-    def load(addr: int, data: bytes) -> List["EncryptedPage"]:
+    def load(addr: int, data: bytes) -> List["AuthenticatedPage"]:
         pages = []
 
         assert len(data) % (Segment.PAGE_SIZE + 32) == 0
@@ -93,7 +92,7 @@ class EncryptedPage:
             page_data = data[offset:offset+Segment.PAGE_SIZE]
             mac = data[offset+Segment.PAGE_SIZE:offset+Segment.PAGE_SIZE+32]
 
-            page = EncryptedPage(addr, page_data, mac)
+            page = AuthenticatedPage(addr, page_data, mac)
             pages.append(page)
 
             addr += Segment.PAGE_SIZE
@@ -101,7 +100,7 @@ class EncryptedPage:
         return pages
 
     @staticmethod
-    def export(pages: List["EncryptedPage"]) -> bytes:
+    def export(pages: List["AuthenticatedPage"]) -> bytes:
         return b"".join([page.data + page.mac for page in pages])
 
 
@@ -116,7 +115,7 @@ class Encryption:
         msg = data + addr.to_bytes(4, "little") + iv.to_bytes(4, "little")
         return hmac.new(self.hmac_key, msg, digestmod=hashlib.sha256).digest()
 
-    def encrypt_segment(self, segment: Segment) -> List[EncryptedPage]:
+    def encrypt_segment(self, segment: Segment) -> List[AuthenticatedPage]:
         pages = []
         iv = 0
 
@@ -128,7 +127,7 @@ class Encryption:
 
             mac = self._hmac(addr, page, iv)
 
-            pages.append(EncryptedPage(addr, page, mac))
+            pages.append(AuthenticatedPage(addr, page, mac))
             addr += page_size
 
         return pages
@@ -246,8 +245,8 @@ class EncryptedApp:
 
             manifest = Manifest.from_binary(app.binary_manifest)
 
-            app.code_pages = EncryptedPage.load(manifest.code_start, zf.read("code.bin"))
-            app.data_pages = EncryptedPage.load(manifest.data_start, zf.read("data.bin"))
+            app.code_pages = AuthenticatedPage.load(manifest.code_start, zf.read("code.bin"))
+            app.data_pages = AuthenticatedPage.load(manifest.data_start, zf.read("data.bin"))
 
         return app
 
@@ -272,7 +271,7 @@ class EncryptedApp:
         return merkletree
 
     @staticmethod
-    def _get_manifest(elf: Elf, data_pages: List[EncryptedPage], pubkey: EllipticCurvePublicKey) -> Manifest:
+    def _get_manifest(elf: Elf, data_pages: List[AuthenticatedPage], pubkey: EllipticCurvePublicKey) -> Manifest:
         code_start, code_end = elf.get_section_range("code")
         data_start, data_end = elf.get_section_range("data")
         code_size = code_end - code_start
@@ -294,8 +293,8 @@ class EncryptedApp:
         with ZipFile(zip_path, "w") as zf:
             zf.writestr("manifest.bin", self.binary_manifest)
             zf.writestr("manifest.bin.sig", self.binary_manifest_signature)
-            zf.writestr("code.bin", EncryptedPage.export(self.code_pages))
-            zf.writestr("data.bin", EncryptedPage.export(self.data_pages))
+            zf.writestr("code.bin", AuthenticatedPage.export(self.code_pages))
+            zf.writestr("data.bin", AuthenticatedPage.export(self.data_pages))
 
 
 def get_device_keys(app_file) -> Struct:
@@ -305,7 +304,7 @@ def get_device_keys(app_file) -> Struct:
     apdu = exchange(client, ins=0x10, data=data, cla=0x34)
     assert apdu.status == 0x9000
 
-    struct = Struct("pubkey" / Bytes(65), "encrypted_keys" / Bytes(64), "signature" / Bytes(72), "sig_size" / Int8ul)
+    struct = Struct("pubkey" / Bytes(65), "encrypted_keys" / Bytes(32), "signature" / Bytes(72), "sig_size" / Int8ul)
     assert len(apdu.data) == struct.sizeof()
 
     return struct.parse(apdu.data)

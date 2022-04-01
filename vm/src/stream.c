@@ -56,7 +56,7 @@ struct app_s {
     uint32_t bss_max;
     uint32_t stack_min;
 
-    struct key_s static_key;
+    uint8_t hmac_static_key[32];
     struct key_s dynamic_key;
 };
 
@@ -144,7 +144,7 @@ static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
      * always 0. The IV of pages encrypted by the VM is always greater than 0.
      */
     if (iv == 0) {
-        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.static_key.hmac, sizeof(app.static_key.hmac));
+        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.hmac_static_key, sizeof(app.hmac_static_key));
     } else {
         cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.dynamic_key.hmac, sizeof(app.dynamic_key.hmac));
     }
@@ -311,8 +311,7 @@ void stream_commit_page(struct page_s *page, bool insert)
 
 static void init_static_keys(struct app_keys_s *app_keys)
 {
-    memcpy(app.static_key.hmac, app_keys->hmac_key, sizeof(app.static_key.hmac));
-    cx_aes_init_key_no_throw(app_keys->encryption_key, 32, &app.static_key.aes);
+    memcpy(app.hmac_static_key, app_keys->hmac_key, sizeof(app.hmac_static_key));
 }
 
 static void init_dynamic_keys(void)
