@@ -309,9 +309,9 @@ void stream_commit_page(struct page_s *page, bool insert)
     }
 }
 
-static void init_static_keys(struct app_keys_s *app_keys)
+static void init_static_keys(struct hmac_key_s *key)
 {
-    memcpy(app.hmac_static_key, app_keys->hmac_key, sizeof(app.hmac_static_key));
+    memcpy(app.hmac_static_key, key->bytes, sizeof(app.hmac_static_key));
 }
 
 static void init_dynamic_keys(void)
@@ -353,26 +353,21 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
     struct manifest_s *manifest = (struct manifest_s *)(response->data + alignment_offset);
 
     /* 3. verify manifest signature */
-    if (!verify_manifest_signature((uint8_t *)manifest, sizeof(*manifest), signature, signature_size)) {
+    if (!verify_manifest_device_signature(manifest, signature, signature_size)) {
         fatal("invalid manifest\n");
-    }
-
-    /* 4. ensure that the manifest is generated for this device */
-    if (!verify_manifest_pubkey_hash(manifest->app_hash, manifest->pubkey_hash)) {
-        fatal("invalid manifest pubkey hash\n");
     }
 
     memset(&app, '\x00', sizeof(app));
 
-    /* 5. derive and init keys depending on the app hash */
-    struct app_keys_s app_keys;
-    derive_app_keys(manifest->app_hash, &app_keys);
-    init_static_keys(&app_keys);
-    explicit_bzero(&app_keys, sizeof(app_keys));
+    /* 4. derive and init keys depending on the app hash */
+    struct hmac_key_s hmac_key;
+    derive_hmac_key(manifest->app_hash, &hmac_key);
+    init_static_keys(&hmac_key);
+    explicit_bzero(&hmac_key, sizeof(hmac_key));
 
     init_dynamic_keys();
 
-    /* 6. initialize app characteristics from the manifest */
+    /* 5. initialize app characteristics from the manifest */
     memcpy(app.sections, manifest->sections, sizeof(app.sections));
 
     uint32_t sp = app.sections[SECTION_STACK].end;
