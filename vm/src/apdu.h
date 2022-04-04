@@ -23,6 +23,11 @@ enum cmd_stream_e {
     CMD_EXIT = 0x6501,
     CMD_FATAL = 0x6601,
     CMD_REQUEST_MANIFEST = 0x6701,
+    CMD_REQUEST_APP_PAGE = 0x6801,
+    CMD_REQUEST_APP_HMAC = 0x6802,
 };
 
+struct cmd_response_app_s;
+
 size_t handle_general_apdu(uint8_t ins, uint8_t *data);
+bool handle_sign_app(const struct cmd_response_app_s *response, size_t *tx);

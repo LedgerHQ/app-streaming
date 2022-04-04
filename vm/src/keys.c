@@ -12,9 +12,8 @@
 #include "ox.h"
 
 typedef struct internalStorage_t {
-    uint8_t ecdh_seed[32];
-    uint8_t app_hmac_seed[32];
-    uint8_t app_encryption_seed[32];
+    uint8_t ecdsa_seed[32];
+    uint8_t hmac_seed[32];
     uint8_t initialized;
 } internalStorage_t;
 
@@ -38,9 +37,8 @@ void nv_app_state_init(void)
 
     internalStorage_t storage;
 
-    cx_get_random_bytes(storage.ecdh_seed, sizeof(storage.ecdh_seed));
-    cx_get_random_bytes(storage.app_hmac_seed, sizeof(storage.app_hmac_seed));
-    cx_get_random_bytes(storage.app_encryption_seed, sizeof(storage.app_encryption_seed));
+    cx_get_random_bytes(storage.ecdsa_seed, sizeof(storage.ecdsa_seed));
+    cx_get_random_bytes(storage.hmac_seed, sizeof(storage.hmac_seed));
     storage.initialized = 0x01;
 
     nvm_write((internalStorage_t *)&N_storage, (void *)&storage, sizeof(internalStorage_t));
@@ -58,16 +56,15 @@ static void derive_secret(const uint8_t *app_hash, const uint8_t *seed, uint8_t 
     explicit_bzero(secret, sizeof(secret));
 }
 
-void derive_app_keys(const uint8_t *app_hash, struct app_keys_s *app_keys)
+void derive_hmac_key(const uint8_t *app_hash, struct hmac_key_s *key)
 {
-    derive_secret(app_hash, N_storage.app_hmac_seed, app_keys->hmac_key);
-    derive_secret(app_hash, N_storage.app_encryption_seed, app_keys->encryption_key);
+    derive_secret(app_hash, N_storage.hmac_seed, key->bytes);
 }
 
 static bool get_privkey(const uint8_t *app_hash, cx_ecfp_private_key_t *privkey)
 {
     uint8_t privkey_data[32];
-    derive_secret(app_hash, N_storage.ecdh_seed, privkey_data);
+    derive_secret(app_hash, N_storage.ecdsa_seed, privkey_data);
 
     cx_err_t err = cx_ecfp_init_private_key_no_throw(CX_CURVE_256K1, privkey_data,
                                                      sizeof(privkey_data), privkey);
@@ -80,34 +77,25 @@ static bool get_privkey(const uint8_t *app_hash, cx_ecfp_private_key_t *privkey)
     return true;
 }
 
-static bool get_shared_secret(const uint8_t *app_hash,
-                              const cx_ecfp_public_key_t *pubkey,
-                              uint8_t *secret_key)
+static void compute_manifest_hash(const struct manifest_s *manifest, uint8_t *digest)
 {
-    cx_ecfp_private_key_t privkey;
-    if (!get_privkey(app_hash, &privkey)) {
-        return false;
-    }
-
-    uint8_t secret[32];
-    cx_err_t ret = cx_ecdh_no_throw(&privkey, CX_ECDH_X, pubkey->W, pubkey->W_len, secret, 32);
-    explicit_bzero(&privkey, sizeof(privkey));
-
-    if (ret != CX_OK) {
-        return false;
-    }
-
-    /* kdf */
-    cx_hash_sha256(secret, sizeof(secret), secret_key, CX_SHA256_SIZE);
-    explicit_bzero(secret, sizeof(secret));
-
-    return true;
+    cx_hash_sha256((uint8_t *)manifest, sizeof(*manifest), digest, CX_SHA256_SIZE);
 }
 
-static bool get_hsm_pubkey(cx_ecfp_public_key_t *pubkey)
+bool sign_manifest(const struct manifest_s *manifest, uint8_t *sig, size_t *sig_size)
 {
-    if (cx_ecfp_init_public_key_no_throw(CX_CURVE_256K1, hsm_pubkey_bytes, sizeof(hsm_pubkey_bytes),
-                                         pubkey) != CX_OK) {
+    uint8_t digest[CX_SHA256_SIZE];
+    compute_manifest_hash(manifest, digest);
+
+    cx_ecfp_private_key_t privkey;
+    if (!get_privkey(manifest->app_hash, &privkey)) {
+        return false;
+    }
+
+    cx_err_t err = cx_ecdsa_sign_no_throw(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
+                                          digest, sizeof(digest), sig, sig_size, NULL);
+    explicit_bzero(&privkey, sizeof(privkey));
+    if (err != CX_OK) {
         return false;
     }
 
@@ -131,102 +119,51 @@ static bool get_device_pubkey(const uint8_t *app_hash, cx_ecfp_public_key_t *pub
     return true;
 }
 
-bool get_device_keys(const uint8_t *app_hash,
-                     cx_ecfp_public_key_t *pubkey,
-                     struct encrypted_keys_s *encrypted_keys)
-{
-    if (!get_device_pubkey(app_hash, pubkey)) {
-        return false;
-    }
-
-    cx_ecfp_public_key_t hsm_pubkey;
-    if (!get_hsm_pubkey(&hsm_pubkey)) {
-        return false;
-    }
-
-    uint8_t secret_key[32];
-    if (!get_shared_secret(app_hash, &hsm_pubkey, secret_key)) {
-        return false;
-    }
-
-    cx_aes_key_t key;
-    uint8_t iv[CX_AES_BLOCK_SIZE];
-    int flag = CX_CHAIN_CBC | CX_ENCRYPT;
-
-    cx_aes_init_key_no_throw(secret_key, sizeof(secret_key), &key);
-    explicit_bzero(&secret_key, sizeof(secret_key));
-
-    struct app_keys_s app_keys;
-    derive_app_keys(app_hash, &app_keys);
-
-    _Static_assert(sizeof(struct app_keys_s) == sizeof(struct encrypted_keys_s),
-                   "invalid keys structure");
-
-    memset(iv, 0, sizeof(iv));
-    size_t size = sizeof(*encrypted_keys);
-    cx_aes_iv_no_throw(&key, flag, iv, CX_AES_BLOCK_SIZE, (const uint8_t *)&app_keys,
-                       sizeof(app_keys), encrypted_keys->bytes, &size);
-    explicit_bzero(&key, sizeof(key));
-    explicit_bzero(&app_keys, sizeof(app_keys));
-
-    return true;
-}
-
-bool sign_encrypted_keys(const uint8_t *app_hash,
-                         struct encrypted_keys_s *encrypted_keys,
-                         uint8_t *sig,
-                         size_t *sig_size)
-{
-    uint8_t digest[CX_SHA256_SIZE];
-    cx_hash_sha256((uint8_t *)encrypted_keys, sizeof(*encrypted_keys), digest, sizeof(digest));
-
-    cx_ecfp_private_key_t privkey;
-    if (!get_privkey(app_hash, &privkey)) {
-        return false;
-    }
-
-    cx_err_t err = cx_ecdsa_sign_no_throw(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
-                                          digest, sizeof(digest), sig, sig_size, NULL);
-    explicit_bzero(&privkey, sizeof(privkey));
-    if (err != CX_OK) {
-        return false;
-    }
-
-    return true;
-}
-
-bool verify_manifest_signature(const uint8_t *manifest,
-                               const size_t manifest_size,
+static bool verify_manifest_signature(const struct manifest_s *manifest,
+                               const cx_ecfp_public_key_t *pubkey,
                                const uint8_t *signature,
                                const size_t signature_size)
 {
-    cx_ecfp_public_key_t hsm_pubkey;
-    if (!get_hsm_pubkey(&hsm_pubkey)) {
-        return false;
-    }
-
     uint8_t digest[CX_SHA256_SIZE];
-    cx_hash_sha256(manifest, manifest_size, digest, sizeof(digest));
-    if (!cx_ecdsa_verify_no_throw(&hsm_pubkey, digest, sizeof(digest), signature, signature_size)) {
+    compute_manifest_hash(manifest, digest);
+
+    if (!cx_ecdsa_verify_no_throw(pubkey, digest, sizeof(digest), signature, signature_size)) {
         return false;
     }
 
     return true;
 }
 
-bool verify_manifest_pubkey_hash(const uint8_t *app_hash, const uint8_t *pubkey_hash)
+bool verify_manifest_device_signature(const struct manifest_s *manifest,
+                                      const uint8_t *signature,
+                                      const size_t signature_size)
 {
     cx_ecfp_public_key_t pubkey;
-    if (!get_device_pubkey(app_hash, &pubkey)) {
+    if (!get_device_pubkey(manifest->app_hash, &pubkey)) {
         return false;
     }
 
-    uint8_t digest[CX_SHA256_SIZE];
-    cx_hash_sha256(pubkey.W, pubkey.W_len, digest, sizeof(digest));
+    return verify_manifest_signature(manifest, &pubkey, signature, signature_size);
+}
 
-    if (memcmp(digest, pubkey_hash, sizeof(digest)) != 0) {
+static bool get_hsm_pubkey(cx_ecfp_public_key_t *pubkey)
+{
+    if (cx_ecfp_init_public_key_no_throw(CX_CURVE_256K1, hsm_pubkey_bytes, sizeof(hsm_pubkey_bytes),
+                                         pubkey) != CX_OK) {
         return false;
     }
 
     return true;
+}
+
+bool verify_manifest_hsm_signature(const struct manifest_s *manifest,
+                                   const uint8_t *signature,
+                                   const size_t signature_size)
+{
+    cx_ecfp_public_key_t pubkey;
+    if (!get_hsm_pubkey(&pubkey)) {
+        return false;
+    }
+
+    return verify_manifest_signature(manifest, &pubkey, signature, signature_size);
 }

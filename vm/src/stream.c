@@ -56,7 +56,7 @@ struct app_s {
     uint32_t bss_max;
     uint32_t stack_min;
 
-    struct key_s static_key;
+    uint8_t hmac_static_key[32];
     struct key_s dynamic_key;
 };
 
@@ -132,16 +132,9 @@ static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
     int flag = CX_CHAIN_CBC | CX_DECRYPT;
     size_t size = PAGE_SIZE;
     uint8_t iv[CX_AES_BLOCK_SIZE];
-    cx_aes_key_t *key;
-
-    if (iv32 == 0) {
-        key = &app.static_key.aes;
-    } else {
-        key = &app.dynamic_key.aes;
-    }
 
     compute_iv(iv, addr, iv32);
-    cx_aes_iv_no_throw(key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
 }
 
 static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
@@ -151,7 +144,7 @@ static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
      * always 0. The IV of pages encrypted by the VM is always greater than 0.
      */
     if (iv == 0) {
-        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.static_key.hmac, sizeof(app.static_key.hmac));
+        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.hmac_static_key, sizeof(app.hmac_static_key));
     } else {
         cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.dynamic_key.hmac, sizeof(app.dynamic_key.hmac));
     }
@@ -215,7 +208,9 @@ void stream_request_page(struct page_s *page, bool read_only)
     /* TODO: ideally, decryption should happen before IV verification */
 
     page->iv = r->iv;
-    decrypt_page(page->data, page->data, page->addr, page->iv);
+    if (page->iv != 0) {
+        decrypt_page(page->data, page->data, page->addr, page->iv);
+    }
 
     /* 4. verify iv thanks to the merkle tree if the page is writeable */
     if (read_only) {
@@ -314,10 +309,9 @@ void stream_commit_page(struct page_s *page, bool insert)
     }
 }
 
-static void init_static_keys(struct app_keys_s *app_keys)
+static void init_static_keys(struct hmac_key_s *key)
 {
-    memcpy(app.static_key.hmac, app_keys->hmac_key, sizeof(app.static_key.hmac));
-    cx_aes_init_key_no_throw(app_keys->encryption_key, 32, &app.static_key.aes);
+    memcpy(app.hmac_static_key, key->bytes, sizeof(app.hmac_static_key));
 }
 
 static void init_dynamic_keys(void)
@@ -359,26 +353,21 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
     struct manifest_s *manifest = (struct manifest_s *)(response->data + alignment_offset);
 
     /* 3. verify manifest signature */
-    if (!verify_manifest_signature((uint8_t *)manifest, sizeof(*manifest), signature, signature_size)) {
+    if (!verify_manifest_device_signature(manifest, signature, signature_size)) {
         fatal("invalid manifest\n");
-    }
-
-    /* 4. ensure that the manifest is generated for this device */
-    if (!verify_manifest_pubkey_hash(manifest->app_hash, manifest->pubkey_hash)) {
-        fatal("invalid manifest pubkey hash\n");
     }
 
     memset(&app, '\x00', sizeof(app));
 
-    /* 5. derive and init keys depending on the app hash */
-    struct app_keys_s app_keys;
-    derive_app_keys(manifest->app_hash, &app_keys);
-    init_static_keys(&app_keys);
-    explicit_bzero(&app_keys, sizeof(app_keys));
+    /* 4. derive and init keys depending on the app hash */
+    struct hmac_key_s hmac_key;
+    derive_hmac_key(manifest->app_hash, &hmac_key);
+    init_static_keys(&hmac_key);
+    explicit_bzero(&hmac_key, sizeof(hmac_key));
 
     init_dynamic_keys();
 
-    /* 6. initialize app characteristics from the manifest */
+    /* 5. initialize app characteristics from the manifest */
     memcpy(app.sections, manifest->sections, sizeof(app.sections));
 
     uint32_t sp = app.sections[SECTION_STACK].end;

@@ -8,7 +8,9 @@ from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from typing import Any, Dict
 
 from comm import Apdu, exchange, get_client, import_ledgerwallet
-from encryption import EncryptedApp, get_device_keys
+from app import App, device_sign_app
+from hsm import hsm_sign_app
+from manifest import Manifest
 from merkletree import Entry, MerkleTree
 from server import Server
 
@@ -31,25 +33,29 @@ class Stream:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    def __init__(self, zip_path: str) -> None:
-        app = EncryptedApp.from_zip(zip_path)
-
+    def __init__(self, app: App) -> None:
         self.pages: Dict[int, Page] = {}
         self.merkletree = MerkleTree()
-        self.manifest = app.binary_manifest
-        self.signature = app.binary_manifest_signature
+        self.manifest = app.manifest
+        self.signature = app.manifest_device_signature
 
-        for page in app.code_pages:
-            assert page.addr not in self.pages
+        m = Manifest.from_binary(app.manifest)
+
+        addr = m.code_start
+        for data, mac in zip(app.code_pages, app.code_macs):
+            assert addr not in self.pages
             # Since this pages are read-only, don't call _write_page() to avoid
             # inserting them in the merkle tree.
-            self.pages[page.addr] = Page(page.data, page.mac, read_only=True)
+            self.pages[addr] = Page(data, mac, read_only=True)
+            addr += Stream.PAGE_SIZE
 
-        for page in app.data_pages:
-            assert page.addr not in self.pages
+        addr = m.data_start
+        for data, mac in zip(app.data_pages, app.data_macs):
+            assert addr not in self.pages
             # The IV is set to 0. It allows the VM to tell which key should be
             # used for decryption and HMAC verification.
-            self._write_page(page.addr, page.data, page.mac, 0)
+            self._write_page(addr, data, mac, 0)
+            addr += Stream.PAGE_SIZE
 
         self.send_buffer = b""
         self.send_buffer_counter = 0
@@ -220,15 +226,19 @@ if __name__ == "__main__":
 
     if zipfile.is_zipfile(args.app):
         zip_path = args.app
+        app = App.from_zip(zip_path)
     else:
-        logger.warn("app doesn't seem to be encrypted... encrypting it")
-        output_pubkey_file = "/tmp/device-pubkey.der"
+        logger.warn("app is an ELF file... retrieving the HSM signature")
         zip_path = "/tmp/app.zip"
-        device_keys = get_device_keys(args.app)
-        app = EncryptedApp(args.app, device_keys)
+        app = hsm_sign_app(args.app)
         app.export_zip(zip_path)
 
-    stream = Stream(zip_path)
+    if app.manifest_device_signature is None:
+        logger.warn("making the device sign the app")
+        device_sign_app(app)
+        app.export_zip(zip_path)
+
+    stream = Stream(app)
     apdu = stream.init_app()
 
     while True:
