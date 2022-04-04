@@ -147,7 +147,7 @@ if __name__ == "__main__":
     app = App.from_zip(args.app_path)
 
     if args.show_manifest:
-        manifest = Manifest.from_binary(app.manifest)
+        manifest = Manifest(app.manifest)
         print(manifest)
         sys.exit(1)
 

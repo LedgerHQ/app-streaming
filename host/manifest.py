@@ -1,5 +1,4 @@
 from construct import Bytes, Int32ul, Struct
-from typing import Type
 
 
 class Manifest:
@@ -24,28 +23,24 @@ class Manifest:
         "mt_last_entry" / Bytes(8),
     )
 
-    @classmethod
-    def from_binary(cls: Type[object], data: bytes) -> "Manifest":
+    def __init__(self, data: bytes) -> None:
         assert len(data) == Manifest.MANIFEST_STRUCT.sizeof()
+
         m = Manifest.MANIFEST_STRUCT.parse(data)
-
-        manifest = cls.__new__(cls)
-        manifest.name = m.name
-        manifest.version = m.version
-        manifest.app_hash = m.app_hash
-        manifest.entrypoint = m.entrypoint
-        manifest.bss = m.bss
-        manifest.code_start = m.code_start
-        manifest.code_end = m.code_end
-        manifest.stack_start = m.stack_start
-        manifest.stack_end = m.stack_end
-        manifest.data_start = m.data_start
-        manifest.data_end = m.data_end
-        manifest.mt_root_hash = m.mt_root_hash
-        manifest.mt_size = m.mt_size
-        manifest.mt_last_entry = m.mt_last_entry
-
-        return manifest
+        self.name = m.name
+        self.version = m.version
+        self.app_hash = m.app_hash
+        self.entrypoint = m.entrypoint
+        self.bss = m.bss
+        self.code_start = m.code_start
+        self.code_end = m.code_end
+        self.stack_start = m.stack_start
+        self.stack_end = m.stack_end
+        self.data_start = m.data_start
+        self.data_end = m.data_end
+        self.mt_root_hash = m.mt_root_hash
+        self.mt_size = m.mt_size
+        self.mt_last_entry = m.mt_last_entry
 
     def export_binary(self) -> bytes:
         data = Manifest.MANIFEST_STRUCT.build(dict({

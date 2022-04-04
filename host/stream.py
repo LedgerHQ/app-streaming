@@ -39,7 +39,7 @@ class Stream:
         self.manifest = app.manifest
         self.signature = app.manifest_device_signature
 
-        m = Manifest.from_binary(app.manifest)
+        m = Manifest(app.manifest)
 
         addr = m.code_start
         for data, mac in zip(app.code_pages, app.code_macs):

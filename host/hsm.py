@@ -121,7 +121,7 @@ class HsmApp:
             "mt_last_entry": self.merkletree.entries[-1],
         }))
 
-        return Manifest.from_binary(data)
+        return Manifest(data)
 
     def get_manifest_signature(self) -> bytes:
         manifest = self.get_manifest()
