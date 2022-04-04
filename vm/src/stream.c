@@ -316,7 +316,7 @@ void stream_commit_page(struct page_s *page, bool insert)
     }
 }
 
-static void init_static_keys(struct hmac_key_s *key)
+static void init_static_key(struct hmac_key_s *key)
 {
     memcpy(app.hmac_static_key, key->bytes, sizeof(app.hmac_static_key));
 }
@@ -369,7 +369,7 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
     /* 4. derive and init keys depending on the app hash */
     struct hmac_key_s hmac_key;
     derive_hmac_key(manifest->app_hash, &hmac_key);
-    init_static_keys(&hmac_key);
+    init_static_key(&hmac_key);
     explicit_bzero(&hmac_key, sizeof(hmac_key));
 
     init_dynamic_keys();
