@@ -27,7 +27,7 @@ size_t handle_general_apdu(uint8_t ins, uint8_t *data)
         G_io_apdu_buffer[1] = 0x61;
     } else {
         G_io_apdu_buffer[tx] = 0x90;
-        G_io_apdu_buffer[tx+1] = 0x00;
+        G_io_apdu_buffer[tx + 1] = 0x00;
     }
 
     return tx + 2;

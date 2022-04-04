@@ -12,9 +12,8 @@ static void hash_entry(const struct entry_s *entry, uint8_t *hash)
     cx_sha256_init_no_throw(&hash_ctx);
 
     cx_hash_no_throw((cx_hash_t *)&hash_ctx, 0, (uint8_t *)"\x00", 1, NULL, 0);
-    cx_hash_no_throw((cx_hash_t *)&hash_ctx, CX_LAST,
-                     (uint8_t *)entry, sizeof(*entry),
-                     hash, CX_SHA256_SIZE);
+    cx_hash_no_throw((cx_hash_t *)&hash_ctx, CX_LAST, (uint8_t *)entry, sizeof(*entry), hash,
+                     CX_SHA256_SIZE);
 }
 
 static void hash_nodes(const uint8_t *left, const uint8_t *right, uint8_t *hash)
@@ -23,9 +22,7 @@ static void hash_nodes(const uint8_t *left, const uint8_t *right, uint8_t *hash)
 
     cx_hash_no_throw((cx_hash_t *)&hash_ctx, 0, (uint8_t *)"\x01", sizeof(uint8_t), NULL, 0);
     cx_hash_no_throw((cx_hash_t *)&hash_ctx, 0, left, CX_SHA256_SIZE, NULL, 0);
-    cx_hash_no_throw((cx_hash_t *)&hash_ctx, CX_LAST,
-                     right, CX_SHA256_SIZE,
-                     hash, CX_SHA256_SIZE);
+    cx_hash_no_throw((cx_hash_t *)&hash_ctx, CX_LAST, right, CX_SHA256_SIZE, hash, CX_SHA256_SIZE);
 }
 
 static void proof_hash(const struct entry_s *entry,

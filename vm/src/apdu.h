@@ -3,14 +3,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define OFFSET_CLA 0
-#define OFFSET_INS 1
-#define OFFSET_P1 2
-#define OFFSET_P2 3
-#define OFFSET_LC 4
+#define OFFSET_CLA   0
+#define OFFSET_INS   1
+#define OFFSET_P1    2
+#define OFFSET_P2    3
+#define OFFSET_LC    4
 #define OFFSET_CDATA 5
 
-#define CLA_GENERAL    0x34
+#define CLA_GENERAL 0x34
 
 enum cmd_stream_e {
     CMD_REQUEST_PAGE = 0x6101,

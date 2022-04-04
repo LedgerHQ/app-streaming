@@ -97,7 +97,8 @@ struct response_hmac_s {
 
 static struct app_s app;
 
-static void parse_apdu(const struct response_s *response, size_t size) {
+static void parse_apdu(const struct response_s *response, size_t size)
+{
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
 
     if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
@@ -124,7 +125,8 @@ static void encrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
 
     /* Code pages are never commited since they're read-only. Hence, the AES key
      * is always the dynamic one for encryption. */
-    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out,
+                       &size);
 }
 
 static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv32)
@@ -134,7 +136,8 @@ static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
     uint8_t iv[CX_AES_BLOCK_SIZE];
 
     compute_iv(iv, addr, iv32);
-    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out, &size);
+    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out,
+                       &size);
 }
 
 static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
@@ -144,9 +147,11 @@ static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
      * always 0. The IV of pages encrypted by the VM is always greater than 0.
      */
     if (iv == 0) {
-        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.hmac_static_key, sizeof(app.hmac_static_key));
+        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.hmac_static_key,
+                                     sizeof(app.hmac_static_key));
     } else {
-        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.dynamic_key.hmac, sizeof(app.dynamic_key.hmac));
+        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.dynamic_key.hmac,
+                                     sizeof(app.dynamic_key.hmac));
     }
 }
 
@@ -198,7 +203,8 @@ void stream_request_page(struct page_s *page, bool read_only)
     /* TODO: ideally, the IV should be verified before */
     init_hmac_ctx(&hmac_sha256_ctx, entry.iv);
     cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, page->data, sizeof(page->data), NULL, 0);
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data), mac, sizeof(mac));
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data), mac,
+                     sizeof(mac));
 
     if (memcmp(mac, r->mac, sizeof(mac)) != 0) {
         fatal("invalid hmac\n");
@@ -277,7 +283,8 @@ void stream_commit_page(struct page_s *page, bool insert)
     entry.addr = page->addr;
     entry.iv = page->iv;
 
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data), cmd2->mac, sizeof(cmd2->mac));
+    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data),
+                     cmd2->mac, sizeof(cmd2->mac));
 
     cmd2->addr = page->addr;
     cmd2->iv = page->iv;
@@ -382,7 +389,8 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
     app.cpu.regs[RV_REG_SP] = sp - 4;
     app.current_code_page = NULL;
 
-    init_merkle_tree(manifest->merkle_tree_root_hash, manifest->merkle_tree_size, (struct entry_s *)manifest->last_entry_init);
+    init_merkle_tree(manifest->merkle_tree_root_hash, manifest->merkle_tree_size,
+                     (struct entry_s *)manifest->last_entry_init);
 
     lfsr_init();
     sys_app_loading_stop();
@@ -395,8 +403,8 @@ static void u32hex(uint32_t n, char *buf)
     size_t i;
 
     for (i = 0; i < 4; i++) {
-        buf[i*2] = hex[(n >> ((24 - i * 8) + 4)) & 0xf];
-        buf[i*2+1] = hex[(n >> (24 - i * 8)) & 0xf];
+        buf[i * 2] = hex[(n >> ((24 - i * 8) + 4)) & 0xf];
+        buf[i * 2 + 1] = hex[(n >> (24 - i * 8)) & 0xf];
     }
 }
 

@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdint.h>
 
 #include "cx.h"
 #include "os_io_seproxyhal.h"
@@ -49,7 +48,8 @@ struct response_s {
     uint8_t data[PAGE_SIZE - 1];
 } __attribute__((packed));
 
-static void parse_apdu(const struct response_s *response, size_t size) {
+static void parse_apdu(const struct response_s *response, size_t size)
+{
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
 
     if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {

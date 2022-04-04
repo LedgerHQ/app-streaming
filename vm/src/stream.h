@@ -3,9 +3,9 @@
 #include <stdint.h>
 
 #define PAGE_SIZE 256
-#define PAGE_MASK ~(PAGE_SIZE-1)
+#define PAGE_MASK ~(PAGE_SIZE - 1)
 
-#define PAGE_START(addr) ((addr) & PAGE_MASK)
+#define PAGE_START(addr) ((addr)&PAGE_MASK)
 
 enum section_e {
     SECTION_CODE,

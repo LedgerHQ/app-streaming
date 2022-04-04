@@ -92,8 +92,8 @@ bool sign_manifest(const struct manifest_s *manifest, uint8_t *sig, size_t *sig_
         return false;
     }
 
-    cx_err_t err = cx_ecdsa_sign_no_throw(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256,
-                                          digest, sizeof(digest), sig, sig_size, NULL);
+    cx_err_t err = cx_ecdsa_sign_no_throw(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256, digest,
+                                          sizeof(digest), sig, sig_size, NULL);
     explicit_bzero(&privkey, sizeof(privkey));
     if (err != CX_OK) {
         return false;
@@ -120,9 +120,9 @@ static bool get_device_pubkey(const uint8_t *app_hash, cx_ecfp_public_key_t *pub
 }
 
 static bool verify_manifest_signature(const struct manifest_s *manifest,
-                               const cx_ecfp_public_key_t *pubkey,
-                               const uint8_t *signature,
-                               const size_t signature_size)
+                                      const cx_ecfp_public_key_t *pubkey,
+                                      const uint8_t *signature,
+                                      const size_t signature_size)
 {
     uint8_t digest[CX_SHA256_SIZE];
     compute_manifest_hash(manifest, digest);
