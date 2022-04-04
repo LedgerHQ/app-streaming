@@ -6,7 +6,9 @@ class Manifest:
     The manifest embeds info required by the VM to execute an app.
     """
 
+    MANIFEST_VERSION = 1
     MANIFEST_STRUCT = Struct(
+        "manifest_version" / Int32ul,
         "name" / Bytes(32),
         "version" / Bytes(16),
         "app_hash" / Bytes(32),
@@ -27,6 +29,7 @@ class Manifest:
         assert len(data) == Manifest.MANIFEST_STRUCT.sizeof()
 
         m = Manifest.MANIFEST_STRUCT.parse(data)
+        self.manifest_version = m.manifest_version
         self.name = m.name
         self.version = m.version
         self.app_hash = m.app_hash
@@ -44,6 +47,7 @@ class Manifest:
 
     def export_binary(self) -> bytes:
         data = Manifest.MANIFEST_STRUCT.build(dict({
+            "manifest_version": self.manifest_version,
             "name": self.name,
             "version": self.version,
             "app_hash": self.app_hash,

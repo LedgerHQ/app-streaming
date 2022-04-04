@@ -20,6 +20,7 @@ struct section_s {
 } __attribute__((packed));
 
 struct manifest_s {
+    uint32_t manifest_version; /* not used for now */
     char name[32];
     char version[16];
     uint8_t app_hash[32];

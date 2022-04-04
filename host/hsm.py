@@ -105,6 +105,7 @@ class HsmApp:
         stack_start = stack_end - Elf.STACK_SIZE
 
         data = Manifest.MANIFEST_STRUCT.build(dict({
+            "manifest_version": Manifest.MANIFEST_VERSION,
             "name": self.name,
             "version": self.version,
             "app_hash": self.compute_app_hash(),
