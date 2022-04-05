@@ -1,4 +1,4 @@
-from construct import Bytes, Int32ul, Struct
+from construct import Bytes, Hex, Int32ul, PaddedString, Struct
 
 
 class Manifest:
@@ -9,20 +9,20 @@ class Manifest:
     MANIFEST_VERSION = 1
     MANIFEST_STRUCT = Struct(
         "manifest_version" / Int32ul,
-        "name" / Bytes(32),
-        "version" / Bytes(16),
-        "app_hash" / Bytes(32),
-        "entrypoint" / Int32ul,
-        "bss" / Int32ul,
-        "code_start" / Int32ul,
-        "code_end" / Int32ul,
-        "stack_start" / Int32ul,
-        "stack_end" / Int32ul,
-        "data_start" / Int32ul,
-        "data_end" / Int32ul,
-        "mt_root_hash" / Bytes(32),
+        "name" / PaddedString(32, "ascii"),
+        "version" / PaddedString(16, "ascii"),
+        "app_hash" / Hex(Bytes(32)),
+        "entrypoint" / Hex(Int32ul),
+        "bss" / Hex(Int32ul),
+        "code_start" / Hex(Int32ul),
+        "code_end" / Hex(Int32ul),
+        "stack_start" / Hex(Int32ul),
+        "stack_end" / Hex(Int32ul),
+        "data_start" / Hex(Int32ul),
+        "data_end" / Hex(Int32ul),
+        "mt_root_hash" / Hex(Bytes(32)),
         "mt_size" / Int32ul,
-        "mt_last_entry" / Bytes(8),
+        "mt_last_entry" / Hex(Bytes(8)),
     )
 
     def __init__(self, data: bytes) -> None:

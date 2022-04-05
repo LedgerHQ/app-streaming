@@ -59,7 +59,7 @@ class Elf:
             if section is None:
                 logger.critical(f"failed to get section {section_name}")
                 sys.exit(1)
-            infos[name] = section.data()
+            infos[name] = section.data().decode("ascii")
 
         assert len(infos["name"]) == 32
         assert len(infos["version"]) == 16
