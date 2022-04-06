@@ -103,6 +103,12 @@ LD      := $(GCCPATH)arm-none-eabi-gcc
 LDFLAGS += -O3 -Os
 LDLIBS  += -lm -lgcc -lc
 
+# If the INSTRUMENT environment variable is set, build the app with
+# -finstrument-functions. See src/instrument.c.
+ifneq ($(INSTRUMENT),)
+	CFLAGS += -finstrument-functions -DWITH_INSTRUMENT
+endif
+
 include $(BOLOS_SDK)/Makefile.glyphs
 
 APP_SOURCE_PATH += src
