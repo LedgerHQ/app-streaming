@@ -16,6 +16,7 @@
 #define ECALL_MEMSET           14
 #define ECALL_MEMCPY           15
 #define ECALL_STRLEN           16
+#define ECALL_STRNLEN          17
 
 #define ECALL_DERIVE_NODE_BIP32     100
 #define ECALL_CX_ECFP_GENERATE_PAIR 101

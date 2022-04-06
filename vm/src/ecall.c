@@ -489,6 +489,31 @@ static size_t sys_strlen(uint32_t s_addr)
 
     return size;
 }
+
+static size_t sys_strnlen(uint32_t s_addr, size_t maxlen)
+{
+    size_t size = 0;
+
+    while (maxlen > 0) {
+        size_t n;
+        n = PAGE_SIZE - (s_addr - PAGE_START(s_addr));
+        n = MIN(n, maxlen);
+
+        char *buffer = (char *)get_buffer(s_addr, n, false);
+        size_t tmp_size = strnlen(buffer, n);
+
+        s_addr += n;
+        maxlen -= n;
+        size += tmp_size;
+
+        if (tmp_size < n) {
+            break;
+        }
+    }
+
+    return size;
+}
+
 /*
  * Return true if the ecall either exit() or unsupported, false otherwise.
  */
@@ -546,6 +571,9 @@ bool ecall(struct rv_cpu *cpu)
         break;
     case ECALL_STRLEN:
         cpu->regs[RV_REG_A0] = sys_strlen(cpu->regs[RV_REG_A0]);
+        break;
+    case ECALL_STRNLEN:
+        cpu->regs[RV_REG_A0] = sys_strnlen(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1]);
         break;
     default:
         stop = ecall_bolos(cpu, nr);

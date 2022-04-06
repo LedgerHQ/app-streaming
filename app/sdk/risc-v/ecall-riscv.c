@@ -227,6 +227,7 @@ ECALL0v(ecall_screen_update, ECALL_SCREEN_UPDATE)
 ECALL0v(ecall_ux_idle, ECALL_UX_IDLE)
 ECALL1(ecall_strlen, ECALL_STRLEN, size_t, const char *, s)
 ECALL1v(ecall_app_loading_start, ECALL_LOADING_START, const char *, status)
+ECALL2(ecall_strnlen, ECALL_STRNLEN, size_t, const char *, s, size_t, maxlen)
 ECALL2(ecall_xrecv, ECALL_XRECV, size_t, uint8_t *, buffer, size_t, size)
 ECALL2v(ecall_xsend, ECALL_XSEND, const uint8_t *, buffer, size_t, size)
 ECALL3(ecall_ecfp_generate_pair, ECALL_CX_ECFP_GENERATE_PAIR, cx_err_t, cx_curve_t, curve, cx_ecfp_public_key_t *, pubkey, cx_ecfp_private_key_t *, privkey)
@@ -277,3 +278,5 @@ void *memset(void *s, int c, size_t n) __attribute__((alias("ecall_memset")));
 void *memcpy(void *dest, const void *src, size_t n) __attribute__((alias("ecall_memcpy")));
 
 size_t strlen(const char *s) __attribute__((alias("ecall_strlen")));
+
+size_t strnlen(const char *s, size_t maxlen) __attribute__((alias("ecall_strnlen")));
