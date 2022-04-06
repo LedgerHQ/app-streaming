@@ -45,3 +45,14 @@ Or using a real device (2.0.2):
 ```console
 $ ./host/stream.py --verbose --app ./app/build/app-wip/app
 ```
+
+### Sign the app
+
+While everything is done transparently when passing an ELF file to `stream.py`,
+the following commands can be used to sign an app manually. The app is first
+signed by a (fake) Ledger HSM, then by the device:
+
+```shell
+python host/hsm.py --elf-path app/build/app-ethereum/app-ethereum --app-path /tmp/app.zip
+python host/app.py --speculos --app-path /tmp/app.zip
+```
