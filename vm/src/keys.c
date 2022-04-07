@@ -6,6 +6,7 @@
 #include "stream.h"
 
 #include "cx.h"
+#include "os_id.h"
 #include "os_nvm.h"
 #include "os_pic.h"
 #include "os_random.h"
@@ -29,6 +30,13 @@ static const uint8_t hsm_pubkey_bytes[] = {
     0x10, 0x35, 0xd1, 0xcb, 0x23, 0x85, 0x30, 0x5d, 0x0c, 0xfe, 0x9f, 0xe9, 0x0b
 };
 
+static bool running_on_speculos(void)
+{
+    uint8_t buffer[32] = { 0 };
+    os_version(buffer, sizeof(buffer));
+    return strcmp((char *)buffer, "Speculos") == 0;
+}
+
 void nv_app_state_init(void)
 {
     if (N_storage.initialized == 0x01) {
@@ -37,8 +45,16 @@ void nv_app_state_init(void)
 
     internalStorage_t storage;
 
-    cx_get_random_bytes(storage.ecdsa_seed, sizeof(storage.ecdsa_seed));
-    cx_get_random_bytes(storage.hmac_seed, sizeof(storage.hmac_seed));
+    if (!running_on_speculos()) {
+        cx_get_random_bytes(storage.ecdsa_seed, sizeof(storage.ecdsa_seed));
+        cx_get_random_bytes(storage.hmac_seed, sizeof(storage.hmac_seed));
+    } else {
+        /* XXX - The NVM storage isn't persistent on speculos. Use fixed seeds
+         * until this feature is implemented. */
+        memset(storage.ecdsa_seed, 'a', sizeof(storage.ecdsa_seed));
+        memset(storage.hmac_seed, 'b', sizeof(storage.hmac_seed));
+    }
+
     storage.initialized = 0x01;
 
     nvm_write((internalStorage_t *)&N_storage, (void *)&storage, sizeof(internalStorage_t));
