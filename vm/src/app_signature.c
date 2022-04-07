@@ -39,24 +39,6 @@ struct cmd_response_app_s {
 _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct cmd_response_app_s),
                "invalid struct cmd_response_app_s");
 
-struct response_s {
-    uint8_t cla;
-    uint8_t ins;
-    uint8_t p1;
-    uint8_t p2;
-    uint8_t lc;
-    uint8_t data[PAGE_SIZE - 1];
-} __attribute__((packed));
-
-static void parse_apdu(const struct response_s *response, size_t size)
-{
-    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
-
-    if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
-        fatal("invalid apdu\n");
-    }
-}
-
 static void generate_hmac(const uint32_t addr,
                           const uint8_t *page,
                           const uint8_t *hmac_key,

@@ -43,23 +43,6 @@ struct cmd_fatal_s {
     uint16_t cmd;
 } __attribute__((packed));
 
-struct response_s {
-    uint8_t cla;
-    uint8_t ins;
-    uint8_t p1;
-    uint8_t p2;
-    uint8_t lc;
-    uint8_t data[PAGE_SIZE - 1];
-} __attribute__((packed));
-
-static void parse_apdu(const struct response_s *response, size_t size) {
-    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
-
-    if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
-        fatal("invalid apdu\n");
-    }
-}
-
 /*
  * Receives at most size bytes.
  *
