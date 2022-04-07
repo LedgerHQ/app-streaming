@@ -150,7 +150,7 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
+    struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
 
     if (response->lc != PAGE_SIZE - 1) {
@@ -166,7 +166,7 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_HMAC >> 8) | ((CMD_REQUEST_HMAC & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    response = (struct response_s *)G_io_apdu_buffer;
+    response = (struct apdu_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
 
     if (response->lc != sizeof(struct response_hmac_s)) {
@@ -211,7 +211,7 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    response = (struct response_s *)G_io_apdu_buffer;
+    response = (struct apdu_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
 
     if ((response->lc % sizeof(struct proof_s)) != 0) {
@@ -248,7 +248,7 @@ void stream_commit_page(struct page_s *page, bool insert)
     cmd1->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd1));
 
-    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
+    struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
 
     if (response->lc != 0) {
@@ -274,7 +274,7 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd2));
 
-    response = (struct response_s *)G_io_apdu_buffer;
+    response = (struct apdu_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
 
     if ((response->lc % sizeof(struct proof_s)) != 0) {
@@ -331,7 +331,7 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     size_t size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
+    struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
     parse_apdu(response, size);
 
     const size_t alignment_offset = 3;

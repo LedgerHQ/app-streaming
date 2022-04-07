@@ -30,7 +30,7 @@ enum cmd_stream_e {
     CMD_REQUEST_APP_HMAC = 0x6802,
 };
 
-struct response_s {
+struct apdu_s {
     uint8_t cla;
     uint8_t ins;
     uint8_t p1;
@@ -39,14 +39,14 @@ struct response_s {
     uint8_t data[PAGE_SIZE - 1];
 } __attribute__((packed));
 
-_Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct response_s), "invalid IO_APDU_BUFFER_SIZE");
+_Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct apdu_s), "invalid IO_APDU_BUFFER_SIZE");
 
 struct cmd_response_app_s;
 
 size_t handle_general_apdu(uint8_t ins, uint8_t *data);
 bool handle_sign_app(const struct cmd_response_app_s *response, size_t *tx);
 
-static inline bool parse_apdu(const struct response_s *response, size_t size)
+static inline bool parse_apdu(const struct apdu_s *response, size_t size)
 {
     if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
         fatal("invalid apdu\n");

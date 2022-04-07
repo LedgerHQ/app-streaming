@@ -55,7 +55,7 @@ static size_t xrecv(uint32_t addr, size_t size)
     uint32_t counter = 0;
 
     while (size > 0) {
-        struct response_s *response = (struct response_s *)G_io_apdu_buffer;
+        struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
         /* an additional byte is stored in p2 to allow entire pages to be
          * transmitted, hence + 1 */
         _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(response->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
