@@ -55,10 +55,10 @@ static size_t xrecv(uint32_t addr, size_t size)
     uint32_t counter = 0;
 
     while (size > 0) {
-        struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
+        struct apdu_s *apdu = (struct apdu_s *)G_io_apdu_buffer;
         /* an additional byte is stored in p2 to allow entire pages to be
          * transmitted, hence + 1 */
-        _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(response->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
+        _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(apdu->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
 
         size_t n;
         n = PAGE_SIZE - (addr - PAGE_START(addr));
@@ -92,21 +92,21 @@ static size_t xrecv(uint32_t addr, size_t size)
 
         /* 2. ensure that data received fits in the buffer */
 
-        response = parse_apdu(received);
-        if (response == NULL) {
+        apdu = parse_apdu(received);
+        if (apdu == NULL) {
             fatal("invalid APDU\n");
         }
-        bool stop = (response->p1 == '\x01');
+        bool stop = (apdu->p1 == '\x01');
 
-        if ((response->lc + 1) > n || ((response->lc + 1) != n && !stop)) {
-            fatal("invalid response size\n");
+        if ((apdu->lc + 1) > n || ((apdu->lc + 1) != n && !stop)) {
+            fatal("invalid apdu size\n");
         }
 
-        n = response->lc + 1;
+        n = apdu->lc + 1;
 
         /* 3. copies data to the app buffer (the first byte is in p2) */
-        buffer[0] = response->p2;
-        memcpy(buffer + 1, response->data, n - 1);
+        buffer[0] = apdu->p2;
+        memcpy(buffer + 1, apdu->data, n - 1);
 
         addr += n;
         size -= n;

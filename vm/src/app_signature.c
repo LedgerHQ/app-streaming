@@ -83,14 +83,14 @@ static bool compute_section_hmacs(cx_sha256_t *ctx,
         cmd->cmd = (CMD_REQUEST_APP_PAGE >> 8) | ((CMD_REQUEST_APP_PAGE & 0xff) << 8);
         size_t size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-        struct apdu_s *response = parse_apdu(size);
-        if (response == NULL) {
+        struct apdu_s *apdu = parse_apdu(size);
+        if (apdu == NULL) {
             fatal("invalid APDU\n");
         }
 
         /* the first byte of the page is in p2 */
-        page[0] = response->p2;
-        memcpy(&page[1], response->data, PAGE_SIZE - 1);
+        page[0] = apdu->p2;
+        memcpy(&page[1], apdu->data, PAGE_SIZE - 1);
 
         /* update app_hash */
         cx_hash_no_throw((cx_hash_t *)ctx, 0, page, PAGE_SIZE, NULL, 0);
@@ -104,8 +104,8 @@ static bool compute_section_hmacs(cx_sha256_t *ctx,
         cmd_hmac->cmd = (CMD_REQUEST_APP_HMAC >> 8) | ((CMD_REQUEST_APP_HMAC & 0xff) << 8);
 
         size = io_exchange(CHANNEL_APDU, sizeof(*cmd_hmac));
-        response = parse_apdu(size);
-        if (response == NULL) {
+        apdu = parse_apdu(size);
+        if (apdu == NULL) {
             fatal("invalid APDU\n");
         }
 
