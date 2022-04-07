@@ -92,7 +92,10 @@ static size_t xrecv(uint32_t addr, size_t size)
 
         /* 2. ensure that data received fits in the buffer */
 
-        parse_apdu(response, received);
+        response = parse_apdu(received);
+        if (response == NULL) {
+            fatal("invalid APDU\n");
+        }
         bool stop = (response->p1 == '\x01');
 
         if ((response->lc + 1) > n || ((response->lc + 1) != n && !stop)) {

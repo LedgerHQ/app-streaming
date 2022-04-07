@@ -150,8 +150,10 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    struct apdu_s *response = parse_apdu(size);
+    if (response == NULL) {
+        fatal("invalid APDU\n");
+    }
 
     if (response->lc != PAGE_SIZE - 1) {
         fatal("invalid response size\n");
@@ -166,8 +168,10 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_HMAC >> 8) | ((CMD_REQUEST_HMAC & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    response = (struct apdu_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    response = parse_apdu(size);
+    if (response == NULL) {
+        fatal("invalid APDU\n");
+    }
 
     if (response->lc != sizeof(struct response_hmac_s)) {
         fatal("invalid response size\n");
@@ -211,8 +215,10 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    response = (struct apdu_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    response = parse_apdu(size);
+    if (response == NULL) {
+        fatal("invalid APDU\n");
+    }
 
     if ((response->lc % sizeof(struct proof_s)) != 0) {
         fatal("invalid proof size\n");
@@ -248,8 +254,10 @@ void stream_commit_page(struct page_s *page, bool insert)
     cmd1->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd1));
 
-    struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    struct apdu_s *response = parse_apdu(size);
+    if (response == NULL) {
+        fatal("invalid APDU\n");
+    }
 
     if (response->lc != 0) {
         fatal("invalid response size\n");
@@ -274,8 +282,10 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd2));
 
-    response = (struct apdu_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    response = parse_apdu(size);
+    if (response == NULL) {
+        fatal("invalid APDU\n");
+    }
 
     if ((response->lc % sizeof(struct proof_s)) != 0) {
         fatal("invalid proof size\n");
@@ -331,8 +341,10 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     size_t size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct apdu_s *response = (struct apdu_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    struct apdu_s *response = parse_apdu(size);
+    if (response == NULL) {
+        fatal("invalid APDU\n");
+    }
 
     const size_t alignment_offset = 3;
     if (response->lc != alignment_offset + sizeof(struct manifest_s)) {

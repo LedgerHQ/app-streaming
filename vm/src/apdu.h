@@ -46,12 +46,13 @@ struct cmd_response_app_s;
 size_t handle_general_apdu(uint8_t ins, uint8_t *data);
 bool handle_sign_app(const struct cmd_response_app_s *response, size_t *tx);
 
-static inline bool parse_apdu(const struct apdu_s *response, size_t size)
+static inline struct apdu_s *parse_apdu(size_t size)
 {
-    if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
-        fatal("invalid apdu\n");
-        return false;
+    struct apdu_s *apdu = (struct apdu_s *)G_io_apdu_buffer;
+
+    if (size < OFFSET_CDATA || size - OFFSET_CDATA != apdu->lc) {
+        return NULL;
     }
 
-    return true;
+    return apdu;
 }
