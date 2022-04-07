@@ -85,7 +85,8 @@ static bool compute_section_hmacs(cx_sha256_t *ctx,
 
         struct apdu_s *apdu = parse_apdu(size);
         if (apdu == NULL) {
-            fatal("invalid APDU\n");
+            err("invalid APDU\n");
+            return false;
         }
 
         /* the first byte of the page is in p2 */
@@ -106,7 +107,8 @@ static bool compute_section_hmacs(cx_sha256_t *ctx,
         size = io_exchange(CHANNEL_APDU, sizeof(*cmd_hmac));
         apdu = parse_apdu(size);
         if (apdu == NULL) {
-            fatal("invalid APDU\n");
+            err("invalid APDU\n");
+            return false;
         }
 
         addr += PAGE_SIZE;
