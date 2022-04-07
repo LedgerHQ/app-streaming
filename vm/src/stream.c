@@ -81,30 +81,12 @@ struct cmd_commit_hmac_s {
     uint16_t cmd;
 } __attribute__((packed));
 
-struct response_s {
-    uint8_t cla;
-    uint8_t ins;
-    uint8_t p1;
-    uint8_t p2;
-    uint8_t lc;
-    uint8_t data[PAGE_SIZE - 1];
-} __attribute__((packed));
-
 struct response_hmac_s {
     uint32_t iv;
     uint8_t mac[32];
 } __attribute__((packed));
 
 static struct app_s app;
-
-static void parse_apdu(const struct response_s *response, size_t size)
-{
-    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
-
-    if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
-        fatal("invalid apdu\n");
-    }
-}
 
 static void compute_iv(uint8_t *iv, uint32_t addr, uint32_t iv32)
 {
@@ -168,30 +150,34 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    struct apdu_s *apdu = parse_apdu(size);
+    if (apdu == NULL) {
+        fatal("invalid APDU\n");
+    }
 
-    if (response->lc != PAGE_SIZE - 1) {
-        fatal("invalid response size\n");
+    if (apdu->lc != PAGE_SIZE - 1) {
+        fatal("invalid apdu size\n");
     }
 
     /* the first byte of the page is in p2 */
-    page->data[0] = response->p2;
-    memcpy(&page->data[1], response->data, PAGE_SIZE - 1);
+    page->data[0] = apdu->p2;
+    memcpy(&page->data[1], apdu->data, PAGE_SIZE - 1);
 
     /* 2. retrieve and verify hmac */
 
     cmd->cmd = (CMD_REQUEST_HMAC >> 8) | ((CMD_REQUEST_HMAC & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    response = (struct response_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
-
-    if (response->lc != sizeof(struct response_hmac_s)) {
-        fatal("invalid response size\n");
+    apdu = parse_apdu(size);
+    if (apdu == NULL) {
+        fatal("invalid APDU\n");
     }
 
-    struct response_hmac_s *r = (struct response_hmac_s *)&response->data;
+    if (apdu->lc != sizeof(struct response_hmac_s)) {
+        fatal("invalid apdu size\n");
+    }
+
+    struct response_hmac_s *r = (struct response_hmac_s *)&apdu->data;
 
     cx_hmac_sha256_t hmac_sha256_ctx;
     struct entry_s entry;
@@ -229,15 +215,17 @@ void stream_request_page(struct page_s *page, bool read_only)
     cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    response = (struct response_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    apdu = parse_apdu(size);
+    if (apdu == NULL) {
+        fatal("invalid APDU\n");
+    }
 
-    if ((response->lc % sizeof(struct proof_s)) != 0) {
+    if ((apdu->lc % sizeof(struct proof_s)) != 0) {
         fatal("invalid proof size\n");
     }
 
-    size_t count = response->lc / sizeof(struct proof_s);
-    if (!merkle_verify_proof(&entry, (struct proof_s *)&response->data, count)) {
+    size_t count = apdu->lc / sizeof(struct proof_s);
+    if (!merkle_verify_proof(&entry, (struct proof_s *)&apdu->data, count)) {
         fatal("invalid iv (merkle proof)\n");
     }
 }
@@ -266,11 +254,13 @@ void stream_commit_page(struct page_s *page, bool insert)
     cmd1->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd1));
 
-    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    struct apdu_s *apdu = parse_apdu(size);
+    if (apdu == NULL) {
+        fatal("invalid APDU\n");
+    }
 
-    if (response->lc != 0) {
-        fatal("invalid response size\n");
+    if (apdu->lc != 0) {
+        fatal("invalid apdu size\n");
     }
 
     /* 2. hmac(data || addr || iv) */
@@ -292,25 +282,27 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd2));
 
-    response = (struct response_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    apdu = parse_apdu(size);
+    if (apdu == NULL) {
+        fatal("invalid APDU\n");
+    }
 
-    if ((response->lc % sizeof(struct proof_s)) != 0) {
+    if ((apdu->lc % sizeof(struct proof_s)) != 0) {
         fatal("invalid proof size\n");
     }
 
     /* 3. update merkle tree */
-    size_t count = response->lc / sizeof(struct proof_s);
+    size_t count = apdu->lc / sizeof(struct proof_s);
 
     if (insert) {
-        if (!merkle_insert(&entry, (struct proof_s *)&response->data, count)) {
+        if (!merkle_insert(&entry, (struct proof_s *)&apdu->data, count)) {
             fatal("merkle insert failed\n");
         }
     } else {
         struct entry_s old_entry;
         old_entry.addr = page->addr;
         old_entry.iv = page->iv - 1;
-        if (!merkle_update(&old_entry, &entry, (struct proof_s *)&response->data, count)) {
+        if (!merkle_update(&old_entry, &entry, (struct proof_s *)&apdu->data, count)) {
             fatal("merkle update failed\n");
         }
     }
@@ -349,15 +341,17 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     size_t size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct response_s *response = (struct response_s *)G_io_apdu_buffer;
-    parse_apdu(response, size);
+    struct apdu_s *apdu = parse_apdu(size);
+    if (apdu == NULL) {
+        fatal("invalid APDU\n");
+    }
 
     const size_t alignment_offset = 3;
-    if (response->lc != alignment_offset + sizeof(struct manifest_s)) {
+    if (apdu->lc != alignment_offset + sizeof(struct manifest_s)) {
         fatal("invalid manifest APDU\n");
     }
 
-    struct manifest_s *manifest = (struct manifest_s *)(response->data + alignment_offset);
+    struct manifest_s *manifest = (struct manifest_s *)(apdu->data + alignment_offset);
 
     /* 3. verify manifest signature */
     if (!verify_manifest_device_signature(manifest, signature, signature_size)) {

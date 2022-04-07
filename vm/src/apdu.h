@@ -3,6 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "error.h"
+#include "stream.h"
+
 #define OFFSET_CLA   0
 #define OFFSET_INS   1
 #define OFFSET_P1    2
@@ -27,7 +30,29 @@ enum cmd_stream_e {
     CMD_REQUEST_APP_HMAC = 0x6802,
 };
 
+struct apdu_s {
+    uint8_t cla;
+    uint8_t ins;
+    uint8_t p1;
+    uint8_t p2;
+    uint8_t lc;
+    uint8_t data[PAGE_SIZE - 1];
+} __attribute__((packed));
+
+_Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct apdu_s), "invalid IO_APDU_BUFFER_SIZE");
+
 struct cmd_response_app_s;
 
 size_t handle_general_apdu(uint8_t ins, uint8_t *data);
 bool handle_sign_app(const struct cmd_response_app_s *response, size_t *tx);
+
+static inline struct apdu_s *parse_apdu(size_t size)
+{
+    struct apdu_s *apdu = (struct apdu_s *)G_io_apdu_buffer;
+
+    if (size < OFFSET_CDATA || size - OFFSET_CDATA != apdu->lc) {
+        return NULL;
+    }
+
+    return apdu;
+}

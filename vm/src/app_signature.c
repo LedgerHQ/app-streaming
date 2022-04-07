@@ -39,24 +39,6 @@ struct cmd_response_app_s {
 _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct cmd_response_app_s),
                "invalid struct cmd_response_app_s");
 
-struct response_s {
-    uint8_t cla;
-    uint8_t ins;
-    uint8_t p1;
-    uint8_t p2;
-    uint8_t lc;
-    uint8_t data[PAGE_SIZE - 1];
-} __attribute__((packed));
-
-static void parse_apdu(const struct response_s *response, size_t size)
-{
-    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*response), "invalid IO_APDU_BUFFER_SIZE");
-
-    if (size < OFFSET_CDATA || size - OFFSET_CDATA != response->lc) {
-        fatal("invalid apdu\n");
-    }
-}
-
 static void generate_hmac(const uint32_t addr,
                           const uint8_t *page,
                           const uint8_t *hmac_key,
@@ -101,12 +83,15 @@ static bool compute_section_hmacs(cx_sha256_t *ctx,
         cmd->cmd = (CMD_REQUEST_APP_PAGE >> 8) | ((CMD_REQUEST_APP_PAGE & 0xff) << 8);
         size_t size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-        struct response_s *response = (struct response_s *)G_io_apdu_buffer;
-        parse_apdu(response, size);
+        struct apdu_s *apdu = parse_apdu(size);
+        if (apdu == NULL) {
+            err("invalid APDU\n");
+            return false;
+        }
 
         /* the first byte of the page is in p2 */
-        page[0] = response->p2;
-        memcpy(&page[1], response->data, PAGE_SIZE - 1);
+        page[0] = apdu->p2;
+        memcpy(&page[1], apdu->data, PAGE_SIZE - 1);
 
         /* update app_hash */
         cx_hash_no_throw((cx_hash_t *)ctx, 0, page, PAGE_SIZE, NULL, 0);
@@ -120,8 +105,11 @@ static bool compute_section_hmacs(cx_sha256_t *ctx,
         cmd_hmac->cmd = (CMD_REQUEST_APP_HMAC >> 8) | ((CMD_REQUEST_APP_HMAC & 0xff) << 8);
 
         size = io_exchange(CHANNEL_APDU, sizeof(*cmd_hmac));
-        response = (struct response_s *)G_io_apdu_buffer;
-        parse_apdu(response, size);
+        apdu = parse_apdu(size);
+        if (apdu == NULL) {
+            err("invalid APDU\n");
+            return false;
+        }
 
         addr += PAGE_SIZE;
     }
