@@ -60,9 +60,7 @@ static size_t xrecv(guest_pointer_t p_buf, size_t size)
          * transmitted, hence + 1 */
         _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(apdu->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
 
-        size_t n;
-        n = BUFFER_MAX_SIZE(p_buf.addr);
-        n = MIN(size, n);
+        size_t n = BUFFER_MIN_SIZE(p_buf.addr, size);
 
         /* 0. retrieve buffer pointer now since it can modify G_io_apdu_buffer */
         uint8_t *buffer = get_buffer(p_buf.addr, n, true);
@@ -133,10 +131,7 @@ static void xsend(guest_pointer_t p_buf, size_t size)
         struct cmd_send_buffer_s *cmd = (struct cmd_send_buffer_s *)G_io_apdu_buffer;
         _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd), "invalid IO_APDU_BUFFER_SIZE");
 
-        size_t n;
-
-        n = BUFFER_MAX_SIZE(p_buf.addr);
-        n = MIN(size, n);
+        size_t n = BUFFER_MIN_SIZE(p_buf.addr, size);
         n = MIN(sizeof(cmd->data), n);
 
         /* 0. copy the app buffer (note that it can modify G_io_apdu_buffer) */
@@ -223,12 +218,9 @@ void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
     uint8_t *dst = buf;
 
     while (size > 0) {
-        size_t n;
-        n = BUFFER_MAX_SIZE(p_src.addr);
-        n = MIN(size, n);
+        const size_t n = BUFFER_MIN_SIZE(p_src.addr, size);
+        const uint8_t *buffer = get_buffer(p_src.addr, n, false);
 
-        uint8_t *buffer;
-        buffer = get_buffer(p_src.addr, n, false);
         memcpy(dst, buffer, n);
 
         p_src.addr += n;
@@ -242,12 +234,9 @@ void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
     uint8_t *src = buf;
 
     while (size > 0) {
-        size_t n;
-        n = BUFFER_MAX_SIZE(p_dst.addr);
-        n = MIN(size, n);
+        const size_t n = BUFFER_MIN_SIZE(p_dst.addr, size);
+        uint8_t *buffer = get_buffer(p_dst.addr, n, true);
 
-        uint8_t *buffer;
-        buffer = get_buffer(p_dst.addr, n, true);
         memcpy(buffer, src, n);
 
         p_dst.addr += n;
@@ -412,11 +401,9 @@ static uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
     const uint32_t s_addr = p_s.addr;
 
     while (size > 0) {
-        size_t n;
-        n = BUFFER_MAX_SIZE(p_s.addr);
-        n = MIN(size, n);
-
+        const size_t n = BUFFER_MIN_SIZE(p_s.addr, size);
         uint8_t *buffer = get_buffer(p_s.addr, n, true);
+
         memset(buffer, c, n);
 
         p_s.addr += n;
@@ -431,12 +418,9 @@ static uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t 
     const uint32_t dst_addr = p_dst.addr;
 
     while (size > 0) {
-        size_t n, a, b;
-        a = BUFFER_MAX_SIZE(p_dst.addr);
-        b = BUFFER_MAX_SIZE(p_src.addr);
-        n = MIN(size, MIN(a, b));
-
-        uint8_t *buffer_src = get_buffer(p_src.addr, n, false);
+        const size_t a = BUFFER_MIN_SIZE(p_dst.addr, size);
+        const size_t n = BUFFER_MIN_SIZE(p_src.addr, a);
+        const uint8_t *buffer_src = get_buffer(p_src.addr, n, false);
 
         /* a temporary buffer is required because get_buffer() might unlikely
          * return the same page if p_dst.addr or p_src.addr isn't in the
@@ -460,9 +444,10 @@ static size_t sys_strlen(guest_pointer_t p_s)
     size_t size = 0;
 
     while (true) {
-        size_t n = BUFFER_MAX_SIZE(p_s.addr);
-        char *buffer = (char *)get_buffer(p_s.addr, n, false);
-        size_t tmp_size = strnlen(buffer, n);
+        const size_t n = BUFFER_MAX_SIZE(p_s.addr);
+        const char *buffer = (char *)get_buffer(p_s.addr, n, false);
+
+        const size_t tmp_size = strnlen(buffer, n);
 
         p_s.addr += n;
         size += tmp_size;
@@ -480,11 +465,9 @@ static size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
     size_t size = 0;
 
     while (maxlen > 0) {
-        size_t n;
-        n = BUFFER_MAX_SIZE(p_s.addr);
-        n = MIN(n, maxlen);
+        const size_t n = BUFFER_MIN_SIZE(p_s.addr, maxlen);
+        const char *buffer = (char *)get_buffer(p_s.addr, n, false);
 
-        char *buffer = (char *)get_buffer(p_s.addr, n, false);
         size_t tmp_size = strnlen(buffer, n);
 
         p_s.addr += n;

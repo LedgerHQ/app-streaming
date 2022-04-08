@@ -1,16 +1,14 @@
 #include <string.h>
 
-#include "cx.h"
-#include "os.h"
-
-#include "apdu.h"
 #include "ecall.h"
 #include "ecall_hash.h"
 #include "error.h"
 #include "rv.h"
-#include "stream.h"
 #include "types.h"
 #include "uint256-internal.h"
+
+#include "cx.h"
+#include "os.h"
 
 #include "sdk/api/ecall-nr.h"
 
