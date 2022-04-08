@@ -12,7 +12,7 @@
 
 #include "sdk/api/ecall-nr.h"
 
-static cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain)
+cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain)
 {
     const unsigned int path[10];
     uint8_t private_key[32];
@@ -44,7 +44,7 @@ static cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, 
     return CX_OK;
 }
 
-static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
+cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
 {
     cx_ecfp_public_key_t pubkey;
     cx_ecfp_private_key_t privkey;
@@ -63,7 +63,7 @@ static cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubke
     return err;
 }
 
-static cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
+cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
 {
     cx_ecfp_public_key_t pubkey;
     cx_ecfp_private_key_t privkey;
@@ -83,9 +83,9 @@ static cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, guest_pointer_t p_pubkey, 
     return err;
 }
 
-static size_t sys_ecdsa_sign(const guest_pointer_t p_key, const int mode,
-                             const cx_md_t hash_id, const guest_pointer_t p_hash,
-                             guest_pointer_t p_sig, size_t sig_len)
+size_t sys_ecdsa_sign(const guest_pointer_t p_key, const int mode,
+                      const cx_md_t hash_id, const guest_pointer_t p_hash,
+                      guest_pointer_t p_sig, size_t sig_len)
 {
     cx_ecfp_private_key_t key;
     uint8_t hash[CX_SHA512_SIZE];
@@ -116,7 +116,7 @@ static size_t sys_ecdsa_sign(const guest_pointer_t p_key, const int mode,
     return ret;
 }
 
-static void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, size_t len)
+void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, size_t len)
 {
     uint8_t r[64], a[32], b[32];
 
@@ -133,7 +133,7 @@ static void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p
     copy_host_buffer(p_r, r, len * 2);
 }
 
-static void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len)
+void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len)
 {
     uint8_t r[64], a[32], b[32], m[32];
 
@@ -151,7 +151,7 @@ static void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t 
     copy_host_buffer(p_r, r, len * 2);
 }
 
-static bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, guest_pointer_t p_out, size_t len)
+bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, guest_pointer_t p_out, size_t len)
 {
     uint256_t number;
     char buf[100];
@@ -169,55 +169,4 @@ static bool sys_tostring256(const guest_pointer_t p_number, const unsigned int b
     copy_host_buffer(p_out, buf, len);
 
     return true;
-}
-
-/*
- * XXX - Disclaimer: these ECALLs aren't stable, probably buggy.
- *       The API is a WIP.
- */
-bool ecall_bolos(struct rv_cpu *cpu, uint32_t nr)
-{
-    bool stop = false;
-
-    switch (nr) {
-    case ECALL_SHA256SUM:
-        sys_sha256sum(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
-        break;
-    case ECALL_DERIVE_NODE_BIP32:
-        cpu->regs[RV_REG_A0] = sys_derive_node_bip32(cpu->regs[RV_REG_A0], GP(RV_REG_A1), cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4));
-        break;
-    case ECALL_CX_ECFP_GENERATE_PAIR:
-        cpu->regs[RV_REG_A0] = sys_ecfp_generate_pair(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
-        break;
-    case ECALL_CX_ECFP_GET_PUBKEY:
-        cpu->regs[RV_REG_A0] = sys_ecfp_get_pubkey(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
-        break;
-    case ECALL_CX_SHA3_256:
-        sys_sha3_256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
-        break;
-    case ECALL_ECDSA_SIGN:
-        cpu->regs[RV_REG_A0] = sys_ecdsa_sign(GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4), cpu->regs[RV_REG_A5]);
-        break;
-    case ECALL_MULT:
-        sys_mult(GP(RV_REG_A0), GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
-        break;
-    case ECALL_MULTM:
-        sys_multm(GP(RV_REG_A0), GP(RV_REG_A1), GP(RV_REG_A2), GP(RV_REG_A3), cpu->regs[RV_REG_A4]);
-        break;
-    case ECALL_TOSTRING256:
-        cpu->regs[RV_REG_A0] = sys_tostring256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
-        break;
-    case ECALL_HASH_UPDATE:
-        cpu->regs[RV_REG_A0] = sys_hash_update(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
-        break;
-    case ECALL_HASH_FINAL:
-        cpu->regs[RV_REG_A0] = sys_hash_final(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
-        break;
-    default:
-        sys_exit(0xdeaddead);
-        stop = true;
-        break;
-    }
-
-    return stop;
 }

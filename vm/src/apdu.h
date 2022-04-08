@@ -6,6 +6,8 @@
 #include "error.h"
 #include "stream.h"
 
+#include "os_io_seproxyhal.h"
+
 #define OFFSET_CLA   0
 #define OFFSET_INS   1
 #define OFFSET_P1    2
