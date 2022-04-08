@@ -280,3 +280,17 @@ void *memcpy(void *dest, const void *src, size_t n) __attribute__((alias("ecall_
 size_t strlen(const char *s) __attribute__((alias("ecall_strlen")));
 
 size_t strnlen(const char *s, size_t maxlen) __attribute__((alias("ecall_strnlen")));
+
+void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
+    __attribute__((alias("ecall_sha256sum")));
+
+void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
+    __attribute__((alias("ecall_sha3_256")));
+
+bool hash_update(const cx_hash_id_t hash_id,
+                 ctx_hash_guest_t *ctx,
+                 const uint8_t *buffer,
+                 const size_t size) __attribute__((alias("ecall_hash_update")));
+
+bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest)
+    __attribute__((alias("ecall_hash_final")));
