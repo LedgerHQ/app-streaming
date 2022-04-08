@@ -2,11 +2,9 @@
 
 #include "ecall.h"
 #include "ecall_hash.h"
-#include "stream.h"
+#include "page.h"
 
 #include "cx.h"
-
-#define MIN(a,b)        ((a) < (b) ? (a) : (b))
 
 union cx_hash_ctx_u {
     cx_sha256_t sha256;
@@ -23,12 +21,8 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
 
     /* compute digest over the guest data */
     while (size > 0) {
-        size_t n;
-        n = PAGE_SIZE - (p_data.addr - PAGE_START(p_data.addr));
-        n = MIN(size, n);
-
-        uint8_t *buffer;
-        buffer = get_buffer(p_data.addr, n, false);
+        const size_t n = BUFFER_MIN_SIZE(p_data.addr, size);
+        const uint8_t *buffer = get_buffer(p_data.addr, n, false);
 
         if (size - n != 0) {
             cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
@@ -43,11 +37,9 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
     /* copy digest to the guest addr */
     size = sizeof(digest);
     while (size > 0) {
-        size_t n;
-        n = PAGE_SIZE - (p_digest.addr - PAGE_START(p_digest.addr));
-        n = MIN(size, n);
-
+        const size_t n = BUFFER_MIN_SIZE(p_digest.addr, size);
         uint8_t *buffer = get_buffer(p_digest.addr, n, true);
+
         memcpy(buffer, digest + sizeof(digest) - size, n);
 
         p_digest.addr += n;
@@ -61,12 +53,9 @@ void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
 
     cx_keccak_init(&ctx, 256);
     while (size > 0) {
-        size_t n;
-        n = PAGE_SIZE - (p_buffer.addr - PAGE_START(p_buffer.addr));
-        n = MIN(size, n);
+        const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
+        const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
 
-        uint8_t *buffer;
-        buffer = get_buffer(p_buffer.addr, n, false);
         cx_hash(&ctx.header, 0, buffer, n, NULL, 0);
 
         p_buffer.addr += n;
@@ -136,12 +125,9 @@ bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_po
     }
 
     while (size > 0) {
-        size_t n;
-        n = PAGE_SIZE - (p_buffer.addr - PAGE_START(p_buffer.addr));
-        n = MIN(size, n);
+        const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
+        const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
 
-        uint8_t *buffer;
-        buffer = get_buffer(p_buffer.addr, n, false);
         cx_hash((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
 
         p_buffer.addr += n;

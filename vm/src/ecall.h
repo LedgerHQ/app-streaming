@@ -11,6 +11,7 @@ typedef struct guest_pointer_s {
 
 void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size);
 void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size);
+uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable);
 void sys_exit(uint32_t code);
 
 bool ecall(struct rv_cpu *cpu);
