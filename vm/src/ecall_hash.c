@@ -24,7 +24,7 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
     /* compute digest over the guest data */
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_data.addr - PAGE_START(p_data.addr));
+        n = BUFFER_MAX_SIZE(p_data.addr);
         n = MIN(size, n);
 
         uint8_t *buffer;
@@ -44,7 +44,7 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
     size = sizeof(digest);
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_digest.addr - PAGE_START(p_digest.addr));
+        n = BUFFER_MAX_SIZE(p_digest.addr);
         n = MIN(size, n);
 
         uint8_t *buffer = get_buffer(p_digest.addr, n, true);
@@ -62,7 +62,7 @@ void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
     cx_keccak_init(&ctx, 256);
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_buffer.addr - PAGE_START(p_buffer.addr));
+        n = BUFFER_MAX_SIZE(p_buffer.addr);
         n = MIN(size, n);
 
         uint8_t *buffer;
@@ -137,7 +137,7 @@ bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_po
 
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_buffer.addr - PAGE_START(p_buffer.addr));
+        n = BUFFER_MAX_SIZE(p_buffer.addr);
         n = MIN(size, n);
 
         uint8_t *buffer;

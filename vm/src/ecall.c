@@ -61,7 +61,7 @@ static size_t xrecv(guest_pointer_t p_buf, size_t size)
         _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(apdu->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
 
         size_t n;
-        n = PAGE_SIZE - (p_buf.addr - PAGE_START(p_buf.addr));
+        n = BUFFER_MAX_SIZE(p_buf.addr);
         n = MIN(size, n);
 
         /* 0. retrieve buffer pointer now since it can modify G_io_apdu_buffer */
@@ -135,7 +135,7 @@ static void xsend(guest_pointer_t p_buf, size_t size)
 
         size_t n;
 
-        n = PAGE_SIZE - (p_buf.addr - PAGE_START(p_buf.addr));
+        n = BUFFER_MAX_SIZE(p_buf.addr);
         n = MIN(size, n);
         n = MIN(sizeof(cmd->data), n);
 
@@ -173,7 +173,7 @@ static void sys_fatal(guest_pointer_t p_msg)
     size_t max_size = sizeof(cmd->msg);
 
     uint8_t *p = cmd->msg;
-    size_t n = PAGE_SIZE - (p_msg.addr - PAGE_START(p_msg.addr));
+    size_t n = BUFFER_MAX_SIZE(p_msg.addr);
     if (n > max_size) {
         n = max_size;
     }
@@ -224,7 +224,7 @@ void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
 
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_src.addr - PAGE_START(p_src.addr));
+        n = BUFFER_MAX_SIZE(p_src.addr);
         n = MIN(size, n);
 
         uint8_t *buffer;
@@ -243,7 +243,7 @@ void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
 
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_dst.addr - PAGE_START(p_dst.addr));
+        n = BUFFER_MAX_SIZE(p_dst.addr);
         n = MIN(size, n);
 
         uint8_t *buffer;
@@ -413,7 +413,7 @@ static uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
 
     while (size > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_s.addr - PAGE_START(p_s.addr));
+        n = BUFFER_MAX_SIZE(p_s.addr);
         n = MIN(size, n);
 
         uint8_t *buffer = get_buffer(p_s.addr, n, true);
@@ -432,8 +432,8 @@ static uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t 
 
     while (size > 0) {
         size_t n, a, b;
-        a = PAGE_SIZE - (p_dst.addr - PAGE_START(p_dst.addr));
-        b = PAGE_SIZE - (p_src.addr - PAGE_START(p_src.addr));
+        a = BUFFER_MAX_SIZE(p_dst.addr);
+        b = BUFFER_MAX_SIZE(p_src.addr);
         n = MIN(size, MIN(a, b));
 
         uint8_t *buffer_src = get_buffer(p_src.addr, n, false);
@@ -460,9 +460,7 @@ static size_t sys_strlen(guest_pointer_t p_s)
     size_t size = 0;
 
     while (true) {
-        size_t n;
-        n = PAGE_SIZE - (p_s.addr - PAGE_START(p_s.addr));
-
+        size_t n = BUFFER_MAX_SIZE(p_s.addr);
         char *buffer = (char *)get_buffer(p_s.addr, n, false);
         size_t tmp_size = strnlen(buffer, n);
 
@@ -483,7 +481,7 @@ static size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
 
     while (maxlen > 0) {
         size_t n;
-        n = PAGE_SIZE - (p_s.addr - PAGE_START(p_s.addr));
+        n = BUFFER_MAX_SIZE(p_s.addr);
         n = MIN(n, maxlen);
 
         char *buffer = (char *)get_buffer(p_s.addr, n, false);
