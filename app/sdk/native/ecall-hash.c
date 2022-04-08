@@ -1,3 +1,10 @@
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "api/ecall-params.h"
+#include "api/uint256.h"
+#include "crypto.h"
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 union cx_hash_ctx_u {
@@ -108,3 +115,17 @@ bool ecall_hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *guest_ctx, u
 
     return true;
 }
+
+void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
+    __attribute__((alias("ecall_sha256sum")));
+
+void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
+    __attribute__((alias("ecall_sha3_256")));
+
+bool hash_update(const cx_hash_id_t hash_id,
+                 ctx_hash_guest_t *ctx,
+                 const uint8_t *buffer,
+                 const size_t size) __attribute__((alias("ecall_hash_update")));
+
+bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest)
+    __attribute__((alias("ecall_hash_final")));

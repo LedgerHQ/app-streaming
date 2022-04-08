@@ -13,6 +13,7 @@ else()
   add_library(sdk
     crypto.c
     native/ecall-native.c
+    native/ecall-hash.c
     native/uint256-native.c
     sdk.c
     uint256.c

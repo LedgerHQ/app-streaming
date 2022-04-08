@@ -215,5 +215,3 @@ bool ecall_tostring256(const uint256_t *number, const unsigned int base, char *o
 {
     return sys_tostring256(number, base, out, len);
 }
-
-#include "ecall-hash.c"

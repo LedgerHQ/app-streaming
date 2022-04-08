@@ -21,17 +21,11 @@ bool app_loading_stop(void) __attribute__((alias("ecall_app_loading_stop")));
 
 __attribute__((noreturn)) void fatal(char *msg) __attribute__((alias("ecall_fatal")));
 
-void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
-    __attribute__((alias("ecall_sha256sum")));
-
 void screen_update(void) __attribute__((alias("ecall_screen_update")));
 
 void xsend(const uint8_t *buffer, size_t size) __attribute__((alias("ecall_xsend")));
 
 int wait_button(void) __attribute__((alias("ecall_wait_button")));
-
-void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
-    __attribute__((alias("ecall_sha3_256")));
 
 void ux_idle(void) __attribute__((alias("ecall_ux_idle")));
 
@@ -61,11 +55,3 @@ void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, siz
 
 bool tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len)
     __attribute__((alias("ecall_tostring256")));
-
-bool hash_update(const cx_hash_id_t hash_id,
-                 ctx_hash_guest_t *ctx,
-                 const uint8_t *buffer,
-                 const size_t size) __attribute__((alias("ecall_hash_update")));
-
-bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest)
-    __attribute__((alias("ecall_hash_final")));

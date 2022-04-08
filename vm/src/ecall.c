@@ -3,7 +3,6 @@
 #include "bagl.h"
 #include "cx.h"
 #include "os.h"
-#include "os_io_seproxyhal.h"
 
 #include "apdu.h"
 #include "ecall.h"
@@ -13,9 +12,6 @@
 #include "stream.h"
 #include "types.h"
 #include "ui.h"
-
-#include "sdk/api/ecall-nr.h"
-#include "sdk/api/ecall-params.h"
 
 int saved_apdu_state;
 
@@ -49,7 +45,7 @@ struct cmd_fatal_s {
  * Can't be interrupted by a button press for now when the exchange has started.
  * TODO: display some progress bar or something.
  */
-static size_t xrecv(guest_pointer_t p_buf, size_t size)
+size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
 {
     size_t ret = 0;
     uint32_t counter = 0;
@@ -123,7 +119,7 @@ static size_t xrecv(guest_pointer_t p_buf, size_t size)
     return ret;
 }
 
-static void xsend(guest_pointer_t p_buf, size_t size)
+void sys_xsend(guest_pointer_t p_buf, size_t size)
 {
     uint32_t counter = 0;
 
@@ -158,7 +154,7 @@ static void xsend(guest_pointer_t p_buf, size_t size)
     }
 }
 
-static void sys_fatal(guest_pointer_t p_msg)
+void sys_fatal(guest_pointer_t p_msg)
 {
     struct cmd_fatal_s *cmd = (struct cmd_fatal_s *)G_io_apdu_buffer;
 
@@ -203,12 +199,12 @@ void sys_exit(uint32_t code)
 }
 
 #ifdef TARGET_NANOX
-static void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
     bagl_hal_draw_rect(color, x, y, width, height);
 }
 
-static void sys_screen_update(void)
+void sys_screen_update(void)
 {
     screen_update();
 }
@@ -245,7 +241,7 @@ void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
     }
 }
 
-static void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits)
+void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits)
 {
     unsigned int colors[2];
     uint8_t bitmap[512];
@@ -343,7 +339,7 @@ static unsigned short io_exchange_asynch_reply(void)
   return button_pressed - 1;
 }
 
-static int sys_wait_button(void)
+int sys_wait_button(void)
 {
     int button_mask;
 
@@ -355,7 +351,7 @@ static int sys_wait_button(void)
     return button_mask;
 }
 
-static void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding)
+void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding)
 {
     packed_bagl_component_t packed_component;
     bagl_component_t component;
@@ -396,7 +392,7 @@ void sys_ux_idle(void)
     ui_app_idle();
 }
 
-static uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
+uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
 {
     const uint32_t s_addr = p_s.addr;
 
@@ -413,7 +409,7 @@ static uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
     return s_addr;
 }
 
-static uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
+uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
 {
     const uint32_t dst_addr = p_dst.addr;
 
@@ -439,7 +435,7 @@ static uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t 
     return dst_addr;
 }
 
-static size_t sys_strlen(guest_pointer_t p_s)
+size_t sys_strlen(guest_pointer_t p_s)
 {
     size_t size = 0;
 
@@ -460,7 +456,7 @@ static size_t sys_strlen(guest_pointer_t p_s)
     return size;
 }
 
-static size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
+size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
 {
     size_t size = 0;
 
@@ -480,73 +476,4 @@ static size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
     }
 
     return size;
-}
-
-/*
- * Return true if the ecall either exit() or unsupported, false otherwise.
- */
-bool ecall(struct rv_cpu *cpu)
-{
-    uint32_t nr = cpu->regs[RV_REG_T0];
-    bool stop = false;
-
-    switch (nr) {
-    case ECALL_FATAL:
-        sys_fatal(GP(RV_REG_A0));
-        stop = true;
-        break;
-    case ECALL_XSEND:
-        xsend(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
-        break;
-    case ECALL_XRECV:
-        cpu->regs[RV_REG_A0] = xrecv(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
-        break;
-    case ECALL_EXIT:
-        sys_exit(cpu->regs[RV_REG_A0]);
-        stop = true;
-        break;
-#ifdef TARGET_NANOX
-    case ECALL_UX_RECTANGLE:
-        sys_ux_rectangle(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
-        break;
-    case ECALL_SCREEN_UPDATE:
-        sys_screen_update();
-        break;
-    case ECALL_BAGL_DRAW_BITMAP:
-        sys_ux_bitmap(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], GP(RV_REG_A4), cpu->regs[RV_REG_A5], GP(RV_REG_A6), cpu->regs[RV_REG_A7]);
-        break;
-#endif
-    case ECALL_WAIT_BUTTON:
-        cpu->regs[RV_REG_A0] = sys_wait_button();
-        break;
-    case ECALL_BAGL_DRAW:
-        sys_bagl_draw_with_context(GP(RV_REG_A0), GP(RV_REG_A1), cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
-        break;
-    case ECALL_LOADING_START:
-        sys_app_loading_start(GP(RV_REG_A0));
-        break;
-    case ECALL_LOADING_STOP:
-        cpu->regs[RV_REG_A0] = sys_app_loading_stop();
-        break;
-    case ECALL_UX_IDLE:
-        sys_ux_idle();
-        break;
-    case ECALL_MEMSET:
-        cpu->regs[RV_REG_A0] = sys_memset(GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
-        break;
-    case ECALL_MEMCPY:
-        cpu->regs[RV_REG_A0] = sys_memcpy(GP(RV_REG_A0), GP(RV_REG_A1), cpu->regs[RV_REG_A2]);
-        break;
-    case ECALL_STRLEN:
-        cpu->regs[RV_REG_A0] = sys_strlen(GP(RV_REG_A0));
-        break;
-    case ECALL_STRNLEN:
-        cpu->regs[RV_REG_A0] = sys_strnlen(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
-        break;
-    default:
-        stop = ecall_bolos(cpu, nr);
-        break;
-    }
-
-    return stop;
 }
