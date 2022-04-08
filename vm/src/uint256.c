@@ -410,7 +410,7 @@ bool tostring128(uint128_t *number, uint32_t baseParam, char *out, uint32_t outL
     return true;
 }
 
-bool tostring256(const uint256_t *number, const unsigned int baseParam, char *out, size_t outLength) {
+bool tostring256_implem(const uint256_t *number, const unsigned int baseParam, char *out, size_t outLength) {
     uint256_t rDiv;
     uint256_t rMod;
     uint256_t base;

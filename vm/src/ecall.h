@@ -5,6 +5,10 @@
 
 #include "cx.h"
 
+#ifdef NATIVE
+#include "speculos.h"
+#endif
+
 #include "sdk/api/ecall-params.h"
 
 struct rv_cpu;

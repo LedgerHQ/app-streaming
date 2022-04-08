@@ -32,7 +32,7 @@ static void test_sign_msg(void **state __attribute__((unused)))
 
     ResponseSignMsg response;
     const char *error = handle_sign_message(&req, &response);
-    assert_non_null(error);
+    assert_null(error);
 }
 
 int main(void)

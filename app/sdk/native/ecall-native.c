@@ -5,10 +5,9 @@
 #include <unistd.h>
 
 #include "crypto.h"
-#include "ecall-common.h"
+#include "ecall-vm.h"
 #include "ecall.h"
 #include "sdk/sdk.h"
-#include "uint256-native.h"
 
 static void readall(int fd, void *buf, size_t count)
 {
@@ -55,6 +54,25 @@ static void writeall(const uint8_t *buffer, size_t size)
         size -= i;
         p += i;
     }
+}
+
+bool copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
+{
+    memcpy(buf, (void *)p_src.addr, size);
+
+    return true;
+}
+
+bool copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
+{
+    memcpy((void *)p_dst.addr, buf, size);
+
+    return true;
+}
+
+uint8_t *get_buffer(const uintptr_t addr, const size_t size, const bool writeable)
+{
+    return (uint8_t *)addr;
 }
 
 void ecall_xsend(const uint8_t *buffer, size_t size)
@@ -132,86 +150,4 @@ bool ecall_app_loading_stop(void)
 
 void ecall_ux_idle(void)
 {
-}
-
-cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve,
-                                  cx_ecfp_public_key_t *pubkey,
-                                  cx_ecfp_private_key_t *privkey)
-{
-    sys_cx_ecfp_generate_pair(curve, pubkey, privkey, true);
-    /* XXX */
-    return CX_OK;
-}
-
-cx_err_t ecall_ecfp_get_pubkey(cx_curve_t curve,
-                               cx_ecfp_public_key_t *pubkey,
-                               const cx_ecfp_private_key_t *privkey)
-{
-    sys_cx_ecfp_generate_pair(curve, pubkey, (cx_ecfp_private_key_t *)privkey, false);
-    /* XXX */
-    return CX_OK;
-}
-
-cx_err_t ecall_derive_node_bip32(cx_curve_t curve,
-                                 const unsigned int *path,
-                                 size_t path_count,
-                                 uint8_t *private_key,
-                                 uint8_t *chain)
-{
-    sys_os_perso_derive_node_bip32(curve, path, path_count, private_key, chain);
-    /* XXX */
-    return CX_OK;
-}
-
-size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,
-                        const int mode,
-                        const cx_md_t hash_id,
-                        const uint8_t *hash,
-                        uint8_t *sig,
-                        size_t sig_len)
-{
-    unsigned int *info = NULL;
-    size_t hash_len, ret;
-
-    switch (hash_id) {
-    case CX_SHA224:
-        hash_len = CX_SHA224_SIZE;
-        break;
-    case CX_SHA256:
-        hash_len = CX_SHA256_SIZE;
-        break;
-    case CX_SHA384:
-        hash_len = CX_SHA384_SIZE;
-        break;
-    case CX_SHA512:
-        hash_len = CX_SHA512_SIZE;
-        break;
-    case CX_RIPEMD160:
-        hash_len = CX_RIPEMD160_SIZE;
-        break;
-    default:
-        return 0;
-    }
-
-    ret = sys_cx_ecdsa_sign(key, mode, hash_id, hash, hash_len, sig, sig_len, info);
-    if (ret == 0) {
-        return 0;
-    }
-
-    return ret;
-}
-
-void ecall_mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
-{
-    sys_cx_math_mult(r, a, b, len);
-}
-
-void ecall_multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len)
-{
-    sys_cx_math_multm(r, a, b, m, len);
-}
-
-bool ecall_tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len)
-{
-    return sys_tostring256(number, base, out, len);
 }

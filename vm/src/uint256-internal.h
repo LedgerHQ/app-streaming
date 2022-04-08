@@ -35,4 +35,4 @@ void divmod128(uint128_t *l, uint128_t *r, uint128_t *div, uint128_t *mod);
 void divmod256(uint256_t *l, uint256_t *r, uint256_t *div, uint256_t *mod);
 bool tostring128(uint128_t *number, uint32_t base, char *out, uint32_t outLength);
 void reverseString(char *str, uint32_t length);
-bool tostring256(const uint256_t *number, const unsigned int baseParam, char *out, size_t outLength);
+bool tostring256_implem(const uint256_t *number, const unsigned int baseParam, char *out, size_t outLength);

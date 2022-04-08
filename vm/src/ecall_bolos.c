@@ -6,7 +6,7 @@
 #include "uint256-internal.h"
 
 #include "cx.h"
-#include "os.h"
+#include "os_seed.h"
 
 #include "sdk/api/ecall-nr.h"
 
@@ -216,7 +216,7 @@ bool sys_tostring256(eret_t *eret, const guest_pointer_t p_number, const unsigne
         return false;
     }
 
-    if (!tostring256(&number, base, buf, len)) {
+    if (!tostring256_implem(&number, base, buf, len)) {
         eret->boolean = false;
         return true;
     }
