@@ -13,7 +13,7 @@ union cx_hash_ctx_u {
     cx_hash_t header;
 };
 
-void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest)
+bool sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest)
 {
     uint8_t digest[CX_SHA256_SIZE];
     cx_sha256_t ctx;
@@ -25,7 +25,7 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
         const size_t n = BUFFER_MIN_SIZE(p_data.addr, size);
         const uint8_t *buffer = get_buffer(p_data.addr, n, false);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         if (size - n != 0) {
@@ -44,7 +44,7 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
         const size_t n = BUFFER_MIN_SIZE(p_digest.addr, size);
         uint8_t *buffer = get_buffer(p_digest.addr, n, true);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         memcpy(buffer, digest + sizeof(digest) - size, n);
@@ -52,6 +52,8 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
         p_digest.addr += n;
         size -= n;
     }
+
+    return true;
 }
 
 void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_digest)

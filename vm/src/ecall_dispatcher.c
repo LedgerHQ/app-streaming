@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "ecall.h"
+#include "ecall_hash.h"
 #include "rv.h"
 
 #include "sdk/api/ecall-nr.h"
@@ -12,6 +13,7 @@ bool ecall(struct rv_cpu *cpu)
 {
     uint32_t nr = cpu->regs[RV_REG_T0];
     bool stop = false;
+    bool success = true;
 
     switch (nr) {
     case ECALL_FATAL:
@@ -71,7 +73,7 @@ bool ecall(struct rv_cpu *cpu)
      *       The API is a WIP.
      */
     case ECALL_SHA256SUM:
-        sys_sha256sum(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
+        success = sys_sha256sum(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
         break;
     case ECALL_DERIVE_NODE_BIP32:
         cpu->regs[RV_REG_A0] = sys_derive_node_bip32(cpu->regs[RV_REG_A0], GP(RV_REG_A1), cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4));
@@ -107,6 +109,10 @@ bool ecall(struct rv_cpu *cpu)
         sys_exit(0xdeaddead);
         stop = true;
         break;
+    }
+
+    if (!success) {
+        stop = true;
     }
 
     return stop;

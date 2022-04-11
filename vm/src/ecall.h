@@ -46,9 +46,4 @@ void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, siz
 void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len);
 bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, guest_pointer_t p_out, size_t len);
 
-void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest);
-void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_digest);
-bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_pointer_t p_buffer, size_t size);
-bool sys_hash_final(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_pointer_t p_digest);
-
 bool ecall(struct rv_cpu *cpu);
