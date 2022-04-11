@@ -2,7 +2,6 @@
 
 #include "ecall.h"
 #include "ecall_hash.h"
-#include "error.h"
 #include "page.h"
 
 #include "cx.h"
@@ -136,7 +135,10 @@ static bool save_ctx_from_host(const cx_hash_id_t hash_id, guest_pointer_t p_ctx
     return true;
 }
 
-bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_pointer_t p_buffer, size_t size)
+/**
+ * @return true on success, false otherwise
+ */
+bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_pointer_t p_buffer, size_t size, uint32_t *ret)
 {
     union cx_hash_ctx_u ctx;
 
@@ -148,7 +150,7 @@ bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_po
         const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
         const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         cx_hash((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
@@ -157,7 +159,9 @@ bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_po
         size -= n;
     }
 
-    return save_ctx_from_host(hash_id, p_ctx, &ctx);
+    *ret = save_ctx_from_host(hash_id, p_ctx, &ctx);
+
+    return true;
 }
 
 bool sys_hash_final(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_pointer_t p_digest)
