@@ -74,7 +74,13 @@ static void app_main_(void)
             continue;
         }
 
-        stream_init_app(&G_io_apdu_buffer[OFFSET_CDATA], cmd.lc);
+        if (!stream_init_app(&G_io_apdu_buffer[OFFSET_CDATA], cmd.lc)) {
+            G_io_apdu_buffer[0] = 0x62;
+            G_io_apdu_buffer[1] = 0x62;
+            tx = 2;
+            continue;
+        }
+
         vm_running = true;
         stream_run_app();
         vm_running = false;

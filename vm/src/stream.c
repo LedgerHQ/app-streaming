@@ -347,13 +347,14 @@ static void init_dynamic_keys(void)
     explicit_bzero(encryption_key, sizeof(encryption_key));
 }
 
-void stream_init_app(uint8_t *buffer, size_t signature_size)
+bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
 {
     /* 1. store the manifest signature */
     uint8_t signature[72];
 
     if (signature_size > sizeof(signature)) {
-        fatal("invalid signature\n");
+        err("invalid signature\n");
+        return false;
     }
 
     memcpy(signature, buffer, signature_size);
@@ -366,19 +367,22 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     struct apdu_s *apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     const size_t alignment_offset = 3;
     if (apdu->lc != alignment_offset + sizeof(struct manifest_s)) {
-        fatal("invalid manifest APDU\n");
+        err("invalid manifest APDU\n");
+        return false;
     }
 
     struct manifest_s *manifest = (struct manifest_s *)(apdu->data + alignment_offset);
 
     /* 3. verify manifest signature */
     if (!verify_manifest_device_signature(manifest, signature, signature_size)) {
-        fatal("invalid manifest\n");
+        err("invalid manifest\n");
+        return false;
     }
 
     memset(&app, '\x00', sizeof(app));
@@ -396,7 +400,8 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     uint32_t sp = app.sections[SECTION_STACK].end;
     if (PAGE_START(sp) != sp) {
-        fatal("invalid stack end\n");
+        err("invalid stack end\n");
+        return false;
     }
 
     app.stack_min = sp;
@@ -412,6 +417,8 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
     lfsr_init();
     sys_app_loading_stop();
     set_app_name(manifest->name);
+
+    return true;
 }
 
 static void u32hex(uint32_t n, char *buf)
