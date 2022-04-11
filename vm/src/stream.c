@@ -457,6 +457,9 @@ static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct 
     return false;
 }
 
+/**
+ * @return NULL on error
+ */
 static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 {
     struct page_s *pages, *page;
@@ -467,7 +470,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 
     if (in_section(SECTION_CODE, addr)) {
         if (page_prot != PAGE_PROT_RO) {
-            fatal("write access to code page\n");
+            err("write access to code page\n");
+            return NULL;
         }
         pages = app.code;
         npage = NPAGE_CODE;
@@ -480,8 +484,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         npage = NPAGE_STACK;
         writeable = true;
     } else {
-        fatal("invalid addr (no section found)\n");
-        pages = NULL;
+        err("invalid addr (no section found)\n");
+        return NULL;
     }
 
     if (find_page(addr, pages, npage, &page)) {
@@ -517,7 +521,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 
     if (!zero_page) {
         if (!stream_request_page(page, !writeable)) {
-            fatal("stream_request_page failed\n");
+            return NULL;
         }
     } else {
         /* the IV was incremented by 1 during commit */
@@ -577,6 +581,9 @@ uint32_t mem_read(uint32_t addr, size_t size)
     check_alignment(addr, size);
 
     page = get_page(addr, PAGE_PROT_RO);
+    if (page == NULL) {
+        fatal("get_page failed\n");
+    }
     offset = addr - PAGE_START(addr);
 
     switch (size) {
@@ -603,6 +610,9 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
     check_alignment(addr, size);
 
     page = get_page(addr, PAGE_PROT_RW);
+    if (page == NULL) {
+        fatal("get_page failed\n");
+    }
     offset = addr - PAGE_START(addr);
 
     if (offset > PAGE_SIZE - size) {
@@ -634,6 +644,10 @@ uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
     }
 
     struct page_s *page = get_page(addr, writeable ? PAGE_PROT_RW : PAGE_PROT_RO);
+    if (page == NULL) {
+        fatal("get_page failed\n");
+    }
+
     uint32_t offset = addr - PAGE_START(addr);
 
     return &page->data[offset];
