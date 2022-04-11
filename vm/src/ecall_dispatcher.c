@@ -85,7 +85,7 @@ bool ecall(struct rv_cpu *cpu)
         cpu->regs[RV_REG_A0] = sys_ecfp_get_pubkey(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
         break;
     case ECALL_CX_SHA3_256:
-        sys_sha3_256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
+        success = sys_sha3_256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
         break;
     case ECALL_ECDSA_SIGN:
         cpu->regs[RV_REG_A0] = sys_ecdsa_sign(GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4), cpu->regs[RV_REG_A5]);

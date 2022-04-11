@@ -13,6 +13,9 @@ union cx_hash_ctx_u {
     cx_hash_t header;
 };
 
+/**
+ * @return true on success, false otherwise
+ */
 bool sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest)
 {
     uint8_t digest[CX_SHA256_SIZE];
@@ -56,7 +59,10 @@ bool sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
     return true;
 }
 
-void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_digest)
+/**
+ * @return true on success, false otherwise
+ */
+bool sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_digest)
 {
     cx_sha3_t ctx;
 
@@ -65,7 +71,7 @@ void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
         const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
         const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         cx_hash(&ctx.header, 0, buffer, n, NULL, 0);
@@ -78,6 +84,8 @@ void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
     cx_hash((cx_hash_t *)&ctx, CX_LAST, NULL, 0, digest, sizeof(digest));
 
     copy_host_buffer(p_digest, digest, sizeof(digest));
+
+    return true;
 }
 
 static bool restore_ctx_from_guest(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, union cx_hash_ctx_u *ctx)
