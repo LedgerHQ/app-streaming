@@ -540,7 +540,7 @@ static void check_alignment(uint32_t addr, size_t size)
     }
 }
 
-static uint32_t get_instruction(uint32_t addr)
+static bool get_instruction(const uint32_t addr, uint32_t *instruction)
 {
     struct page_s *page;
     uint32_t page_addr;
@@ -555,7 +555,7 @@ static uint32_t get_instruction(uint32_t addr)
             page->addr = page_addr;
             page->usage = 1;
             if (!stream_request_page(page, true)) {
-                fatal("stream_request_page failed\n");
+                return false;
             }
             app.current_code_page = page;
         }
@@ -564,7 +564,9 @@ static uint32_t get_instruction(uint32_t addr)
     uint32_t offset = addr - page_addr;
     uint32_t value = *(uint32_t *)&page->data[offset];
 
-    return value;
+    *instruction = value;
+
+    return true;
 }
 
 uint32_t mem_read(uint32_t addr, size_t size)
@@ -656,7 +658,9 @@ void stream_run_app(void)
     bool stop;
 
     do {
-        instruction = get_instruction(app.cpu.pc);
+        if (!get_instruction(app.cpu.pc, &instruction)) {
+            fatal("get_instruction failed\n");
+        }
         if (0) {
             debug_cpu(app.cpu.pc, instruction);
         }
