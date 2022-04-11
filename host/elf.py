@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import sys
 
@@ -65,19 +64,6 @@ class Elf:
         assert len(infos["version"]) == 16
 
         return infos
-
-    def app_hash(self):
-        code = self.get_segment("code").data
-        data = self.get_segment("data").data
-
-        m = hashlib.sha256()
-        m.update(self.app_infos["name"])
-        m.update(self.app_infos["version"])
-        m.update(len(code).to_bytes(4, "little"))
-        m.update(len(data).to_bytes(4, "little"))
-        m.update(code)
-        m.update(data)
-        return m.digest()
 
     @staticmethod
     def _parse_segments(elf: ELFFile) -> List[Segment]:
