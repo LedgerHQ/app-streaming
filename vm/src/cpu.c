@@ -343,15 +343,21 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_SB:
-            mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 1, cpu->regs[inst.rs2]);
+            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 1, cpu->regs[inst.rs2])) {
+                stop = true;
+            }
             break;
 
         case RV_OP_SH:
-            mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 2, cpu->regs[inst.rs2]);
+            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 2, cpu->regs[inst.rs2])) {
+                stop = true;
+            }
             break;
 
         case RV_OP_SW:
-            mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 4, cpu->regs[inst.rs2]);
+            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 4, cpu->regs[inst.rs2])) {
+                stop = true;
+            }
             break;
 
         case RV_OP_ECALL:

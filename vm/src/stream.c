@@ -606,7 +606,10 @@ bool mem_read(const uint32_t addr, const size_t size, uint32_t *value)
     return true;
 }
 
-void mem_write(uint32_t addr, size_t size, uint32_t value)
+/**
+ * @return true on success, false otherwise
+ */
+bool mem_write(const uint32_t addr, const size_t size, const uint32_t value)
 {
     struct page_s *page;
     uint32_t offset;
@@ -615,12 +618,14 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
 
     page = get_page(addr, PAGE_PROT_RW);
     if (page == NULL) {
-        fatal("get_page failed\n");
+        err("get_page failed\n");
+        return false;
     }
     offset = addr - PAGE_START(addr);
 
     if (offset > PAGE_SIZE - size) {
-        fatal("invalid mem_write\n");
+        err("invalid mem_write\n");
+        return false;
     }
 
     switch (size) {
@@ -635,6 +640,8 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         *(uint32_t *)&page->data[offset] = value;
         break;
     }
+
+    return true;
 }
 
 uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
