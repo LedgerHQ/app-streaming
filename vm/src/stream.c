@@ -437,9 +437,13 @@ static bool in_section(enum section_e section, uint32_t addr)
     return addr >= app.sections[section].start && addr < app.sections[section].end;
 }
 
-/* the page argument is just here to avoid declaring this structure on the stack
- * since this struct is quite large */
-static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
+/**
+ * The page argument is just here to avoid declaring this structure on the stack
+ * since this struct is quite large.
+ *
+ * @return true on success, false otherwise
+ */
+static bool create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
 {
     uint32_t addr;
 
@@ -450,9 +454,11 @@ static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
          * dynamic keys will be used for decryption and HMAC. */
         page->iv = 0;
         if (!stream_commit_page(page, true)) {
-            fatal("stream_commit_page failed\n");
+            return false;
         }
     }
+
+    return true;
 }
 
 static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct page_s **result)
@@ -527,13 +533,17 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     bool zero_page = false;
     if (pages == app.data) {
         if (addr >= app.bss_max) {
-            create_empty_pages(app.bss_max, addr + PAGE_SIZE, page);
+            if (!create_empty_pages(app.bss_max, addr + PAGE_SIZE, page)) {
+                return NULL;
+            }
             app.bss_max = addr + PAGE_SIZE;
             zero_page = true;
         }
     } else if (pages == app.stack) {
         if (addr < app.stack_min) {
-            create_empty_pages(PAGE_START(addr), app.stack_min, page);
+            if (!create_empty_pages(PAGE_START(addr), app.stack_min, page)) {
+                return NULL;
+            }
             app.stack_min = addr;
             zero_page = true;
         }
