@@ -573,33 +573,37 @@ static bool get_instruction(const uint32_t addr, uint32_t *instruction)
     return true;
 }
 
-uint32_t mem_read(uint32_t addr, size_t size)
+/**
+ * @return true on success, false otherwise
+ */
+bool mem_read(const uint32_t addr, const size_t size, uint32_t *value)
 {
-    uint32_t offset, value;
     struct page_s *page;
+    uint32_t offset;
 
     check_alignment(addr, size);
 
     page = get_page(addr, PAGE_PROT_RO);
     if (page == NULL) {
-        fatal("get_page failed\n");
+        err("get_page failed\n");
+        return false;
     }
     offset = addr - PAGE_START(addr);
 
     switch (size) {
     case 1:
-        value = *(uint8_t *)&page->data[offset];
+        *value = *(uint8_t *)&page->data[offset];
         break;
     case 2:
-        value = *(uint16_t *)&page->data[offset];
+        *value = *(uint16_t *)&page->data[offset];
         break;
     case 4:
     default:
-        value = *(uint32_t *)&page->data[offset];
+        *value = *(uint32_t *)&page->data[offset];
         break;
     }
 
-    return value;
+    return true;
 }
 
 void mem_write(uint32_t addr, size_t size, uint32_t value)

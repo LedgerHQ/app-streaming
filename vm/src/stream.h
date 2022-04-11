@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "page.h"
@@ -33,3 +34,5 @@ struct manifest_s {
 
 void stream_init_app(uint8_t *buffer, size_t size);
 void stream_run_app(void);
+bool mem_read(const uint32_t addr, const size_t size, uint32_t *value);
+void mem_write(uint32_t addr, size_t size, uint32_t value);
