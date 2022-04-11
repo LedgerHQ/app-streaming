@@ -125,7 +125,10 @@ bool sys_xrecv(guest_pointer_t p_buf, size_t size, size_t *ret)
     return true;
 }
 
-void sys_xsend(guest_pointer_t p_buf, size_t size)
+/**
+ * @return false on error, true otherwise
+ */
+bool sys_xsend(guest_pointer_t p_buf, size_t size)
 {
     uint32_t counter = 0;
 
@@ -139,7 +142,7 @@ void sys_xsend(guest_pointer_t p_buf, size_t size)
         /* 0. copy the app buffer (note that it can modify G_io_apdu_buffer) */
         const uint8_t *buffer = get_buffer(p_buf.addr, n, false);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         memcpy(cmd->data, buffer, n);
@@ -160,6 +163,8 @@ void sys_xsend(guest_pointer_t p_buf, size_t size)
         size -= n;
         counter++;
     }
+
+    return true;
 }
 
 void sys_fatal(guest_pointer_t p_msg)
