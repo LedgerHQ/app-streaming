@@ -15,7 +15,7 @@ typedef struct guest_pointer_s {
 
 #define GP(reg) ((const guest_pointer_t){ .addr = cpu->regs[reg] })
 
-void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size);
+bool copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size);
 void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size);
 uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable);
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "ecall.h"
+#include "error.h"
 #include "loading.h"
 #include "ux.h"
 
@@ -74,7 +75,9 @@ void sys_app_loading_start(guest_pointer_t p_status)
     } else {
         /* XXX: this might be wrong if the guest buffer is smaller that sizeof(loading_status) and
          * at the end of a memory mapping */
-        copy_guest_buffer(p_status, loading_status, sizeof(loading_status) - 1);
+        if (!copy_guest_buffer(p_status, loading_status, sizeof(loading_status) - 1)) {
+            fatal("copy_guest_buffer failed\n");
+        }
         loading_status[sizeof(loading_status) - 1] = '\x00';
     }
 

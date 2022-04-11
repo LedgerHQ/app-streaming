@@ -26,8 +26,13 @@ cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t 
         fatal("derive_node_bip32: invalid curve (TODO)");
     }
 
-    copy_guest_buffer(p_path, (void *)path, path_count * sizeof(unsigned int));
-    copy_guest_buffer(p_private_key, private_key, sizeof(private_key));
+    if (!copy_guest_buffer(p_path, (void *)path, path_count * sizeof(unsigned int))) {
+        fatal("copy_guest_buffer failed\n");
+    }
+
+    if (!copy_guest_buffer(p_private_key, private_key, sizeof(private_key))) {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     os_perso_derive_node_bip32(curve, path, path_count, private_key, chain);
     /* XXX: error? */
@@ -68,7 +73,9 @@ cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, guest_pointer_t p_pubkey, guest_p
     cx_ecfp_public_key_t pubkey;
     cx_ecfp_private_key_t privkey;
 
-    copy_guest_buffer(p_privkey, &privkey, sizeof(privkey));
+    if (!copy_guest_buffer(p_privkey, &privkey, sizeof(privkey))) {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, true);
     if (err != CX_OK) {
@@ -103,8 +110,12 @@ size_t sys_ecdsa_sign(const guest_pointer_t p_key, const int mode,
     default: return 0;
     }
 
-    copy_guest_buffer(p_key, (void *)&key, sizeof(key));
-    copy_guest_buffer(p_hash, hash, hash_len);
+    if (!copy_guest_buffer(p_key, (void *)&key, sizeof(key))) {
+        fatal("copy_guest_buffer failed\n");
+    }
+    if (!copy_guest_buffer(p_hash, hash, hash_len)) {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     ret = cx_ecdsa_sign(&key, mode, hash_id, hash, hash_len, sig, sizeof(sig), info);
     if (ret == 0 || ret > sig_len) {
@@ -125,8 +136,12 @@ void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, siz
         fatal("invalid size for mult");
     }
 
-    copy_guest_buffer(p_a, a, len);
-    copy_guest_buffer(p_b, b, len);
+    if (!copy_guest_buffer(p_a, a, len)) {
+        fatal("copy_guest_buffer failed\n");
+    }
+    if (!copy_guest_buffer(p_b, b, len)) {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     cx_math_mult(r, a, b, len);
 
@@ -142,9 +157,15 @@ void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, gu
         fatal("invalid size for multm");
     }
 
-    copy_guest_buffer(p_a, a, len);
-    copy_guest_buffer(p_b, b, len);
-    copy_guest_buffer(p_m, m, len);
+    if (!copy_guest_buffer(p_a, a, len)) {
+        fatal("copy_guest_buffer failed\n");
+    }
+    if (!copy_guest_buffer(p_b, b, len)) {
+        fatal("copy_guest_buffer failed\n");
+    }
+    if (!copy_guest_buffer(p_m, m, len)) {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     cx_math_multm(r, a, b, m, len);
 
@@ -160,7 +181,9 @@ bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, gu
         len = sizeof(buf);
     }
 
-    copy_guest_buffer(p_number, &number, sizeof(number));
+    if (!copy_guest_buffer(p_number, &number, sizeof(number))) {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     if (!tostring256(&number, base, buf, len)) {
         return false;

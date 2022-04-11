@@ -181,14 +181,18 @@ void sys_fatal(guest_pointer_t p_msg)
     if (n > max_size) {
         n = max_size;
     }
-    copy_guest_buffer(p_msg, p, n);
+    if (!copy_guest_buffer(p_msg, p, n))  {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     uint8_t *q = memchr(p, '\x00', n);
     if (q == NULL) {
         p_msg.addr += n;
         p += n;
         max_size -= n;
-        copy_guest_buffer(p_msg, p, max_size);
+        if (!copy_guest_buffer(p_msg, p, max_size)) {
+            fatal("copy_guest_buffer failed\n");
+        }
         q = memchr(p, '\x00', n);
     }
 
@@ -222,7 +226,7 @@ void sys_screen_update(void)
     screen_update();
 }
 
-void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
+bool copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
 {
     uint8_t *dst = buf;
 
@@ -230,7 +234,7 @@ void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
         const size_t n = BUFFER_MIN_SIZE(p_src.addr, size);
         const uint8_t *buffer = get_buffer(p_src.addr, n, false);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         memcpy(dst, buffer, n);
@@ -239,6 +243,8 @@ void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
         dst += n;
         size -= n;
     }
+
+    return true;
 }
 
 void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
@@ -270,8 +276,13 @@ void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsi
         bitmap_length += 1;
     }
 
-    copy_guest_buffer(p_colors, colors, 2 * sizeof(unsigned int));
-    copy_guest_buffer(p_bitmap, bitmap, bitmap_length);
+    if (!copy_guest_buffer(p_colors, colors, 2 * sizeof(unsigned int))) {
+        fatal("copy_guest_buffer failed\n");
+    }
+
+    if (!copy_guest_buffer(p_bitmap, bitmap, bitmap_length)) {
+        fatal("copy_guest_buffer failed\n");
+    }
 
     bagl_hal_draw_bitmap_within_rect(x, y, width, height, /*color_count, */2, colors, bit_per_pixel, bitmap, bitmap_length_bits);
 }
@@ -381,9 +392,14 @@ void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_c
         context_length = sizeof(context_buf);
     }
 
-    copy_guest_buffer(p_component, &packed_component, sizeof(packed_component));
+    if (!copy_guest_buffer(p_component, &packed_component, sizeof(packed_component))) {
+        fatal("copy_guest_buffer failed\n");
+    }
+
     if (p_context.addr != 0) {
-        copy_guest_buffer(p_context, &context_buf, context_length);
+        if (!copy_guest_buffer(p_context, &context_buf, context_length))  {
+            fatal("copy_guest_buffer failed\n");
+        }
         context = &context_buf;
     } else {
         context = NULL;
