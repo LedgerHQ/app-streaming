@@ -532,16 +532,22 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     return page;
 }
 
-static bool same_page(uint32_t addr1, uint32_t addr2)
+/**
+ * @return true if the buffer of size bytes starting at address addr fits in a
+ *         page, false otherwise
+ */
+static bool fit_in_page(uint32_t addr, size_t size)
 {
-    return PAGE_START(addr1) == PAGE_START(addr2);
-}
-
-static void check_alignment(uint32_t addr, size_t size)
-{
-    if (!same_page(addr, addr + size - 1)) {
-        fatal("not on same page\n");
+    if (size == 0) {
+        return true;
     }
+
+    if (PAGE_START(addr) != PAGE_START(addr + size - 1)) {
+        err("not on same page\n");
+        return false;
+    }
+
+    return true;
 }
 
 static bool get_instruction(const uint32_t addr, uint32_t *instruction)
@@ -549,7 +555,9 @@ static bool get_instruction(const uint32_t addr, uint32_t *instruction)
     struct page_s *page;
     uint32_t page_addr;
 
-    check_alignment(addr, sizeof(uint32_t));
+    if (!fit_in_page(addr, sizeof(uint32_t))) {
+        return false;
+    }
     page_addr = PAGE_START(addr);
 
     if (app.current_code_page != NULL && app.current_code_page->addr == page_addr) {
@@ -581,7 +589,9 @@ bool mem_read(const uint32_t addr, const size_t size, uint32_t *value)
     struct page_s *page;
     uint32_t offset;
 
-    check_alignment(addr, size);
+    if (!fit_in_page(addr, size)) {
+        return false;
+    }
 
     page = get_page(addr, PAGE_PROT_RO);
     if (page == NULL) {
@@ -614,7 +624,9 @@ bool mem_write(const uint32_t addr, const size_t size, const uint32_t value)
     struct page_s *page;
     uint32_t offset;
 
-    check_alignment(addr, size);
+    if (!fit_in_page(addr, size)) {
+        return false;
+    }
 
     page = get_page(addr, PAGE_PROT_RW);
     if (page == NULL) {
@@ -650,7 +662,7 @@ uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
         fatal("invalid size\n");
     }
 
-    if (!same_page(addr, addr + size - 1)) {
+    if (!fit_in_page(addr, size)) {
         fatal("not on same page\n");
     }
 
