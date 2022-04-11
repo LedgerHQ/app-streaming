@@ -137,7 +137,7 @@ static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
     }
 }
 
-void stream_request_page(struct page_s *page, bool read_only)
+static bool stream_request_page(struct page_s *page, bool read_only)
 {
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
@@ -152,11 +152,13 @@ void stream_request_page(struct page_s *page, bool read_only)
 
     struct apdu_s *apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if (apdu->lc != PAGE_SIZE - 1) {
-        fatal("invalid apdu size\n");
+        err("invalid apdu size\n");
+        return false;
     }
 
     /* the first byte of the page is in p2 */
@@ -170,11 +172,13 @@ void stream_request_page(struct page_s *page, bool read_only)
 
     apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if (apdu->lc != sizeof(struct response_hmac_s)) {
-        fatal("invalid apdu size\n");
+        err("invalid apdu size\n");
+        return false;
     }
 
     struct response_hmac_s *r = (struct response_hmac_s *)&apdu->data;
@@ -193,7 +197,8 @@ void stream_request_page(struct page_s *page, bool read_only)
                      sizeof(mac));
 
     if (memcmp(mac, r->mac, sizeof(mac)) != 0) {
-        fatal("invalid hmac\n");
+        err("invalid hmac\n");
+        return false;
     }
 
     /* 3. decrypt page */
@@ -207,9 +212,10 @@ void stream_request_page(struct page_s *page, bool read_only)
     /* 4. verify iv thanks to the merkle tree if the page is writeable */
     if (read_only) {
         if (page->iv != 0) {
-            fatal("invalid id for read-only page\n");
+            err("invalid id for read-only page\n");
+            return false;
         }
-        return;
+        return true;
     }
 
     cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
@@ -217,17 +223,22 @@ void stream_request_page(struct page_s *page, bool read_only)
 
     apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if ((apdu->lc % sizeof(struct proof_s)) != 0) {
-        fatal("invalid proof size\n");
+        err("invalid proof size\n");
+        return false;
     }
 
     size_t count = apdu->lc / sizeof(struct proof_s);
     if (!merkle_verify_proof(&entry, (struct proof_s *)&apdu->data, count)) {
-        fatal("invalid iv (merkle proof)\n");
+        err("invalid iv (merkle proof)\n");
+        return false;
     }
+
+    return true;
 }
 
 void stream_commit_page(struct page_s *page, bool insert)
@@ -505,7 +516,9 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     page->usage = 1;
 
     if (!zero_page) {
-        stream_request_page(page, !writeable);
+        if (!stream_request_page(page, !writeable)) {
+            fatal("stream_request_page failed\n");
+        }
     } else {
         /* the IV was incremented by 1 during commit */
         page->iv = 1;
@@ -541,7 +554,9 @@ static uint32_t get_instruction(uint32_t addr)
         if (!find_page(page_addr, app.code, NPAGE_CODE, &page)) {
             page->addr = page_addr;
             page->usage = 1;
-            stream_request_page(page, true);
+            if (!stream_request_page(page, true)) {
+                fatal("stream_request_page failed\n");
+            }
             app.current_code_page = page;
         }
     }
