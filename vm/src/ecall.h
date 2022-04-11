@@ -31,10 +31,10 @@ void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsi
 int sys_wait_button(void);
 void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding);
 void sys_ux_idle(void);
-uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size);
-uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size);
-size_t sys_strlen(guest_pointer_t p_s);
-size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen);
+bool sys_memset(guest_pointer_t p_s, int c, size_t size, uint32_t *ret);
+bool sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size, uint32_t *ret);
+bool sys_strlen(guest_pointer_t p_s, size_t *ret);
+bool sys_strnlen(guest_pointer_t p_s, size_t maxlen, size_t *ret);
 
 cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain);
 cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);

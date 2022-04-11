@@ -411,15 +411,15 @@ void sys_ux_idle(void)
     ui_app_idle();
 }
 
-uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
+bool sys_memset(guest_pointer_t p_s, int c, size_t size, uint32_t *ret)
 {
-    const uint32_t s_addr = p_s.addr;
+    *ret = p_s.addr;
 
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_s.addr, size);
         uint8_t *buffer = get_buffer(p_s.addr, n, true);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         memset(buffer, c, n);
@@ -428,19 +428,19 @@ uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
         size -= n;
     }
 
-    return s_addr;
+    return true;
 }
 
-uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
+bool sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size, uint32_t *ret)
 {
-    const uint32_t dst_addr = p_dst.addr;
+    *ret = p_dst.addr;
 
     while (size > 0) {
         const size_t a = BUFFER_MIN_SIZE(p_dst.addr, size);
         const size_t n = BUFFER_MIN_SIZE(p_src.addr, a);
         const uint8_t *buffer_src = get_buffer(p_src.addr, n, false);
         if (buffer_src == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         /* a temporary buffer is required because get_buffer() might unlikely
@@ -451,7 +451,7 @@ uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
 
         uint8_t *buffer_dst = get_buffer(p_dst.addr, n, true);
         if (buffer_dst == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         memcpy(buffer_dst, tmp, n);
@@ -461,54 +461,54 @@ uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
         size -= n;
     }
 
-    return dst_addr;
+    return true;
 }
 
-size_t sys_strlen(guest_pointer_t p_s)
+bool sys_strlen(guest_pointer_t p_s, size_t *ret)
 {
-    size_t size = 0;
+    *ret = 0;
 
     while (true) {
         const size_t n = BUFFER_MAX_SIZE(p_s.addr);
         const char *buffer = (char *)get_buffer(p_s.addr, n, false);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         const size_t tmp_size = strnlen(buffer, n);
 
         p_s.addr += n;
-        size += tmp_size;
+        *ret += tmp_size;
 
         if (tmp_size < n) {
             break;
         }
     }
 
-    return size;
+    return true;
 }
 
-size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
+bool sys_strnlen(guest_pointer_t p_s, size_t maxlen, size_t *ret)
 {
-    size_t size = 0;
+    *ret = 0;
 
     while (maxlen > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_s.addr, maxlen);
         const char *buffer = (char *)get_buffer(p_s.addr, n, false);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         size_t tmp_size = strnlen(buffer, n);
 
         p_s.addr += n;
         maxlen -= n;
-        size += tmp_size;
+        *ret += tmp_size;
 
         if (tmp_size < n) {
             break;
         }
     }
 
-    return size;
+    return true;
 }

@@ -57,16 +57,16 @@ bool ecall(struct rv_cpu *cpu)
         sys_ux_idle();
         break;
     case ECALL_MEMSET:
-        cpu->regs[RV_REG_A0] = sys_memset(GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2]);
+        success = sys_memset(GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], &cpu->regs[RV_REG_A0]);
         break;
     case ECALL_MEMCPY:
-        cpu->regs[RV_REG_A0] = sys_memcpy(GP(RV_REG_A0), GP(RV_REG_A1), cpu->regs[RV_REG_A2]);
+        success = sys_memcpy(GP(RV_REG_A0), GP(RV_REG_A1), cpu->regs[RV_REG_A2], &cpu->regs[RV_REG_A0]);
         break;
     case ECALL_STRLEN:
-        cpu->regs[RV_REG_A0] = sys_strlen(GP(RV_REG_A0));
+        success = sys_strlen(GP(RV_REG_A0), &cpu->regs[RV_REG_A0]);
         break;
     case ECALL_STRNLEN:
-        cpu->regs[RV_REG_A0] = sys_strnlen(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
+        success = sys_strnlen(GP(RV_REG_A0), cpu->regs[RV_REG_A1], &cpu->regs[RV_REG_A0]);
         break;
     /*
      * XXX - Disclaimer: the following ECALLs aren't stable, probably buggy.
