@@ -20,7 +20,7 @@ void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size);
 uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable);
 
 void sys_xsend(guest_pointer_t p_buf, size_t size);
-size_t sys_xrecv(guest_pointer_t p_buf, size_t size);
+bool sys_xrecv(guest_pointer_t p_buf, size_t size, size_t *ret);
 void sys_fatal(guest_pointer_t p_msg);
 void sys_exit(uint32_t code);
 void sys_app_loading_start(guest_pointer_t p_status);

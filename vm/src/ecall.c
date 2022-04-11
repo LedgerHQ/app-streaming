@@ -39,17 +39,16 @@ struct cmd_fatal_s {
     uint16_t cmd;
 } __attribute__((packed));
 
-/*
+/**
  * Receives at most size bytes.
  *
- * Can't be interrupted by a button press for now when the exchange has started.
- * TODO: display some progress bar or something.
+ * @return false on error, true otherwise
  */
-size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
+bool sys_xrecv(guest_pointer_t p_buf, size_t size, size_t *ret)
 {
-    size_t ret = 0;
     uint32_t counter = 0;
 
+    *ret = 0;
     while (size > 0) {
         struct apdu_s *apdu = (struct apdu_s *)G_io_apdu_buffer;
         /* an additional byte is stored in p2 to allow entire pages to be
@@ -61,7 +60,7 @@ size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
         /* 0. retrieve buffer pointer now since it can modify G_io_apdu_buffer */
         uint8_t *buffer = get_buffer(p_buf.addr, n, true);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         /* 1. send "recv" request */
@@ -74,7 +73,7 @@ size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
         size_t received = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
 #if false
-        if (ret == 0 && G_io_app.apdu_state == 0xff) {
+        if (*ret == 0 && G_io_app.apdu_state == 0xff) {
             // restore G_io_app
             G_io_app.apdu_state = saved_apdu_state;
             G_io_app.apdu_length = 0;
@@ -83,7 +82,8 @@ size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
             /* button */
             return 0xdeadbe00 | 2;
         } else {
-            fatal("wtf\n");
+            err("wtf\n");
+            return false;
         }
 #endif
 
@@ -91,12 +91,14 @@ size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
 
         apdu = parse_apdu(received);
         if (apdu == NULL) {
-            fatal("invalid APDU\n");
+            err("invalid APDU\n");
+            return false;
         }
         bool stop = (apdu->p1 == '\x01');
 
         if ((apdu->lc + 1) > n || ((apdu->lc + 1) != n && !stop)) {
-            fatal("invalid apdu size\n");
+            err("invalid apdu size\n");
+            return false;
         }
 
         n = apdu->lc + 1;
@@ -107,7 +109,7 @@ size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
 
         p_buf.addr += n;
         size -= n;
-        ret += n;
+        *ret += n;
         counter++;
 
         if (stop) {
@@ -115,11 +117,12 @@ size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
         }
 
         if (size == 0 && !stop) {
-            fatal("invalid p1\n");
+            err("invalid p1\n");
+            return false;
         }
     }
 
-    return ret;
+    return true;
 }
 
 void sys_xsend(guest_pointer_t p_buf, size_t size)

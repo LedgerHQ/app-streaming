@@ -24,7 +24,7 @@ bool ecall(struct rv_cpu *cpu)
         sys_xsend(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
         break;
     case ECALL_XRECV:
-        cpu->regs[RV_REG_A0] = sys_xrecv(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
+        success = sys_xrecv(GP(RV_REG_A0), cpu->regs[RV_REG_A1], &cpu->regs[RV_REG_A0]);
         break;
     case ECALL_EXIT:
         sys_exit(cpu->regs[RV_REG_A0]);
