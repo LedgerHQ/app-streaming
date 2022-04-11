@@ -241,7 +241,10 @@ static bool stream_request_page(struct page_s *page, bool read_only)
     return true;
 }
 
-void stream_commit_page(struct page_s *page, bool insert)
+/**
+ * @return true on success, false otherwise
+ */
+static bool stream_commit_page(struct page_s *page, bool insert)
 {
     struct cmd_commit_page_s *cmd1 = (struct cmd_commit_page_s *)G_io_apdu_buffer;
     cx_hmac_sha256_t hmac_sha256_ctx;
@@ -253,7 +256,8 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     /* 1. encryption */
     if (page->iv == 0xffffffff) {
-        fatal("iv reuse\n");
+        err("iv reuse\n");
+        return false;
     }
     page->iv++;
     encrypt_page(page->data, cmd1->data, page->addr, page->iv);
@@ -267,11 +271,13 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     struct apdu_s *apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if (apdu->lc != 0) {
-        fatal("invalid apdu size\n");
+        err("invalid apdu size\n");
+        return false;
     }
 
     /* 2. hmac(data || addr || iv) */
@@ -295,11 +301,13 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if ((apdu->lc % sizeof(struct proof_s)) != 0) {
-        fatal("invalid proof size\n");
+        err("invalid proof size\n");
+        return false;
     }
 
     /* 3. update merkle tree */
@@ -307,16 +315,20 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     if (insert) {
         if (!merkle_insert(&entry, (struct proof_s *)&apdu->data, count)) {
-            fatal("merkle insert failed\n");
+            err("merkle insert failed\n");
+            return false;
         }
     } else {
         struct entry_s old_entry;
         old_entry.addr = page->addr;
         old_entry.iv = page->iv - 1;
         if (!merkle_update(&old_entry, &entry, (struct proof_s *)&apdu->data, count)) {
-            fatal("merkle update failed\n");
+            err("merkle update failed\n");
+            return false;
         }
     }
+
+    return true;
 }
 
 static void init_static_key(struct hmac_key_s *key)
@@ -430,7 +442,9 @@ static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
         /* During the first commit, the IV will be incremented to 1 and the
          * dynamic keys will be used for decryption and HMAC. */
         page->iv = 0;
-        stream_commit_page(page, true);
+        if (!stream_commit_page(page, true)) {
+            fatal("stream_commit_page failed\n");
+        }
     }
 }
 
@@ -494,7 +508,9 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 
     /* don't commit page if it never was retrieved (its address is zero) */
     if (writeable && page->addr != 0) {
-        stream_commit_page(page, false);
+        if (!stream_commit_page(page, false)) {
+            return NULL;
+        }
     }
 
     /*
