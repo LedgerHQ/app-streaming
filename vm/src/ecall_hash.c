@@ -2,6 +2,7 @@
 
 #include "ecall.h"
 #include "ecall_hash.h"
+#include "error.h"
 #include "page.h"
 
 #include "cx.h"
@@ -23,6 +24,9 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_data.addr, size);
         const uint8_t *buffer = get_buffer(p_data.addr, n, false);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         if (size - n != 0) {
             cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
@@ -39,6 +43,9 @@ void sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_digest.addr, size);
         uint8_t *buffer = get_buffer(p_digest.addr, n, true);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         memcpy(buffer, digest + sizeof(digest) - size, n);
 
@@ -55,6 +62,9 @@ void sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
         const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         cx_hash(&ctx.header, 0, buffer, n, NULL, 0);
 
@@ -127,6 +137,9 @@ bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_po
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
         const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         cx_hash((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
 

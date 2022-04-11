@@ -689,19 +689,25 @@ bool mem_write(const uint32_t addr, const size_t size, const uint32_t value)
     return true;
 }
 
-uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
+/**
+ * @return NULL on error
+ */
+uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable)
 {
     if (size == 0 || size > PAGE_SIZE) {
-        fatal("invalid size\n");
+        err("invalid size\n");
+        return NULL;
     }
 
     if (!fit_in_page(addr, size)) {
-        fatal("not on same page\n");
+        err("not on same page\n");
+        return NULL;
     }
 
     struct page_s *page = get_page(addr, writeable ? PAGE_PROT_RW : PAGE_PROT_RO);
     if (page == NULL) {
-        fatal("get_page failed\n");
+        err("get_page failed\n");
+        return NULL;
     }
 
     uint32_t offset = addr - PAGE_START(addr);

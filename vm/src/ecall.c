@@ -60,6 +60,9 @@ size_t sys_xrecv(guest_pointer_t p_buf, size_t size)
 
         /* 0. retrieve buffer pointer now since it can modify G_io_apdu_buffer */
         uint8_t *buffer = get_buffer(p_buf.addr, n, true);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         /* 1. send "recv" request */
         struct cmd_recv_buffer_s *cmd = (struct cmd_recv_buffer_s *)G_io_apdu_buffer;
@@ -131,9 +134,11 @@ void sys_xsend(guest_pointer_t p_buf, size_t size)
         n = MIN(sizeof(cmd->data), n);
 
         /* 0. copy the app buffer (note that it can modify G_io_apdu_buffer) */
-        uint8_t *buffer;
+        const uint8_t *buffer = get_buffer(p_buf.addr, n, false);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
-        buffer = get_buffer(p_buf.addr, n, false);
         memcpy(cmd->data, buffer, n);
         memset(cmd->data + n, '\x00', sizeof(cmd->data) - n);
 
@@ -216,6 +221,9 @@ void copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_src.addr, size);
         const uint8_t *buffer = get_buffer(p_src.addr, n, false);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         memcpy(dst, buffer, n);
 
@@ -232,6 +240,9 @@ void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_dst.addr, size);
         uint8_t *buffer = get_buffer(p_dst.addr, n, true);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         memcpy(buffer, src, n);
 
@@ -399,6 +410,9 @@ uint32_t sys_memset(guest_pointer_t p_s, int c, size_t size)
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_s.addr, size);
         uint8_t *buffer = get_buffer(p_s.addr, n, true);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         memset(buffer, c, n);
 
@@ -417,6 +431,9 @@ uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
         const size_t a = BUFFER_MIN_SIZE(p_dst.addr, size);
         const size_t n = BUFFER_MIN_SIZE(p_src.addr, a);
         const uint8_t *buffer_src = get_buffer(p_src.addr, n, false);
+        if (buffer_src == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         /* a temporary buffer is required because get_buffer() might unlikely
          * return the same page if p_dst.addr or p_src.addr isn't in the
@@ -425,6 +442,10 @@ uint32_t sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
         memcpy(tmp, buffer_src, n);
 
         uint8_t *buffer_dst = get_buffer(p_dst.addr, n, true);
+        if (buffer_dst == NULL) {
+            fatal("get_buffer failed\n");
+        }
+
         memcpy(buffer_dst, tmp, n);
 
         p_dst.addr += n;
@@ -442,6 +463,9 @@ size_t sys_strlen(guest_pointer_t p_s)
     while (true) {
         const size_t n = BUFFER_MAX_SIZE(p_s.addr);
         const char *buffer = (char *)get_buffer(p_s.addr, n, false);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         const size_t tmp_size = strnlen(buffer, n);
 
@@ -463,6 +487,9 @@ size_t sys_strnlen(guest_pointer_t p_s, size_t maxlen)
     while (maxlen > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_s.addr, maxlen);
         const char *buffer = (char *)get_buffer(p_s.addr, n, false);
+        if (buffer == NULL) {
+            fatal("get_buffer failed\n");
+        }
 
         size_t tmp_size = strnlen(buffer, n);
 
