@@ -247,7 +247,7 @@ bool copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size)
     return true;
 }
 
-void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
+bool copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
 {
     uint8_t *src = buf;
 
@@ -255,7 +255,7 @@ void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
         const size_t n = BUFFER_MIN_SIZE(p_dst.addr, size);
         uint8_t *buffer = get_buffer(p_dst.addr, n, true);
         if (buffer == NULL) {
-            fatal("get_buffer failed\n");
+            return false;
         }
 
         memcpy(buffer, src, n);
@@ -264,6 +264,8 @@ void copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
         src += n;
         size -= n;
     }
+
+    return true;
 }
 
 void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits)

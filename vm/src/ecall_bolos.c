@@ -38,12 +38,16 @@ cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t 
     /* XXX: error? */
 
     if (p_private_key.addr != 0) {
-        copy_host_buffer(p_private_key, &private_key, sizeof(private_key));
+        if (!copy_host_buffer(p_private_key, &private_key, sizeof(private_key))) {
+            fatal("copy_host_buffer failed\n");
+        }
         explicit_bzero(private_key, sizeof(private_key));
     }
 
     if (p_chain.addr != 0) {
-        copy_host_buffer(p_chain, &chain, sizeof(chain));
+        if (!copy_host_buffer(p_chain, &chain, sizeof(chain))) {
+            fatal("copy_host_buffer failed\n");
+        }
     }
 
     return CX_OK;
@@ -59,8 +63,13 @@ cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubkey, gues
         goto error;
     }
 
-    copy_host_buffer(p_pubkey, &pubkey, sizeof(pubkey));
-    copy_host_buffer(p_privkey, &privkey, sizeof(privkey));
+    if (!copy_host_buffer(p_pubkey, &pubkey, sizeof(pubkey))) {
+        fatal("copy_host_buffer failed\n");
+    }
+
+    if (!copy_host_buffer(p_privkey, &privkey, sizeof(privkey))) {
+        fatal("copy_host_buffer failed\n");
+    }
 
  error:
     explicit_bzero(&privkey, sizeof(privkey));
@@ -82,7 +91,9 @@ cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, guest_pointer_t p_pubkey, guest_p
         goto error;
     }
 
-    copy_host_buffer(p_pubkey, &pubkey, sizeof(pubkey));
+    if (!copy_host_buffer(p_pubkey, &pubkey, sizeof(pubkey))) {
+        fatal("copy_host_buffer failed\n");
+    }
 
  error:
     explicit_bzero(&privkey, sizeof(privkey));
@@ -122,7 +133,9 @@ size_t sys_ecdsa_sign(const guest_pointer_t p_key, const int mode,
         return 0;
     }
 
-    copy_host_buffer(p_sig, sig, ret);
+    if (!copy_host_buffer(p_sig, sig, ret)) {
+        fatal("copy_host_buffer failed\n");
+    }
 
     return ret;
 }
@@ -145,7 +158,9 @@ void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, siz
 
     cx_math_mult(r, a, b, len);
 
-    copy_host_buffer(p_r, r, len * 2);
+    if (!copy_host_buffer(p_r, r, len * 2)) {
+        fatal("copy_host_buffer failed\n");
+    }
 }
 
 void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len)
@@ -169,7 +184,9 @@ void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, gu
 
     cx_math_multm(r, a, b, m, len);
 
-    copy_host_buffer(p_r, r, len * 2);
+    if (!copy_host_buffer(p_r, r, len * 2)) {
+        fatal("copy_host_buffer failed\n");
+    }
 }
 
 bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, guest_pointer_t p_out, size_t len)
@@ -189,7 +206,9 @@ bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, gu
         return false;
     }
 
-    copy_host_buffer(p_out, buf, len);
+    if (!copy_host_buffer(p_out, buf, len)) {
+        fatal("copy_host_buffer failed\n");
+    }
 
     return true;
 }

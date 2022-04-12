@@ -83,7 +83,9 @@ bool sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
     uint8_t digest[32];
     cx_hash((cx_hash_t *)&ctx, CX_LAST, NULL, 0, digest, sizeof(digest));
 
-    copy_host_buffer(p_digest, digest, sizeof(digest));
+    if (!copy_host_buffer(p_digest, digest, sizeof(digest))) {
+        return false;
+    }
 
     return true;
 }
@@ -126,13 +128,17 @@ static bool save_ctx_from_host(const cx_hash_id_t hash_id, guest_pointer_t p_ctx
         guest.sha3.blen = ctx->sha3.blen;
         memcpy(guest.sha3.block, &ctx->sha3.block, sizeof(ctx->sha3.block));
         memcpy(guest.sha3.acc, &ctx->sha3.acc, sizeof(ctx->sha3.acc));
-        copy_host_buffer(p_ctx, &guest.sha3, sizeof(guest.sha3));
+        if (!copy_host_buffer(p_ctx, &guest.sha3, sizeof(guest.sha3))) {
+            fatal("copy_host_buffer failed\n");
+        }
         break;
     case HASH_ID_SHA256:
         guest.sha256.blen = ctx->sha256.blen;
         memcpy(guest.sha256.block, &ctx->sha256.block, sizeof(ctx->sha256.block));
         memcpy(guest.sha256.acc, &ctx->sha256.acc, sizeof(ctx->sha256.acc));
-        copy_host_buffer(p_ctx, &guest.sha256, sizeof(guest.sha256));
+        if (!copy_host_buffer(p_ctx, &guest.sha256, sizeof(guest.sha256))) {
+            fatal("copy_host_buffer failed\n");
+        }
     default:
         return false;
     }
@@ -187,7 +193,9 @@ bool sys_hash_final(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_poi
     uint8_t digest[CX_SHA512_SIZE];
     cx_hash(&ctx.header, CX_LAST, NULL, 0, digest, hash_len);
 
-    copy_host_buffer(p_digest, digest, hash_len);
+    if (!copy_host_buffer(p_digest, digest, hash_len)) {
+        fatal("copy_host_buffer failed\n");
+    }
 
     /* no need to save the context */
 
