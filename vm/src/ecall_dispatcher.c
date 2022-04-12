@@ -100,7 +100,7 @@ bool ecall(struct rv_cpu *cpu)
         cpu->regs[RV_REG_A0] = sys_tostring256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
     case ECALL_HASH_UPDATE:
-        success = sys_hash_update(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3], &cpu->regs[RV_REG_A0]);
+        success = sys_hash_update(ERET(RV_REG_A0), cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
     case ECALL_HASH_FINAL:
         cpu->regs[RV_REG_A0] = sys_hash_final(cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));

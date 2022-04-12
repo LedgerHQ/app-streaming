@@ -149,7 +149,7 @@ static bool save_ctx_from_host(const cx_hash_id_t hash_id, guest_pointer_t p_ctx
 /**
  * @return true on success, false otherwise
  */
-bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_pointer_t p_buffer, size_t size, uint32_t *ret)
+bool sys_hash_update(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_pointer_t p_buffer, size_t size)
 {
     union cx_hash_ctx_u ctx;
 
@@ -170,7 +170,7 @@ bool sys_hash_update(const cx_hash_id_t hash_id, guest_pointer_t p_ctx, guest_po
         size -= n;
     }
 
-    *ret = save_ctx_from_host(hash_id, p_ctx, &ctx);
+    eret->addr = save_ctx_from_host(hash_id, p_ctx, &ctx);
 
     return true;
 }

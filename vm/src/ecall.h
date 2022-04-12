@@ -13,7 +13,17 @@ typedef struct guest_pointer_s {
     uint32_t addr;
 } guest_pointer_t;
 
-#define GP(reg) ((const guest_pointer_t){ .addr = cpu->regs[reg] })
+/* ECALL return value */
+typedef union eret_u {
+    uint32_t addr;
+    bool boolean;
+    size_t size;
+} eret_t;
+
+#define ERET(reg) ((eret_t *)&cpu->regs[reg])
+
+/* Guest Pointer */
+#define GP(reg)   ((const guest_pointer_t){ .addr = cpu->regs[reg] })
 
 bool copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size);
 bool copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size);
