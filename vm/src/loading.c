@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "ecall.h"
+#include "error.h"
 #include "loading.h"
 #include "ux.h"
 
@@ -63,7 +64,7 @@ static void display_next_icon(void)
     app_loading_step = (app_loading_step + 1) % NUMBER_OF_ICONS;
 }
 
-void sys_app_loading_start(guest_pointer_t p_status)
+bool sys_app_loading_start(guest_pointer_t p_status)
 {
     app_loading = true;
     app_loading_counter = 0;
@@ -74,7 +75,9 @@ void sys_app_loading_start(guest_pointer_t p_status)
     } else {
         /* XXX: this might be wrong if the guest buffer is smaller that sizeof(loading_status) and
          * at the end of a memory mapping */
-        copy_guest_buffer(p_status, loading_status, sizeof(loading_status) - 1);
+        if (!copy_guest_buffer(p_status, loading_status, sizeof(loading_status) - 1)) {
+            return false;
+        }
         loading_status[sizeof(loading_status) - 1] = '\x00';
     }
 
@@ -85,6 +88,8 @@ void sys_app_loading_start(guest_pointer_t p_status)
     bagl_draw_with_context(&status_component, loading_status, strlen(loading_status), BAGL_ENCODING_LATIN1);
 
     display_next_icon();
+
+    return true;
 }
 
 bool sys_app_loading_stop(void)

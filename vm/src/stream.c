@@ -137,7 +137,7 @@ static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
     }
 }
 
-void stream_request_page(struct page_s *page, bool read_only)
+static bool stream_request_page(struct page_s *page, bool read_only)
 {
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
@@ -152,11 +152,13 @@ void stream_request_page(struct page_s *page, bool read_only)
 
     struct apdu_s *apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if (apdu->lc != PAGE_SIZE - 1) {
-        fatal("invalid apdu size\n");
+        err("invalid apdu size\n");
+        return false;
     }
 
     /* the first byte of the page is in p2 */
@@ -170,11 +172,13 @@ void stream_request_page(struct page_s *page, bool read_only)
 
     apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if (apdu->lc != sizeof(struct response_hmac_s)) {
-        fatal("invalid apdu size\n");
+        err("invalid apdu size\n");
+        return false;
     }
 
     struct response_hmac_s *r = (struct response_hmac_s *)&apdu->data;
@@ -193,7 +197,8 @@ void stream_request_page(struct page_s *page, bool read_only)
                      sizeof(mac));
 
     if (memcmp(mac, r->mac, sizeof(mac)) != 0) {
-        fatal("invalid hmac\n");
+        err("invalid hmac\n");
+        return false;
     }
 
     /* 3. decrypt page */
@@ -207,9 +212,10 @@ void stream_request_page(struct page_s *page, bool read_only)
     /* 4. verify iv thanks to the merkle tree if the page is writeable */
     if (read_only) {
         if (page->iv != 0) {
-            fatal("invalid id for read-only page\n");
+            err("invalid id for read-only page\n");
+            return false;
         }
-        return;
+        return true;
     }
 
     cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
@@ -217,20 +223,28 @@ void stream_request_page(struct page_s *page, bool read_only)
 
     apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if ((apdu->lc % sizeof(struct proof_s)) != 0) {
-        fatal("invalid proof size\n");
+        err("invalid proof size\n");
+        return false;
     }
 
     size_t count = apdu->lc / sizeof(struct proof_s);
     if (!merkle_verify_proof(&entry, (struct proof_s *)&apdu->data, count)) {
-        fatal("invalid iv (merkle proof)\n");
+        err("invalid iv (merkle proof)\n");
+        return false;
     }
+
+    return true;
 }
 
-void stream_commit_page(struct page_s *page, bool insert)
+/**
+ * @return true on success, false otherwise
+ */
+static bool stream_commit_page(struct page_s *page, bool insert)
 {
     struct cmd_commit_page_s *cmd1 = (struct cmd_commit_page_s *)G_io_apdu_buffer;
     cx_hmac_sha256_t hmac_sha256_ctx;
@@ -242,7 +256,8 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     /* 1. encryption */
     if (page->iv == 0xffffffff) {
-        fatal("iv reuse\n");
+        err("iv reuse\n");
+        return false;
     }
     page->iv++;
     encrypt_page(page->data, cmd1->data, page->addr, page->iv);
@@ -256,11 +271,13 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     struct apdu_s *apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if (apdu->lc != 0) {
-        fatal("invalid apdu size\n");
+        err("invalid apdu size\n");
+        return false;
     }
 
     /* 2. hmac(data || addr || iv) */
@@ -284,11 +301,13 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     if ((apdu->lc % sizeof(struct proof_s)) != 0) {
-        fatal("invalid proof size\n");
+        err("invalid proof size\n");
+        return false;
     }
 
     /* 3. update merkle tree */
@@ -296,16 +315,20 @@ void stream_commit_page(struct page_s *page, bool insert)
 
     if (insert) {
         if (!merkle_insert(&entry, (struct proof_s *)&apdu->data, count)) {
-            fatal("merkle insert failed\n");
+            err("merkle insert failed\n");
+            return false;
         }
     } else {
         struct entry_s old_entry;
         old_entry.addr = page->addr;
         old_entry.iv = page->iv - 1;
         if (!merkle_update(&old_entry, &entry, (struct proof_s *)&apdu->data, count)) {
-            fatal("merkle update failed\n");
+            err("merkle update failed\n");
+            return false;
         }
     }
+
+    return true;
 }
 
 static void init_static_key(struct hmac_key_s *key)
@@ -324,13 +347,14 @@ static void init_dynamic_keys(void)
     explicit_bzero(encryption_key, sizeof(encryption_key));
 }
 
-void stream_init_app(uint8_t *buffer, size_t signature_size)
+bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
 {
     /* 1. store the manifest signature */
     uint8_t signature[72];
 
     if (signature_size > sizeof(signature)) {
-        fatal("invalid signature\n");
+        err("invalid signature\n");
+        return false;
     }
 
     memcpy(signature, buffer, signature_size);
@@ -343,19 +367,22 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     struct apdu_s *apdu = parse_apdu(size);
     if (apdu == NULL) {
-        fatal("invalid APDU\n");
+        err("invalid APDU\n");
+        return false;
     }
 
     const size_t alignment_offset = 3;
     if (apdu->lc != alignment_offset + sizeof(struct manifest_s)) {
-        fatal("invalid manifest APDU\n");
+        err("invalid manifest APDU\n");
+        return false;
     }
 
     struct manifest_s *manifest = (struct manifest_s *)(apdu->data + alignment_offset);
 
     /* 3. verify manifest signature */
     if (!verify_manifest_device_signature(manifest, signature, signature_size)) {
-        fatal("invalid manifest\n");
+        err("invalid manifest\n");
+        return false;
     }
 
     memset(&app, '\x00', sizeof(app));
@@ -373,7 +400,8 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
 
     uint32_t sp = app.sections[SECTION_STACK].end;
     if (PAGE_START(sp) != sp) {
-        fatal("invalid stack end\n");
+        err("invalid stack end\n");
+        return false;
     }
 
     app.stack_min = sp;
@@ -389,6 +417,8 @@ void stream_init_app(uint8_t *buffer, size_t signature_size)
     lfsr_init();
     sys_app_loading_stop();
     set_app_name(manifest->name);
+
+    return true;
 }
 
 static void u32hex(uint32_t n, char *buf)
@@ -407,9 +437,13 @@ static bool in_section(enum section_e section, uint32_t addr)
     return addr >= app.sections[section].start && addr < app.sections[section].end;
 }
 
-/* the page argument is just here to avoid declaring this structure on the stack
- * since this struct is quite large */
-static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
+/**
+ * The page argument is just here to avoid declaring this structure on the stack
+ * since this struct is quite large.
+ *
+ * @return true on success, false otherwise
+ */
+static bool create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
 {
     uint32_t addr;
 
@@ -419,8 +453,12 @@ static void create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
         /* During the first commit, the IV will be incremented to 1 and the
          * dynamic keys will be used for decryption and HMAC. */
         page->iv = 0;
-        stream_commit_page(page, true);
+        if (!stream_commit_page(page, true)) {
+            return false;
+        }
     }
+
+    return true;
 }
 
 static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct page_s **result)
@@ -446,6 +484,9 @@ static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct 
     return false;
 }
 
+/**
+ * @return NULL on error
+ */
 static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 {
     struct page_s *pages, *page;
@@ -456,7 +497,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 
     if (in_section(SECTION_CODE, addr)) {
         if (page_prot != PAGE_PROT_RO) {
-            fatal("write access to code page\n");
+            err("write access to code page\n");
+            return NULL;
         }
         pages = app.code;
         npage = NPAGE_CODE;
@@ -469,8 +511,8 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         npage = NPAGE_STACK;
         writeable = true;
     } else {
-        fatal("invalid addr (no section found)\n");
-        pages = NULL;
+        err("invalid addr (no section found)\n");
+        return NULL;
     }
 
     if (find_page(addr, pages, npage, &page)) {
@@ -479,7 +521,9 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
 
     /* don't commit page if it never was retrieved (its address is zero) */
     if (writeable && page->addr != 0) {
-        stream_commit_page(page, false);
+        if (!stream_commit_page(page, false)) {
+            return NULL;
+        }
     }
 
     /*
@@ -489,13 +533,17 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     bool zero_page = false;
     if (pages == app.data) {
         if (addr >= app.bss_max) {
-            create_empty_pages(app.bss_max, addr + PAGE_SIZE, page);
+            if (!create_empty_pages(app.bss_max, addr + PAGE_SIZE, page)) {
+                return NULL;
+            }
             app.bss_max = addr + PAGE_SIZE;
             zero_page = true;
         }
     } else if (pages == app.stack) {
         if (addr < app.stack_min) {
-            create_empty_pages(PAGE_START(addr), app.stack_min, page);
+            if (!create_empty_pages(PAGE_START(addr), app.stack_min, page)) {
+                return NULL;
+            }
             app.stack_min = addr;
             zero_page = true;
         }
@@ -505,7 +553,9 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     page->usage = 1;
 
     if (!zero_page) {
-        stream_request_page(page, !writeable);
+        if (!stream_request_page(page, !writeable)) {
+            return NULL;
+        }
     } else {
         /* the IV was incremented by 1 during commit */
         page->iv = 1;
@@ -515,24 +565,32 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     return page;
 }
 
-static bool same_page(uint32_t addr1, uint32_t addr2)
+/**
+ * @return true if the buffer of size bytes starting at address addr fits in a
+ *         page, false otherwise
+ */
+static bool fit_in_page(uint32_t addr, size_t size)
 {
-    return PAGE_START(addr1) == PAGE_START(addr2);
-}
-
-static void check_alignment(uint32_t addr, size_t size)
-{
-    if (!same_page(addr, addr + size - 1)) {
-        fatal("not on same page\n");
+    if (size == 0) {
+        return true;
     }
+
+    if (PAGE_START(addr) != PAGE_START(addr + size - 1)) {
+        err("not on same page\n");
+        return false;
+    }
+
+    return true;
 }
 
-static uint32_t get_instruction(uint32_t addr)
+static bool get_instruction(const uint32_t addr, uint32_t *instruction)
 {
     struct page_s *page;
     uint32_t page_addr;
 
-    check_alignment(addr, sizeof(uint32_t));
+    if (!fit_in_page(addr, sizeof(uint32_t))) {
+        return false;
+    }
     page_addr = PAGE_START(addr);
 
     if (app.current_code_page != NULL && app.current_code_page->addr == page_addr) {
@@ -541,7 +599,9 @@ static uint32_t get_instruction(uint32_t addr)
         if (!find_page(page_addr, app.code, NPAGE_CODE, &page)) {
             page->addr = page_addr;
             page->usage = 1;
-            stream_request_page(page, true);
+            if (!stream_request_page(page, true)) {
+                return false;
+            }
             app.current_code_page = page;
         }
     }
@@ -549,47 +609,68 @@ static uint32_t get_instruction(uint32_t addr)
     uint32_t offset = addr - page_addr;
     uint32_t value = *(uint32_t *)&page->data[offset];
 
-    return value;
+    *instruction = value;
+
+    return true;
 }
 
-uint32_t mem_read(uint32_t addr, size_t size)
-{
-    uint32_t offset, value;
-    struct page_s *page;
-
-    check_alignment(addr, size);
-
-    page = get_page(addr, PAGE_PROT_RO);
-    offset = addr - PAGE_START(addr);
-
-    switch (size) {
-    case 1:
-        value = *(uint8_t *)&page->data[offset];
-        break;
-    case 2:
-        value = *(uint16_t *)&page->data[offset];
-        break;
-    case 4:
-    default:
-        value = *(uint32_t *)&page->data[offset];
-        break;
-    }
-
-    return value;
-}
-
-void mem_write(uint32_t addr, size_t size, uint32_t value)
+/**
+ * @return true on success, false otherwise
+ */
+bool mem_read(const uint32_t addr, const size_t size, uint32_t *value)
 {
     struct page_s *page;
     uint32_t offset;
 
-    check_alignment(addr, size);
+    if (!fit_in_page(addr, size)) {
+        return false;
+    }
+
+    page = get_page(addr, PAGE_PROT_RO);
+    if (page == NULL) {
+        err("get_page failed\n");
+        return false;
+    }
+    offset = addr - PAGE_START(addr);
+
+    switch (size) {
+    case 1:
+        *value = *(uint8_t *)&page->data[offset];
+        break;
+    case 2:
+        *value = *(uint16_t *)&page->data[offset];
+        break;
+    case 4:
+    default:
+        *value = *(uint32_t *)&page->data[offset];
+        break;
+    }
+
+    return true;
+}
+
+/**
+ * @return true on success, false otherwise
+ */
+bool mem_write(const uint32_t addr, const size_t size, const uint32_t value)
+{
+    struct page_s *page;
+    uint32_t offset;
+
+    if (!fit_in_page(addr, size)) {
+        return false;
+    }
 
     page = get_page(addr, PAGE_PROT_RW);
+    if (page == NULL) {
+        err("get_page failed\n");
+        return false;
+    }
     offset = addr - PAGE_START(addr);
 
     if (offset > PAGE_SIZE - size) {
-        fatal("invalid mem_write\n");
+        err("invalid mem_write\n");
+        return false;
     }
 
     switch (size) {
@@ -604,19 +685,31 @@ void mem_write(uint32_t addr, size_t size, uint32_t value)
         *(uint32_t *)&page->data[offset] = value;
         break;
     }
+
+    return true;
 }
 
-uint8_t *get_buffer(uint32_t addr, size_t size, bool writeable)
+/**
+ * @return NULL on error
+ */
+uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable)
 {
     if (size == 0 || size > PAGE_SIZE) {
-        fatal("invalid size\n");
+        err("invalid size\n");
+        return NULL;
     }
 
-    if (!same_page(addr, addr + size - 1)) {
-        fatal("not on same page\n");
+    if (!fit_in_page(addr, size)) {
+        err("not on same page\n");
+        return NULL;
     }
 
     struct page_s *page = get_page(addr, writeable ? PAGE_PROT_RW : PAGE_PROT_RO);
+    if (page == NULL) {
+        err("get_page failed\n");
+        return NULL;
+    }
+
     uint32_t offset = addr - PAGE_START(addr);
 
     return &page->data[offset];
@@ -641,7 +734,9 @@ void stream_run_app(void)
     bool stop;
 
     do {
-        instruction = get_instruction(app.cpu.pc);
+        if (!get_instruction(app.cpu.pc, &instruction)) {
+            fatal("get_instruction failed\n");
+        }
         if (0) {
             debug_cpu(app.cpu.pc, instruction);
         }

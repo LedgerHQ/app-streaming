@@ -5,6 +5,7 @@
 #include "ecall.h"
 #include "error.h"
 #include "rv.h"
+#include "stream.h"
 #include "types.h"
 
 // Used to set least significant bit to zero.
@@ -161,9 +162,6 @@ static inline uint32_t sign_extend_b(uint32_t x) {
   return (int32_t)((int8_t)x);
 }
 
-uint32_t mem_read(uint32_t addr, size_t size);
-void mem_write(uint32_t addr, size_t size, uint32_t value);
-
 /*
  * Return true if the CPU has stopped (because the app exited for instance, or
  * the instruction isn't recognized, false otherwise.)
@@ -175,6 +173,8 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
     u32 pc_inc = INST_SIZE;
     u32 pc_set = cpu->pc;
     bool stop = false;
+    bool success;
+    uint32_t value;
 
     switch (op) {
         case RV_OP_ADD:
@@ -298,35 +298,66 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_LB:
-            cpu->regs[inst.rd] = sign_extend_b(mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1));
+            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1, &value);
+            if (success) {
+                cpu->regs[inst.rd] = sign_extend_b(value);
+            } else {
+                stop = true;
+            }
             break;
 
         case RV_OP_LH:
-            cpu->regs[inst.rd] = sign_extend_h(mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2));
+            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2, &value);
+            if (success) {
+                cpu->regs[inst.rd] = sign_extend_h(value);
+            } else {
+                stop = true;
+            }
             break;
 
         case RV_OP_LW:
-            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 4);
+            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 4, &value);
+            if (success) {
+                cpu->regs[inst.rd] = value;
+            } else {
+                stop = true;
+            }
             break;
 
         case RV_OP_LBU:
-            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1);
+            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1, &value);
+            if (success) {
+                cpu->regs[inst.rd] = value;
+            } else {
+                stop = true;
+            }
             break;
 
         case RV_OP_LHU:
-            cpu->regs[inst.rd] = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2);
+            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2, &value);
+            if (success) {
+                cpu->regs[inst.rd] = value;
+            } else {
+                stop = true;
+            }
             break;
 
         case RV_OP_SB:
-            mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 1, cpu->regs[inst.rs2]);
+            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 1, cpu->regs[inst.rs2])) {
+                stop = true;
+            }
             break;
 
         case RV_OP_SH:
-            mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 2, cpu->regs[inst.rs2]);
+            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 2, cpu->regs[inst.rs2])) {
+                stop = true;
+            }
             break;
 
         case RV_OP_SW:
-            mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 4, cpu->regs[inst.rs2]);
+            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 4, cpu->regs[inst.rs2])) {
+                stop = true;
+            }
             break;
 
         case RV_OP_ECALL:
