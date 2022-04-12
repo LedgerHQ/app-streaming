@@ -692,7 +692,7 @@ bool mem_write(const uint32_t addr, const size_t size, const uint32_t value)
 /**
  * @return NULL on error
  */
-uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable)
+uint8_t *get_buffer(const uintptr_t addr, const size_t size, const bool writeable)
 {
     if (size == 0 || size > PAGE_SIZE) {
         err("invalid size\n");

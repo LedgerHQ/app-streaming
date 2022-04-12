@@ -206,7 +206,7 @@ bool sys_fatal(guest_pointer_t p_msg)
     return true;
 }
 
-void sys_exit(uint32_t code)
+void sys_exit(unsigned int code)
 {
     struct cmd_exit_s *cmd = (struct cmd_exit_s *)G_io_apdu_buffer;
 
@@ -217,7 +217,7 @@ void sys_exit(uint32_t code)
 }
 
 #ifdef TARGET_NANOX
-void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+void sys_ux_rectangle(unsigned int color, unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
     bagl_hal_draw_rect(color, x, y, width, height);
 }

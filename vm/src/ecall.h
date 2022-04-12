@@ -10,12 +10,12 @@
 struct rv_cpu;
 
 typedef struct guest_pointer_s {
-    uint32_t addr;
+    uintptr_t addr;
 } guest_pointer_t;
 
 /* ECALL return value */
 typedef union eret_u {
-    uint32_t addr;
+    uintptr_t addr;
     bool boolean;
     size_t size;
     int error;
@@ -28,15 +28,15 @@ typedef union eret_u {
 
 bool copy_guest_buffer(guest_pointer_t p_src, void *buf, size_t size);
 bool copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size);
-uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable);
+uint8_t *get_buffer(const uintptr_t addr, const size_t size, const bool writeable);
 
 bool sys_xsend(guest_pointer_t p_buf, size_t size);
 bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size);
 bool sys_fatal(guest_pointer_t p_msg);
-void sys_exit(uint32_t code);
+void sys_exit(unsigned int code);
 bool sys_app_loading_start(guest_pointer_t p_status);
 bool sys_app_loading_stop(void);
-void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+void sys_ux_rectangle(unsigned int color, unsigned int x, unsigned int y, unsigned int width, unsigned int height);
 void sys_screen_update(void);
 bool sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits);
 int sys_wait_button(void);
