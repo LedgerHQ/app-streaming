@@ -17,7 +17,7 @@ bool ecall(struct rv_cpu *cpu)
 
     switch (nr) {
     case ECALL_FATAL:
-        sys_fatal(GP(RV_REG_A0));
+        success = sys_fatal(GP(RV_REG_A0));
         stop = true;
         break;
     case ECALL_XSEND:
@@ -38,7 +38,7 @@ bool ecall(struct rv_cpu *cpu)
         sys_screen_update();
         break;
     case ECALL_BAGL_DRAW_BITMAP:
-        sys_ux_bitmap(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], GP(RV_REG_A4), cpu->regs[RV_REG_A5], GP(RV_REG_A6), cpu->regs[RV_REG_A7]);
+        success = sys_ux_bitmap(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], GP(RV_REG_A4), cpu->regs[RV_REG_A5], GP(RV_REG_A6), cpu->regs[RV_REG_A7]);
         break;
 #endif
     case ECALL_WAIT_BUTTON:

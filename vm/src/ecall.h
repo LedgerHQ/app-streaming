@@ -32,15 +32,15 @@ uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable
 
 bool sys_xsend(guest_pointer_t p_buf, size_t size);
 bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size);
-void sys_fatal(guest_pointer_t p_msg);
+bool sys_fatal(guest_pointer_t p_msg);
 void sys_exit(uint32_t code);
 void sys_app_loading_start(guest_pointer_t p_status);
 bool sys_app_loading_stop(void);
 void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 void sys_screen_update(void);
-void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits);
+bool sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits);
 int sys_wait_button(void);
-void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding);
+bool sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding);
 void sys_ux_idle(void);
 bool sys_memset(eret_t *eret, guest_pointer_t p_s, int c, size_t size);
 bool sys_memcpy(eret_t *eret, guest_pointer_t p_dst, guest_pointer_t p_src, size_t size);

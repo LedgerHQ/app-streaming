@@ -167,7 +167,7 @@ bool sys_xsend(guest_pointer_t p_buf, size_t size)
     return true;
 }
 
-void sys_fatal(guest_pointer_t p_msg)
+bool sys_fatal(guest_pointer_t p_msg)
 {
     struct cmd_fatal_s *cmd = (struct cmd_fatal_s *)G_io_apdu_buffer;
 
@@ -182,7 +182,7 @@ void sys_fatal(guest_pointer_t p_msg)
         n = max_size;
     }
     if (!copy_guest_buffer(p_msg, p, n))  {
-        fatal("copy_guest_buffer failed\n");
+        return false;
     }
 
     uint8_t *q = memchr(p, '\x00', n);
@@ -191,7 +191,7 @@ void sys_fatal(guest_pointer_t p_msg)
         p += n;
         max_size -= n;
         if (!copy_guest_buffer(p_msg, p, max_size)) {
-            fatal("copy_guest_buffer failed\n");
+            return false;
         }
         q = memchr(p, '\x00', n);
     }
@@ -203,6 +203,8 @@ void sys_fatal(guest_pointer_t p_msg)
     cmd->cmd = (CMD_FATAL >> 8) | ((CMD_FATAL & 0xff) << 8);
 
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, sizeof(*cmd));
+
+    return true;
 }
 
 void sys_exit(uint32_t code)
@@ -268,7 +270,7 @@ bool copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size)
     return true;
 }
 
-void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits)
+bool sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsigned int color_count,*/ guest_pointer_t p_colors, unsigned int bit_per_pixel, guest_pointer_t p_bitmap, unsigned int bitmap_length_bits)
 {
     unsigned int colors[2];
     uint8_t bitmap[512];
@@ -279,14 +281,16 @@ void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsi
     }
 
     if (!copy_guest_buffer(p_colors, colors, 2 * sizeof(unsigned int))) {
-        fatal("copy_guest_buffer failed\n");
+        return false;
     }
 
     if (!copy_guest_buffer(p_bitmap, bitmap, bitmap_length)) {
-        fatal("copy_guest_buffer failed\n");
+        return false;
     }
 
     bagl_hal_draw_bitmap_within_rect(x, y, width, height, /*color_count, */2, colors, bit_per_pixel, bitmap, bitmap_length_bits);
+
+    return true;
 }
 #endif
 
@@ -383,7 +387,7 @@ int sys_wait_button(void)
     return button_mask;
 }
 
-void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding)
+bool sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding)
 {
     packed_bagl_component_t packed_component;
     bagl_component_t component;
@@ -395,12 +399,12 @@ void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_c
     }
 
     if (!copy_guest_buffer(p_component, &packed_component, sizeof(packed_component))) {
-        fatal("copy_guest_buffer failed\n");
+        return false;
     }
 
     if (p_context.addr != 0) {
         if (!copy_guest_buffer(p_context, &context_buf, context_length))  {
-            fatal("copy_guest_buffer failed\n");
+            return false;
         }
         context = &context_buf;
     } else {
@@ -422,6 +426,8 @@ void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_c
     component.icon_id = packed_component.icon_id;
 
     bagl_draw_with_context(&component, context, context_length, context_encoding);
+
+    return true;
 }
 
 void sys_ux_idle(void)
