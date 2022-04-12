@@ -44,11 +44,11 @@ struct cmd_fatal_s {
  *
  * @return false on error, true otherwise
  */
-bool sys_xrecv(guest_pointer_t p_buf, size_t size, size_t *ret)
+bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size)
 {
     uint32_t counter = 0;
 
-    *ret = 0;
+    eret->size = 0;
     while (size > 0) {
         struct apdu_s *apdu = (struct apdu_s *)G_io_apdu_buffer;
         /* an additional byte is stored in p2 to allow entire pages to be
@@ -73,7 +73,7 @@ bool sys_xrecv(guest_pointer_t p_buf, size_t size, size_t *ret)
         size_t received = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
 #if false
-        if (*ret == 0 && G_io_app.apdu_state == 0xff) {
+        if (eret->size == 0 && G_io_app.apdu_state == 0xff) {
             // restore G_io_app
             G_io_app.apdu_state = saved_apdu_state;
             G_io_app.apdu_length = 0;
@@ -109,7 +109,7 @@ bool sys_xrecv(guest_pointer_t p_buf, size_t size, size_t *ret)
 
         p_buf.addr += n;
         size -= n;
-        *ret += n;
+        eret->size += n;
         counter++;
 
         if (stop) {
@@ -429,9 +429,9 @@ void sys_ux_idle(void)
     ui_app_idle();
 }
 
-bool sys_memset(guest_pointer_t p_s, int c, size_t size, uint32_t *ret)
+bool sys_memset(eret_t *eret, guest_pointer_t p_s, int c, size_t size)
 {
-    *ret = p_s.addr;
+    eret->addr = p_s.addr;
 
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_s.addr, size);
@@ -449,9 +449,9 @@ bool sys_memset(guest_pointer_t p_s, int c, size_t size, uint32_t *ret)
     return true;
 }
 
-bool sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size, uint32_t *ret)
+bool sys_memcpy(eret_t *eret, guest_pointer_t p_dst, guest_pointer_t p_src, size_t size)
 {
-    *ret = p_dst.addr;
+    eret->addr = p_dst.addr;
 
     while (size > 0) {
         const size_t a = BUFFER_MIN_SIZE(p_dst.addr, size);
@@ -482,9 +482,9 @@ bool sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size, uint3
     return true;
 }
 
-bool sys_strlen(guest_pointer_t p_s, size_t *ret)
+bool sys_strlen(eret_t *eret, guest_pointer_t p_s)
 {
-    *ret = 0;
+    eret->size = 0;
 
     while (true) {
         const size_t n = BUFFER_MAX_SIZE(p_s.addr);
@@ -496,7 +496,7 @@ bool sys_strlen(guest_pointer_t p_s, size_t *ret)
         const size_t tmp_size = strnlen(buffer, n);
 
         p_s.addr += n;
-        *ret += tmp_size;
+        eret->size += tmp_size;
 
         if (tmp_size < n) {
             break;
@@ -506,9 +506,9 @@ bool sys_strlen(guest_pointer_t p_s, size_t *ret)
     return true;
 }
 
-bool sys_strnlen(guest_pointer_t p_s, size_t maxlen, size_t *ret)
+bool sys_strnlen(eret_t *eret, guest_pointer_t p_s, size_t maxlen)
 {
-    *ret = 0;
+    eret->size = 0;
 
     while (maxlen > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_s.addr, maxlen);
@@ -521,7 +521,7 @@ bool sys_strnlen(guest_pointer_t p_s, size_t maxlen, size_t *ret)
 
         p_s.addr += n;
         maxlen -= n;
-        *ret += tmp_size;
+        eret->size += tmp_size;
 
         if (tmp_size < n) {
             break;

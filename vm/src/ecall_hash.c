@@ -170,7 +170,7 @@ bool sys_hash_update(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p
         size -= n;
     }
 
-    eret->addr = save_ctx_from_host(hash_id, p_ctx, &ctx);
+    eret->boolean = save_ctx_from_host(hash_id, p_ctx, &ctx);
 
     return true;
 }

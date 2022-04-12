@@ -30,7 +30,7 @@ bool copy_host_buffer(guest_pointer_t p_dst, void *buf, size_t size);
 uint8_t *get_buffer(const uint32_t addr, const size_t size, const bool writeable);
 
 bool sys_xsend(guest_pointer_t p_buf, size_t size);
-bool sys_xrecv(guest_pointer_t p_buf, size_t size, size_t *ret);
+bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size);
 void sys_fatal(guest_pointer_t p_msg);
 void sys_exit(uint32_t code);
 void sys_app_loading_start(guest_pointer_t p_status);
@@ -41,10 +41,10 @@ void sys_ux_bitmap(int x, int y, unsigned int width, unsigned int height, /*unsi
 int sys_wait_button(void);
 void sys_bagl_draw_with_context(guest_pointer_t p_component, guest_pointer_t p_context, size_t context_length, int context_encoding);
 void sys_ux_idle(void);
-bool sys_memset(guest_pointer_t p_s, int c, size_t size, uint32_t *ret);
-bool sys_memcpy(guest_pointer_t p_dst, guest_pointer_t p_src, size_t size, uint32_t *ret);
-bool sys_strlen(guest_pointer_t p_s, size_t *ret);
-bool sys_strnlen(guest_pointer_t p_s, size_t maxlen, size_t *ret);
+bool sys_memset(eret_t *eret, guest_pointer_t p_s, int c, size_t size);
+bool sys_memcpy(eret_t *eret, guest_pointer_t p_dst, guest_pointer_t p_src, size_t size);
+bool sys_strlen(eret_t *eret, guest_pointer_t p_s);
+bool sys_strnlen(eret_t *eret, guest_pointer_t p_s, size_t maxlen);
 
 cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain);
 cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
