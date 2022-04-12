@@ -18,6 +18,7 @@ typedef union eret_u {
     uint32_t addr;
     bool boolean;
     size_t size;
+    int error;
 } eret_t;
 
 #define ERET(reg) ((eret_t *)&cpu->regs[reg])
@@ -46,14 +47,14 @@ bool sys_memcpy(eret_t *eret, guest_pointer_t p_dst, guest_pointer_t p_src, size
 bool sys_strlen(eret_t *eret, guest_pointer_t p_s);
 bool sys_strnlen(eret_t *eret, guest_pointer_t p_s, size_t maxlen);
 
-cx_err_t sys_derive_node_bip32(cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain);
-cx_err_t sys_ecfp_generate_pair(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
-cx_err_t sys_ecfp_get_pubkey(cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
-size_t sys_ecdsa_sign(const guest_pointer_t p_key, const int mode,
-                      const cx_md_t hash_id, const guest_pointer_t p_hash,
-                      guest_pointer_t p_sig, size_t sig_len);
-void sys_mult(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, size_t len);
-void sys_multm(guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len);
-bool sys_tostring256(const guest_pointer_t p_number, const unsigned int base, guest_pointer_t p_out, size_t len);
+bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain);
+bool sys_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
+bool sys_ecfp_get_pubkey(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
+bool sys_ecdsa_sign(eret_t *eret, const guest_pointer_t p_key, const int mode,
+                    const cx_md_t hash_id, const guest_pointer_t p_hash,
+                    guest_pointer_t p_sig, size_t sig_len);
+bool sys_mult(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, size_t len);
+bool sys_multm(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len);
+bool sys_tostring256(eret_t *eret, const guest_pointer_t p_number, const unsigned int base, guest_pointer_t p_out, size_t len);
 
 bool ecall(struct rv_cpu *cpu);
