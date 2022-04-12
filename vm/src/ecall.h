@@ -34,7 +34,7 @@ bool sys_xsend(guest_pointer_t p_buf, size_t size);
 bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size);
 bool sys_fatal(guest_pointer_t p_msg);
 void sys_exit(uint32_t code);
-void sys_app_loading_start(guest_pointer_t p_status);
+bool sys_app_loading_start(guest_pointer_t p_status);
 bool sys_app_loading_stop(void);
 void sys_ux_rectangle(uint32_t color, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 void sys_screen_update(void);

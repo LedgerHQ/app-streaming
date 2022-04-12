@@ -48,7 +48,7 @@ bool ecall(struct rv_cpu *cpu)
         sys_bagl_draw_with_context(GP(RV_REG_A0), GP(RV_REG_A1), cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3]);
         break;
     case ECALL_LOADING_START:
-        sys_app_loading_start(GP(RV_REG_A0));
+        success = sys_app_loading_start(GP(RV_REG_A0));
         break;
     case ECALL_LOADING_STOP:
         cpu->regs[RV_REG_A0] = sys_app_loading_stop();
