@@ -74,14 +74,14 @@ bool sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
             return false;
         }
 
-        cx_hash(&ctx.header, 0, buffer, n, NULL, 0);
+        cx_hash_no_throw(&ctx.header, 0, buffer, n, NULL, 0);
 
         p_buffer.addr += n;
         size -= n;
     }
 
     uint8_t digest[32];
-    cx_hash((cx_hash_t *)&ctx, CX_LAST, NULL, 0, digest, sizeof(digest));
+    cx_hash_no_throw((cx_hash_t *)&ctx, CX_LAST, NULL, 0, digest, sizeof(digest));
 
     if (!copy_host_buffer(p_digest, digest, sizeof(digest))) {
         return false;
@@ -174,7 +174,7 @@ bool sys_hash_update(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p
             return false;
         }
 
-        cx_hash((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
+        cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
 
         p_buffer.addr += n;
         size -= n;
@@ -203,7 +203,7 @@ bool sys_hash_final(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p_
     }
 
     uint8_t digest[CX_SHA512_SIZE];
-    cx_hash(&ctx.header, CX_LAST, NULL, 0, digest, hash_len);
+    cx_hash_no_throw(&ctx.header, CX_LAST, NULL, 0, digest, hash_len);
 
     if (!copy_host_buffer(p_digest, digest, hash_len)) {
         return false;
