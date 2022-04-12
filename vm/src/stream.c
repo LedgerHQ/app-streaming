@@ -5,7 +5,7 @@
 #include "os_io_seproxyhal.h"
 #include "os_random.h"
 
-#include "rv.h"
+#include "rv_cpu.h"
 
 #include "apdu.h"
 #include "error.h"

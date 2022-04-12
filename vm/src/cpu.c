@@ -4,23 +4,22 @@
 
 #include "ecall.h"
 #include "error.h"
-#include "rv.h"
+#include "rv_cpu.h"
 #include "stream.h"
-#include "types.h"
 
 // Used to set least significant bit to zero.
-static const u32 ZERO_LSB = ~((u32) 1);
+static const uint32_t ZERO_LSB = ~((uint32_t) 1);
 
-static const u32 MOD_32 = 0x1f;
+static const uint32_t MOD_32 = 0x1f;
 
-static const u32 INST_SIZE = 4;
+static const uint32_t INST_SIZE = 4;
 
 void rv_cpu_reset(struct rv_cpu *cpu)
 {
     memset(cpu, 0, sizeof(struct rv_cpu));
 }
 
-enum rv_op rv_cpu_decode(u32 inst)
+enum rv_op rv_cpu_decode(uint32_t inst)
 {
     switch (inst & 0x0000007f) {
         case 0x00000037: return RV_OP_LUI;
@@ -120,33 +119,33 @@ enum rv_op rv_cpu_decode(u32 inst)
     }
 }
 
-static inline u32 imm_i(union rv_inst inst)
+static inline uint32_t imm_i(union rv_inst inst)
 {
-    return (u32) inst.i.i11_0;
+    return (uint32_t) inst.i.i11_0;
 }
 
-static inline u32 imm_u(union rv_inst inst)
+static inline uint32_t imm_u(union rv_inst inst)
 {
-    return (u32) (inst.u.i31_12 << 12);
+    return (uint32_t) (inst.u.i31_12 << 12);
 }
 
-static inline u32 imm_s(union rv_inst inst)
+static inline uint32_t imm_s(union rv_inst inst)
 {
-    return (u32) (inst.s.i11_5 << 5 | inst.s.i4_0);
+    return (uint32_t) (inst.s.i11_5 << 5 | inst.s.i4_0);
 }
 
 
-static inline u32 imm_b(union rv_inst inst)
+static inline uint32_t imm_b(union rv_inst inst)
 {
-    return (u32) (inst.b.i12   << 12 |
+    return (uint32_t) (inst.b.i12   << 12 |
                   inst.b.i11   << 11 |
                   inst.b.i10_5 <<  5 |
                   inst.b.i4_1  <<  1);
 }
 
-static inline u32 imm_j(union rv_inst inst)
+static inline uint32_t imm_j(union rv_inst inst)
 {
-    return (u32) (inst.j.i20    << 20 |
+    return (uint32_t) (inst.j.i20    << 20 |
                   inst.j.i19_12 << 12 |
                   inst.j.i11    << 11 |
                   inst.j.i10_1  <<  1);
@@ -166,12 +165,12 @@ static inline uint32_t sign_extend_b(uint32_t x) {
  * Return true if the CPU has stopped (because the app exited for instance, or
  * the instruction isn't recognized, false otherwise.)
  */
-bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
+bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
 {
     union rv_inst inst = { .inst = instruction };
     enum rv_op op = rv_cpu_decode(instruction);
-    u32 pc_inc = INST_SIZE;
-    u32 pc_set = cpu->pc;
+    uint32_t pc_inc = INST_SIZE;
+    uint32_t pc_set = cpu->pc;
     bool stop = false;
     bool success;
     uint32_t value;
@@ -230,19 +229,19 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_SRA:
-            cpu->regs[inst.rd] = (u32) ((i32) cpu->regs[inst.rs1] >> (cpu->regs[inst.rs2] & MOD_32));
+            cpu->regs[inst.rd] = (uint32_t) ((int32_t) cpu->regs[inst.rs1] >> (cpu->regs[inst.rs2] & MOD_32));
             break;
 
         case RV_OP_SRAI:
-            cpu->regs[inst.rd] = (u32) ((i32) cpu->regs[inst.rs1] >> (imm_i(inst) & MOD_32));
+            cpu->regs[inst.rd] = (uint32_t) ((int32_t) cpu->regs[inst.rs1] >> (imm_i(inst) & MOD_32));
             break;
 
         case RV_OP_SLT:
-            cpu->regs[inst.rd] = (i32) cpu->regs[inst.rs1] < (i32) cpu->regs[inst.rs2];
+            cpu->regs[inst.rd] = (int32_t) cpu->regs[inst.rs1] < (int32_t) cpu->regs[inst.rs2];
             break;
 
         case RV_OP_SLTI:
-            cpu->regs[inst.rd] = (i32) cpu->regs[inst.rs1] < (i32) imm_i(inst);
+            cpu->regs[inst.rd] = (int32_t) cpu->regs[inst.rs1] < (int32_t) imm_i(inst);
             break;
 
         case RV_OP_SLTU:
@@ -282,11 +281,11 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_BLT:
-            pc_inc = (i32) cpu->regs[inst.rs1] < (i32) cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
+            pc_inc = (int32_t) cpu->regs[inst.rs1] < (int32_t) cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_BGE:
-            pc_inc = (i32) cpu->regs[inst.rs1] >= (i32) cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
+            pc_inc = (int32_t) cpu->regs[inst.rs1] >= (int32_t) cpu->regs[inst.rs2] ? imm_b(inst) : INST_SIZE;
             break;
 
         case RV_OP_BLTU:
@@ -298,7 +297,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_LB:
-            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1, &value);
+            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 1, &value);
             if (success) {
                 cpu->regs[inst.rd] = sign_extend_b(value);
             } else {
@@ -307,7 +306,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_LH:
-            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2, &value);
+            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 2, &value);
             if (success) {
                 cpu->regs[inst.rd] = sign_extend_h(value);
             } else {
@@ -316,7 +315,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_LW:
-            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 4, &value);
+            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 4, &value);
             if (success) {
                 cpu->regs[inst.rd] = value;
             } else {
@@ -325,7 +324,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_LBU:
-            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 1, &value);
+            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 1, &value);
             if (success) {
                 cpu->regs[inst.rd] = value;
             } else {
@@ -334,7 +333,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_LHU:
-            success = mem_read(cpu->regs[inst.rs1] + (i32) imm_i(inst), 2, &value);
+            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 2, &value);
             if (success) {
                 cpu->regs[inst.rd] = value;
             } else {
@@ -343,19 +342,19 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_SB:
-            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 1, cpu->regs[inst.rs2])) {
+            if (!mem_write(cpu->regs[inst.rs1] + (int32_t) imm_s(inst), 1, cpu->regs[inst.rs2])) {
                 stop = true;
             }
             break;
 
         case RV_OP_SH:
-            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 2, cpu->regs[inst.rs2])) {
+            if (!mem_write(cpu->regs[inst.rs1] + (int32_t) imm_s(inst), 2, cpu->regs[inst.rs2])) {
                 stop = true;
             }
             break;
 
         case RV_OP_SW:
-            if (!mem_write(cpu->regs[inst.rs1] + (i32) imm_s(inst), 4, cpu->regs[inst.rs2])) {
+            if (!mem_write(cpu->regs[inst.rs1] + (int32_t) imm_s(inst), 4, cpu->regs[inst.rs2])) {
                 stop = true;
             }
             break;
@@ -381,7 +380,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 instruction)
             break;
 
         case RV_OP_DIV:
-            cpu->regs[inst.rd] = (i32)cpu->regs[inst.rs1] / (i32)cpu->regs[inst.rs2];
+            cpu->regs[inst.rd] = (int32_t)cpu->regs[inst.rs1] / (int32_t)cpu->regs[inst.rs2];
             break;
 
         case RV_OP_DIVU:

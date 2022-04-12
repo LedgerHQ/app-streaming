@@ -8,9 +8,8 @@
 #include "ecall.h"
 #include "error.h"
 #include "loading.h"
-#include "rv.h"
+#include "rv_cpu.h"
 #include "stream.h"
-#include "types.h"
 #include "ui.h"
 
 int saved_apdu_state;

@@ -2,7 +2,7 @@
 
 #include "ecall.h"
 #include "ecall_hash.h"
-#include "rv.h"
+#include "rv_cpu.h"
 
 #include "sdk/api/ecall-nr.h"
 
