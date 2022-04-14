@@ -33,5 +33,6 @@ target_link_libraries(app-ethereum PRIVATE
 add_subdirectory(src/eip712)
 
 if (NATIVE)
+  target_link_libraries(app-ethereum PRIVATE cxng speculos)
   add_subdirectory(tests)
 endif()

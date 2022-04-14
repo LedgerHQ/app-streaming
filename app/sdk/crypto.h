@@ -6,9 +6,8 @@
 
 #include "api/ecall-params.h"
 #include "api/uint256.h"
+#include "ecall.h"
 #include "speculos.h"
-
-typedef uint32_t cx_err_t;
 
 #define CX_CURVE_256K1 CX_CURVE_SECP256K1
 
@@ -34,35 +33,57 @@ void ecfp_init_private_key(cx_curve_t curve,
                            const uint8_t *raw_key,
                            size_t key_len,
                            cx_ecfp_private_key_t *key);
-cx_err_t derive_node_bip32(cx_curve_t curve,
-                           const unsigned int *path,
-                           size_t path_count,
-                           uint8_t *private_key,
-                           uint8_t *chain);
-cx_err_t ecfp_generate_pair(cx_curve_t curve,
-                            cx_ecfp_public_key_t *pubkey,
-                            cx_ecfp_private_key_t *privkey);
 cx_err_t ecfp_get_pubkey(cx_curve_t curve,
                          cx_ecfp_public_key_t *pubkey,
                          const cx_ecfp_private_key_t *privkey);
-void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest);
-size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
-                  const int mode,
-                  const cx_md_t hash_id,
-                  const uint8_t *hash,
-                  uint8_t *sig,
-                  size_t sig_len);
-void mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len);
-void multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len);
-bool tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len);
-
 bool hash_update(const cx_hash_id_t hash_id,
                  ctx_hash_guest_t *ctx,
                  const uint8_t *buffer,
                  const size_t size);
 
 bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest);
-
+void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest);
+void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest);
 void sha3_256_init(ctx_sha3_t *ctx);
 void sha3_256_update(ctx_sha3_t *ctx, const uint8_t *buffer, const size_t size);
 void sha3_256_final(ctx_sha3_t *ctx, uint8_t *digest);
+
+static inline cx_err_t derive_node_bip32(cx_curve_t curve,
+                                         const unsigned int *path,
+                                         size_t path_count,
+                                         uint8_t *private_key,
+                                         uint8_t *chain)
+{
+    return ecall_derive_node_bip32(curve, path, path_count, private_key, chain);
+}
+
+static inline size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
+                                const int mode,
+                                const cx_md_t hash_id,
+                                const uint8_t *hash,
+                                uint8_t *sig,
+                                size_t sig_len)
+{
+    return ecall_ecdsa_sign(key, mode, hash_id, hash, sig, sig_len);
+}
+
+static inline cx_err_t ecfp_generate_pair(cx_curve_t curve,
+                                          cx_ecfp_public_key_t *pubkey,
+                                          cx_ecfp_private_key_t *privkey)
+{
+    return ecall_ecfp_generate_pair(curve, pubkey, privkey);
+}
+
+static inline bool mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
+{
+    return ecall_mult(r, a, b, len);
+}
+
+static inline bool multm(uint8_t *r,
+                         const uint8_t *a,
+                         const uint8_t *b,
+                         const uint8_t *m,
+                         size_t len)
+{
+    return ecall_multm(r, a, b, m, len);
+}

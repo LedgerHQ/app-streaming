@@ -1,5 +1,6 @@
 #pragma once
 
+#ifndef NATIVE
 #include "os_task.h"
 
 static inline void err(char *msg)
@@ -17,3 +18,18 @@ static inline void fatal(char *msg)
     err(msg);
     os_sched_exit(7);
 }
+#else
+#include <stdio.h>
+#include <stdlib.h>
+
+static inline void err(char *msg)
+{
+    fprintf(stderr, "%s", msg);
+}
+
+static inline void fatal(char *msg)
+{
+    err(msg);
+    exit(7);
+}
+#endif

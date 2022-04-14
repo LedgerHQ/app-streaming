@@ -2,6 +2,7 @@
 
 #include "crypto.h"
 #include "ecall.h"
+#include "sdk.h"
 
 void ecfp_init_private_key(cx_curve_t curve,
                            const uint8_t *raw_key,
@@ -14,6 +15,29 @@ void ecfp_init_private_key(cx_curve_t curve,
         key->d_len = key_len;
         memcpy(key->d, raw_key, key_len);
     }
+}
+
+bool hash_update(const cx_hash_id_t hash_id,
+                 ctx_hash_guest_t *ctx,
+                 const uint8_t *buffer,
+                 const size_t size)
+{
+    return ecall_hash_update(hash_id, ctx, buffer, size);
+}
+
+bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest)
+{
+    return ecall_hash_final(hash_id, ctx, digest);
+}
+
+void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
+{
+    ecall_sha256sum(buffer, size, digest);
+}
+
+void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
+{
+    ecall_sha3_256(buffer, size, digest);
 }
 
 void sha3_256_init(ctx_sha3_t *ctx)

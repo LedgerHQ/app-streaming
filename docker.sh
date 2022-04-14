@@ -16,6 +16,8 @@ docker_run() {
        -w /app \
        -v "${SCRIPT_DIR}/app/":/app/ \
        -v "${SCRIPT_DIR}/host/":/host/:ro \
+       -v "${SCRIPT_DIR}/tools/":/tools/:ro \
+       -v "${SCRIPT_DIR}/vm/":/vm/:ro \
        "$@" \
        --rm -it "${image}" \
        bash
@@ -43,7 +45,9 @@ case ${image} in
     native)
         docker_run native \
                    --env SPECULOS_DIR=/speculos/ \
-                   -v "${HOME}/code/speculos/":/speculos/:ro
+                   --env BOLOS_SDK_DIR=/bolos_sdk/ \
+                   -v "${HOME}/code/speculos/":/speculos/:ro \
+                   -v "${HOME}/code/ledger/sdk/sdk-balenos-2.0.0/":/bolos_sdk/:ro
         ;;
 
     rust)

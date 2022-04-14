@@ -66,7 +66,7 @@ bool sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
 {
     cx_sha3_t ctx;
 
-    cx_keccak_init(&ctx, 256);
+    cx_keccak_init_no_throw(&ctx, 256);
     while (size > 0) {
         const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
         const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
@@ -74,7 +74,7 @@ bool sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_diges
             return false;
         }
 
-        cx_hash_no_throw(&ctx.header, 0, buffer, n, NULL, 0);
+        cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
 
         p_buffer.addr += n;
         size -= n;

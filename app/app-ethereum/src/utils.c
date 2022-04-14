@@ -6,6 +6,7 @@
 
 #include "api/uint256.h"
 #include "app-ethereum.h"
+#include "sdk.h"
 
 #define ADDRESS_SIZE 40
 #define WEI_TO_ETHER 18

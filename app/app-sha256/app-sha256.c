@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "crypto.h"
 #include "sdk.h"
 #include "sha256.h"
 
