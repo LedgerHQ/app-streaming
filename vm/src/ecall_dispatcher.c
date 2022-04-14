@@ -72,9 +72,6 @@ bool ecall(struct rv_cpu *cpu)
      * XXX - Disclaimer: the following ECALLs aren't stable, probably buggy.
      *       The API is a WIP.
      */
-    case ECALL_SHA256SUM:
-        success = sys_sha256sum(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));
-        break;
     case ECALL_DERIVE_NODE_BIP32:
         success = sys_derive_node_bip32(ERET(RV_REG_A0), cpu->regs[RV_REG_A0], GP(RV_REG_A1), cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4));
         break;

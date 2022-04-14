@@ -53,7 +53,21 @@ bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *dige
 
 void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
 {
-    ecall_sha256sum(buffer, size, digest);
+    ctx_hash_guest_t ctx;
+
+    ctx.sha256.blen = 0;
+    memset(ctx.sha256.block, 0, sizeof(ctx.sha256.block));
+    memset(ctx.sha256.acc, 0, sizeof(ctx.sha256.acc));
+
+    if (!hash_update(HASH_ID_SHA256, &ctx, buffer, size)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("hash_update SHA256");
+    }
+
+    if (!hash_final(HASH_ID_SHA256, &ctx, digest)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("hash_final SHA256");
+    }
 }
 
 void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
@@ -67,7 +81,6 @@ void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
 
 void sha3_256_init(ctx_sha3_t *ctx)
 {
-    const size_t size = 256;
     ctx->blen = 0;
     memset(ctx->block, 0, sizeof(ctx->block));
     memset(ctx->acc, 0, sizeof(ctx->acc));

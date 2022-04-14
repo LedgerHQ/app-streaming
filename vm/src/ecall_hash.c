@@ -13,52 +13,6 @@ union cx_hash_ctx_u {
     cx_hash_t header;
 };
 
-/**
- * @return true on success, false otherwise
- */
-bool sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest)
-{
-    uint8_t digest[CX_SHA256_SIZE];
-    cx_sha256_t ctx;
-
-    cx_sha256_init_no_throw(&ctx);
-
-    /* compute digest over the guest data */
-    while (size > 0) {
-        const size_t n = BUFFER_MIN_SIZE(p_data.addr, size);
-        const uint8_t *buffer = get_buffer(p_data.addr, n, false);
-        if (buffer == NULL) {
-            return false;
-        }
-
-        if (size - n != 0) {
-            cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
-        } else {
-            cx_hash_no_throw((cx_hash_t *)&ctx, CX_LAST, buffer, n, digest, sizeof(digest));
-        }
-
-        p_data.addr += n;
-        size -= n;
-    }
-
-    /* copy digest to the guest addr */
-    size = sizeof(digest);
-    while (size > 0) {
-        const size_t n = BUFFER_MIN_SIZE(p_digest.addr, size);
-        uint8_t *buffer = get_buffer(p_digest.addr, n, true);
-        if (buffer == NULL) {
-            return false;
-        }
-
-        memcpy(buffer, digest + sizeof(digest) - size, n);
-
-        p_digest.addr += n;
-        size -= n;
-    }
-
-    return true;
-}
-
 static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p_ctx, union cx_hash_ctx_u *ctx)
 {
     ctx_hash_guest_t guest;

@@ -113,10 +113,3 @@ bool ecall_tostring256(const uint256_t *number, const unsigned int base, char *o
 
     return eret.success;
 }
-
-void ecall_sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
-{
-    if (!sys_sha256sum(NP(buffer), size, NP(digest))) {
-        errx(1, "sys_sha256sum failed");
-    }
-}
