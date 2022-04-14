@@ -11,19 +11,6 @@
 
 #include "../../../vm/src/ecall_hash.h"
 
-cx_err_t ecall_ecfp_get_pubkey(cx_curve_t curve,
-                               cx_ecfp_public_key_t *pubkey,
-                               const cx_ecfp_private_key_t *privkey)
-{
-    eret_t eret;
-
-    if (!sys_ecfp_get_pubkey(&eret, curve, NP(pubkey), NP(privkey))) {
-        errx(1, "sys_ecfp_get_pubkey failed");
-    }
-
-    return eret.error;
-}
-
 cx_err_t ecall_derive_node_bip32(cx_curve_t curve,
                                  const unsigned int *path,
                                  size_t path_count,
@@ -55,17 +42,18 @@ size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,
     return eret.size;
 }
 
-cx_err_t ecall_ecfp_generate_pair(cx_curve_t curve,
-                                  cx_ecfp_public_key_t *pubkey,
-                                  cx_ecfp_private_key_t *privkey)
+bool ecall_cx_ecfp_generate_pair(cx_curve_t curve,
+                                 cx_ecfp_public_key_t *pubkey,
+                                 cx_ecfp_private_key_t *privkey,
+                                 bool keep_privkey)
 {
     eret_t eret;
 
-    if (!sys_ecfp_generate_pair(&eret, curve, NP(pubkey), NP(privkey))) {
-        errx(1, "sys_ecfp_generate_pair failed");
+    if (!_sys_cx_ecfp_generate_pair(&eret, curve, NP(pubkey), NP(privkey), keep_privkey)) {
+        errx(1, "_sys_cx_ecfp_generate_pair failed");
     }
 
-    return eret.error;
+    return eret.boolean;
 }
 
 bool ecall_hash_update(const cx_hash_id_t hash_id,

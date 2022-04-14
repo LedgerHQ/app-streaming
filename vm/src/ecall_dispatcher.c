@@ -79,10 +79,7 @@ bool ecall(struct rv_cpu *cpu)
         success = sys_derive_node_bip32(ERET(RV_REG_A0), cpu->regs[RV_REG_A0], GP(RV_REG_A1), cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4));
         break;
     case ECALL_CX_ECFP_GENERATE_PAIR:
-        success = sys_ecfp_generate_pair(ERET(RV_REG_A0), cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
-        break;
-    case ECALL_CX_ECFP_GET_PUBKEY:
-        success = sys_ecfp_get_pubkey(ERET(RV_REG_A0), cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2));
+        success = _sys_cx_ecfp_generate_pair(ERET(RV_REG_A0), cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
     case ECALL_CX_SHA3_256:
         success = sys_sha3_256(GP(RV_REG_A0), cpu->regs[RV_REG_A1], GP(RV_REG_A2));

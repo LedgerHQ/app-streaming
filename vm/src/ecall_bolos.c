@@ -54,13 +54,20 @@ bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pat
     return true;
 }
 
-bool sys_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
+bool _sys_cx_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey, bool keep_privkey)
 {
     cx_ecfp_public_key_t pubkey;
     cx_ecfp_private_key_t privkey;
 
-    eret->error = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, false);
-    if (eret->error != CX_OK) {
+    if (keep_privkey) {
+        if (!copy_guest_buffer(p_privkey, &privkey, sizeof(privkey))) {
+            return false;
+        }
+    }
+
+    cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, keep_privkey);
+    if (err != CX_OK) {
+        eret->boolean = false;
         goto error;
     }
 
@@ -68,33 +75,13 @@ bool sys_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pu
         return false;
     }
 
-    if (!copy_host_buffer(p_privkey, &privkey, sizeof(privkey))) {
-        return false;
+    if (!keep_privkey) {
+        if (!copy_host_buffer(p_privkey, &privkey, sizeof(privkey))) {
+            return false;
+        }
     }
 
- error:
-    explicit_bzero(&privkey, sizeof(privkey));
-
-    return true;
-}
-
-bool sys_ecfp_get_pubkey(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey)
-{
-    cx_ecfp_public_key_t pubkey;
-    cx_ecfp_private_key_t privkey;
-
-    if (!copy_guest_buffer(p_privkey, &privkey, sizeof(privkey))) {
-        return false;
-    }
-
-    eret->error = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, true);
-    if (eret->error != CX_OK) {
-        goto error;
-    }
-
-    if (!copy_host_buffer(p_pubkey, &pubkey, sizeof(pubkey))) {
-        return false;
-    }
+    eret->boolean = true;
 
  error:
     explicit_bzero(&privkey, sizeof(privkey));

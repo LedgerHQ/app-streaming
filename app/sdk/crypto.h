@@ -33,9 +33,9 @@ void ecfp_init_private_key(cx_curve_t curve,
                            const uint8_t *raw_key,
                            size_t key_len,
                            cx_ecfp_private_key_t *key);
-cx_err_t ecfp_get_pubkey(cx_curve_t curve,
-                         cx_ecfp_public_key_t *pubkey,
-                         const cx_ecfp_private_key_t *privkey);
+bool ecfp_get_pubkey(const cx_curve_t curve,
+                     const cx_ecfp_private_key_t *privkey,
+                     cx_ecfp_public_key_t *pubkey);
 bool hash_update(const cx_hash_id_t hash_id,
                  ctx_hash_guest_t *ctx,
                  const uint8_t *buffer,
@@ -67,11 +67,11 @@ static inline size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
     return ecall_ecdsa_sign(key, mode, hash_id, hash, sig, sig_len);
 }
 
-static inline cx_err_t ecfp_generate_pair(cx_curve_t curve,
-                                          cx_ecfp_public_key_t *pubkey,
-                                          cx_ecfp_private_key_t *privkey)
+static inline bool ecfp_generate_pair(cx_curve_t curve,
+                                      cx_ecfp_public_key_t *pubkey,
+                                      cx_ecfp_private_key_t *privkey)
 {
-    return ecall_ecfp_generate_pair(curve, pubkey, privkey);
+    return ecall_cx_ecfp_generate_pair(curve, pubkey, privkey, false);
 }
 
 static inline bool mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)

@@ -52,7 +52,7 @@ bool sys_strlen(eret_t *eret, guest_pointer_t p_s);
 bool sys_strnlen(eret_t *eret, guest_pointer_t p_s, size_t maxlen);
 
 bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_path, size_t path_count, guest_pointer_t p_private_key, guest_pointer_t p_chain);
-bool sys_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
+bool _sys_cx_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey, bool keep_privkey);
 bool sys_ecfp_get_pubkey(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
 bool sys_ecdsa_sign(eret_t *eret, const guest_pointer_t p_key, const int mode,
                     const cx_md_t hash_id, const guest_pointer_t p_hash,

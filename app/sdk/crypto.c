@@ -17,6 +17,16 @@ void ecfp_init_private_key(cx_curve_t curve,
     }
 }
 
+/**
+ * Get the public key associated to the given private key.
+ */
+bool ecfp_get_pubkey(const cx_curve_t curve,
+                     const cx_ecfp_private_key_t *privkey,
+                     cx_ecfp_public_key_t *pubkey)
+{
+    return ecall_cx_ecfp_generate_pair(curve, pubkey, (cx_ecfp_private_key_t *)privkey, true);
+}
+
 bool hash_update(const cx_hash_id_t hash_id,
                  ctx_hash_guest_t *ctx,
                  const uint8_t *buffer,
