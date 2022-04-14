@@ -17,6 +17,17 @@ void ecfp_init_private_key(cx_curve_t curve,
     }
 }
 
+bool ecfp_generate_keypair(const cx_curve_t curve,
+                           const uint8_t *rawkey,
+                           const size_t rawkey_size,
+                           cx_ecfp_public_key_t *pubkey,
+                           cx_ecfp_private_key_t *privkey)
+{
+    ecfp_init_private_key(CX_CURVE_256K1, rawkey, rawkey_size, privkey);
+
+    return ecall_cx_ecfp_generate_pair(curve, pubkey, privkey, false);
+}
+
 /**
  * Get the public key associated to the given private key.
  */

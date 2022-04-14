@@ -33,6 +33,11 @@ void ecfp_init_private_key(cx_curve_t curve,
                            const uint8_t *raw_key,
                            size_t key_len,
                            cx_ecfp_private_key_t *key);
+bool ecfp_generate_keypair(const cx_curve_t curve,
+                           const uint8_t *rawkey,
+                           const size_t rawkey_size,
+                           cx_ecfp_public_key_t *pubkey,
+                           cx_ecfp_private_key_t *privkey);
 bool ecfp_get_pubkey(const cx_curve_t curve,
                      const cx_ecfp_private_key_t *privkey,
                      cx_ecfp_public_key_t *pubkey);
@@ -65,13 +70,6 @@ static inline size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
                                 size_t sig_len)
 {
     return ecall_ecdsa_sign(key, mode, hash_id, hash, sig, sig_len);
-}
-
-static inline bool ecfp_generate_pair(cx_curve_t curve,
-                                      cx_ecfp_public_key_t *pubkey,
-                                      cx_ecfp_private_key_t *privkey)
-{
-    return ecall_cx_ecfp_generate_pair(curve, pubkey, privkey, false);
 }
 
 static inline bool mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)

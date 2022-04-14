@@ -24,8 +24,8 @@ static const char *derive_pubkey(const uint32_t *path,
     }
 
     cx_ecfp_private_key_t privkey;
-    ecfp_init_private_key(CX_CURVE_256K1, privkey_data, sizeof(privkey_data), &privkey);
-    if (ecfp_generate_pair(CX_CURVE_256K1, pubkey, &privkey) != CX_OK) {
+    if (!ecfp_generate_keypair(CX_CURVE_256K1, privkey_data, sizeof(privkey_data), pubkey,
+                               &privkey)) {
         error = "failed to generate keypair";
         goto end;
     }
