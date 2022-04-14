@@ -3,6 +3,7 @@
 #include "ecall.h"
 #include "ecall_hash.h"
 #include "error.h"
+#include "no_throw.h"
 #include "uint256-internal.h"
 
 #include "cx.h"
@@ -33,8 +34,9 @@ bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pat
         return false;
     }
 
-    os_perso_derive_node_bip32(curve, path, path_count, private_key, chain);
-    /* XXX: error? */
+    if (!os_perso_derive_node_bip32_nt(curve, path, path_count, private_key, chain)) {
+        return false;
+    }
 
     if (p_private_key.addr != 0) {
         if (!copy_host_buffer(p_private_key, &private_key, sizeof(private_key))) {

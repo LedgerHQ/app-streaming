@@ -327,3 +327,15 @@ unsigned long sys_os_perso_derive_node_bip32(cx_curve_t curve,
                                              size_t length,
                                              uint8_t *private_key,
                                              uint8_t *chain);
+
+static inline bool os_perso_derive_node_bip32_nt(cx_curve_t curve,
+                                                 const uint32_t *path,
+                                                 size_t pathLength,
+                                                 uint8_t *privateKey,
+                                                 uint8_t *chain)
+{
+    os_perso_derive_node_bip32(curve, path, pathLength, privateKey, chain);
+
+    /* XXX: speculos exits if an error is encountered */
+    return true;
+}
