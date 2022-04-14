@@ -20,7 +20,7 @@ typedef struct guest_pointer_s {
 /* ECALL return value */
 typedef union eret_u {
     uintptr_t addr;
-    bool boolean;
+    bool success;
     size_t size;
 } eret_t;
 

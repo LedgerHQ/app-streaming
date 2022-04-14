@@ -17,7 +17,7 @@ bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pat
     uint8_t chain[32];
 
     if (path_count > 10) {
-        eret->boolean = false;
+        eret->success = false;
         return true;
     }
 
@@ -49,7 +49,7 @@ bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pat
         }
     }
 
-    eret->boolean = true;
+    eret->success = true;
 
     return true;
 }
@@ -67,7 +67,7 @@ bool _sys_cx_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t 
 
     cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, keep_privkey);
     if (err != CX_OK) {
-        eret->boolean = false;
+        eret->success = false;
         goto error;
     }
 
@@ -81,7 +81,7 @@ bool _sys_cx_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t 
         }
     }
 
-    eret->boolean = true;
+    eret->success = true;
 
  error:
     explicit_bzero(&privkey, sizeof(privkey));
@@ -136,7 +136,7 @@ bool sys_mult(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_poin
 
     if (len > sizeof(a)) {
         err("invalid size for mult");
-        eret->boolean = false;
+        eret->success = false;
         return true;
     }
 
@@ -154,7 +154,7 @@ bool sys_mult(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_poin
         return false;
     }
 
-    eret->boolean = true;
+    eret->success = true;
 
     return true;
 }
@@ -165,7 +165,7 @@ bool sys_multm(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_poi
 
     if (len > sizeof(a)) {
         err("invalid size for multm");
-        eret->boolean = false;
+        eret->success = false;
         return true;
     }
 
@@ -185,7 +185,7 @@ bool sys_multm(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_poi
         return false;
     }
 
-    eret->boolean = true;
+    eret->success = true;
 
     return true;
 }
@@ -204,7 +204,7 @@ bool sys_tostring256(eret_t *eret, const guest_pointer_t p_number, const unsigne
     }
 
     if (!tostring256_implem(&number, base, buf, len)) {
-        eret->boolean = false;
+        eret->success = false;
         return true;
     }
 
@@ -212,7 +212,7 @@ bool sys_tostring256(eret_t *eret, const guest_pointer_t p_number, const unsigne
         return false;
     }
 
-    eret->boolean = true;
+    eret->success = true;
 
     return true;
 }

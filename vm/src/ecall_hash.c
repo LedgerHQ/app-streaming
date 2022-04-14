@@ -94,7 +94,7 @@ static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, gue
 {
     ctx_hash_guest_t guest;
 
-    eret->boolean = true;
+    eret->success = true;
 
     switch (hash_id) {
     case HASH_ID_SHA3_256:
@@ -115,7 +115,7 @@ static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, gue
         memcpy(&ctx->sha256.block, guest.sha256.block, sizeof(ctx->sha256.block));
         memcpy(&ctx->sha256.acc, guest.sha256.acc, sizeof(ctx->sha256.acc));
     default:
-        eret->boolean = false;
+        eret->success = false;
         break;
     }
 
@@ -126,7 +126,7 @@ static bool save_ctx_from_host(eret_t *eret, const cx_hash_id_t hash_id, guest_p
 {
     ctx_hash_guest_t guest;
 
-    eret->boolean = true;
+    eret->success = true;
 
     switch (hash_id) {
     case HASH_ID_SHA3_256:
@@ -145,7 +145,7 @@ static bool save_ctx_from_host(eret_t *eret, const cx_hash_id_t hash_id, guest_p
             return false;
         }
     default:
-        eret->boolean = false;
+        eret->success = false;
         break;
     }
 
@@ -163,7 +163,7 @@ bool sys_hash_update(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p
         return false;
     }
 
-    if (!eret->boolean) {
+    if (!eret->success) {
         return true;
     }
 
@@ -192,7 +192,7 @@ bool sys_hash_final(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p_
         return false;
     }
 
-    if (!eret->boolean) {
+    if (!eret->success) {
         return true;
     }
 

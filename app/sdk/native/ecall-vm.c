@@ -23,7 +23,7 @@ bool ecall_derive_node_bip32(cx_curve_t curve,
         errx(1, "sys_derive_node_bip32 failed");
     }
 
-    return eret.boolean;
+    return eret.success;
 }
 
 size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,
@@ -53,7 +53,7 @@ bool ecall_cx_ecfp_generate_pair(cx_curve_t curve,
         errx(1, "_sys_cx_ecfp_generate_pair failed");
     }
 
-    return eret.boolean;
+    return eret.success;
 }
 
 bool ecall_hash_update(const cx_hash_id_t hash_id,
@@ -67,7 +67,7 @@ bool ecall_hash_update(const cx_hash_id_t hash_id,
         errx(1, "sys_hash_update failed");
     }
 
-    return eret.boolean;
+    return eret.success;
 }
 
 bool ecall_hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest)
@@ -78,7 +78,7 @@ bool ecall_hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t
         errx(1, "sys_hash_final failed");
     }
 
-    return eret.boolean;
+    return eret.success;
 }
 
 bool ecall_mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
@@ -89,7 +89,7 @@ bool ecall_mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
         errx(1, "sys_mult failed");
     }
 
-    return eret.boolean;
+    return eret.success;
 }
 
 bool ecall_multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len)
@@ -100,7 +100,7 @@ bool ecall_multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *
         errx(1, "sys_multm failed");
     }
 
-    return eret.boolean;
+    return eret.success;
 }
 
 bool ecall_tostring256(const uint256_t *number, const unsigned int base, char *out, size_t len)
@@ -111,7 +111,7 @@ bool ecall_tostring256(const uint256_t *number, const unsigned int base, char *o
         errx(1, "sys_tostring256 failed");
     }
 
-    return eret.boolean;
+    return eret.success;
 }
 
 void ecall_sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
