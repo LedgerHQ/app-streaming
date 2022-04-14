@@ -35,7 +35,8 @@ bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pat
     }
 
     if (!os_perso_derive_node_bip32_nt(curve, path, path_count, private_key, chain)) {
-        return false;
+        eret->success = false;
+        return true;
     }
 
     if (p_private_key.addr != 0) {
