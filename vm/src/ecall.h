@@ -22,7 +22,6 @@ typedef union eret_u {
     uintptr_t addr;
     bool boolean;
     size_t size;
-    int error;
 } eret_t;
 
 #define ERET(reg) ((eret_t *)&cpu->regs[reg])

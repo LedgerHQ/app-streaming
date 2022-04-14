@@ -11,24 +11,6 @@
 
 #define CX_CURVE_256K1 CX_CURVE_SECP256K1
 
-#define CX_OK                      0x00000000
-#define CX_CARRY                   0xFFFFFF21
-#define CX_LOCKED                  0xFFFFFF81
-#define CX_UNLOCKED                0xFFFFFF82
-#define CX_NOT_LOCKED              0xFFFFFF83
-#define CX_NOT_UNLOCKED            0xFFFFFF84
-#define CX_INTERNAL_ERROR          0xFFFFFF85
-#define CX_INVALID_PARAMETER_SIZE  0xFFFFFF86
-#define CX_INVALID_PARAMETER_VALUE 0xFFFFFF87
-#define CX_INVALID_PARAMETER       0xFFFFFF88
-#define CX_NOT_INVERTIBLE          0xFFFFFF89
-#define CX_OVERFLOW                0xFFFFFF8A
-#define CX_MEMORY_FULL             0xFFFFFF8B
-#define CX_NO_RESIDUE              0xFFFFFF8C
-#define CX_EC_INFINITE_POINT       0xFFFFFF41
-#define CX_EC_INVALID_POINT        0xFFFFFFA2
-#define CX_EC_INVALID_CURVE        0xFFFFFFA3
-
 void ecfp_init_private_key(cx_curve_t curve,
                            const uint8_t *raw_key,
                            size_t key_len,
@@ -53,11 +35,11 @@ void sha3_256_init(ctx_sha3_t *ctx);
 void sha3_256_update(ctx_sha3_t *ctx, const uint8_t *buffer, const size_t size);
 void sha3_256_final(ctx_sha3_t *ctx, uint8_t *digest);
 
-static inline cx_err_t derive_node_bip32(cx_curve_t curve,
-                                         const unsigned int *path,
-                                         size_t path_count,
-                                         uint8_t *private_key,
-                                         uint8_t *chain)
+static inline bool derive_node_bip32(cx_curve_t curve,
+                                     const unsigned int *path,
+                                     size_t path_count,
+                                     uint8_t *private_key,
+                                     uint8_t *chain)
 {
     return ecall_derive_node_bip32(curve, path, path_count, private_key, chain);
 }

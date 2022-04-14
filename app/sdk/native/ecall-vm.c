@@ -11,11 +11,11 @@
 
 #include "../../../vm/src/ecall_hash.h"
 
-cx_err_t ecall_derive_node_bip32(cx_curve_t curve,
-                                 const unsigned int *path,
-                                 size_t path_count,
-                                 uint8_t *private_key,
-                                 uint8_t *chain)
+bool ecall_derive_node_bip32(cx_curve_t curve,
+                             const unsigned int *path,
+                             size_t path_count,
+                             uint8_t *private_key,
+                             uint8_t *chain)
 {
     eret_t eret;
 
@@ -23,7 +23,7 @@ cx_err_t ecall_derive_node_bip32(cx_curve_t curve,
         errx(1, "sys_derive_node_bip32 failed");
     }
 
-    return eret.error;
+    return eret.boolean;
 }
 
 size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,

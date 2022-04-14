@@ -9,8 +9,6 @@
 
 #include "speculos.h"
 
-typedef uint32_t cx_err_t;
-
 __attribute__((noreturn)) void ecall_exit(int status);
 __attribute__((noreturn)) void ecall_fatal(char *msg);
 
@@ -28,11 +26,11 @@ void ecall_bagl_hal_draw_bitmap_within_rect(int x,
                                             unsigned int bit_per_pixel,
                                             const unsigned char *bitmap,
                                             unsigned int bitmap_length_bits);
-cx_err_t ecall_derive_node_bip32(cx_curve_t curve,
-                                 const unsigned int *path,
-                                 size_t path_count,
-                                 uint8_t *private_key,
-                                 uint8_t *chain);
+bool ecall_derive_node_bip32(cx_curve_t curve,
+                             const unsigned int *path,
+                             size_t path_count,
+                             uint8_t *private_key,
+                             uint8_t *chain);
 size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,
                         const int mode,
                         const cx_md_t hash_id,

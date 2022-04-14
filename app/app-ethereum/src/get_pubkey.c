@@ -18,7 +18,7 @@ static const char *derive_pubkey(const uint32_t *path,
     const char *error = NULL;
 
     uint8_t privkey_data[32];
-    if (derive_node_bip32(CX_CURVE_256K1, path, path_count, privkey_data, chain_code) != CX_OK) {
+    if (!derive_node_bip32(CX_CURVE_256K1, path, path_count, privkey_data, chain_code)) {
         error = "path derivation failed";
         goto end;
     }

@@ -17,7 +17,7 @@ bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pat
     uint8_t chain[32];
 
     if (path_count > 10) {
-        eret->error = CX_INVALID_PARAMETER;
+        eret->boolean = false;
         return true;
     }
 
@@ -49,7 +49,7 @@ bool sys_derive_node_bip32(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pat
         }
     }
 
-    eret->error = CX_OK;
+    eret->boolean = true;
 
     return true;
 }
