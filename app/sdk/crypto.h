@@ -56,7 +56,7 @@ static inline size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
 
 static inline bool mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
 {
-    return ecall_mult(r, a, b, len);
+    return ecall_multm(r, a, b, NULL, len);
 }
 
 static inline bool multm(uint8_t *r,

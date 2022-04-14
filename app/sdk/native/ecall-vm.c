@@ -81,17 +81,6 @@ bool ecall_hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t
     return eret.success;
 }
 
-bool ecall_mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
-{
-    eret_t eret;
-
-    if (!sys_mult(&eret, NP(r), NP(a), NP(b), len)) {
-        errx(1, "sys_mult failed");
-    }
-
-    return eret.success;
-}
-
 bool ecall_multm(uint8_t *r, const uint8_t *a, const uint8_t *b, const uint8_t *m, size_t len)
 {
     eret_t eret;

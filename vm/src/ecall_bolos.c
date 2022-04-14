@@ -130,38 +130,12 @@ bool sys_ecdsa_sign(eret_t *eret, const guest_pointer_t p_key, const int mode,
     return true;
 }
 
-bool sys_mult(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, size_t len)
-{
-    uint8_t r[64], a[32], b[32];
-
-    if (len > sizeof(a)) {
-        err("invalid size for mult");
-        eret->success = false;
-        return true;
-    }
-
-    if (!copy_guest_buffer(p_a, a, len)) {
-        return false;
-    }
-
-    if (!copy_guest_buffer(p_b, b, len)) {
-        return false;
-    }
-
-    cx_math_mult(r, a, b, len);
-
-    if (!copy_host_buffer(p_r, r, len * 2)) {
-        return false;
-    }
-
-    eret->success = true;
-
-    return true;
-}
-
+/**
+ * If m is NULL, mult().
+ */
 bool sys_multm(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_pointer_t p_b, guest_pointer_t p_m, size_t len)
 {
-    uint8_t r[64], a[32], b[32], m[32];
+    uint8_t r[64], a[32], b[32];
 
     if (len > sizeof(a)) {
         err("invalid size for multm");
@@ -172,14 +146,27 @@ bool sys_multm(eret_t *eret, guest_pointer_t p_r, guest_pointer_t p_a, guest_poi
     if (!copy_guest_buffer(p_a, a, len)) {
         return false;
     }
+
     if (!copy_guest_buffer(p_b, b, len)) {
         return false;
     }
-    if (!copy_guest_buffer(p_m, m, len)) {
-        return false;
+
+    cx_err_t err;
+    if (p_m.addr == 0) {
+        err = cx_math_mult_no_throw(r, a, b, len);
+    } else {
+        uint8_t m[32];
+        if (!copy_guest_buffer(p_m, m, len)) {
+            return false;
+        }
+
+        err = cx_math_multm_no_throw(r, a, b, m, len);
     }
 
-    cx_math_multm(r, a, b, m, len);
+    if (err != CX_OK) {
+        eret->success = false;
+        return true;
+    }
 
     if (!copy_host_buffer(p_r, r, len * 2)) {
         return false;
