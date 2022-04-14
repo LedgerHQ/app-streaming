@@ -120,10 +120,3 @@ void ecall_sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
         errx(1, "sys_sha256sum failed");
     }
 }
-
-void ecall_sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
-{
-    if (!sys_sha3_256(NP(buffer), size, NP(digest))) {
-        errx(1, "sys_sha3_256 failed");
-    }
-}

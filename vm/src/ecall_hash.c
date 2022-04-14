@@ -59,37 +59,6 @@ bool sys_sha256sum(guest_pointer_t p_data, size_t size, guest_pointer_t p_digest
     return true;
 }
 
-/**
- * @return true on success, false otherwise
- */
-bool sys_sha3_256(guest_pointer_t p_buffer, size_t size, guest_pointer_t p_digest)
-{
-    cx_sha3_t ctx;
-
-    cx_keccak_init_no_throw(&ctx, 256);
-    while (size > 0) {
-        const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
-        const uint8_t *buffer = get_buffer(p_buffer.addr, n, false);
-        if (buffer == NULL) {
-            return false;
-        }
-
-        cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
-
-        p_buffer.addr += n;
-        size -= n;
-    }
-
-    uint8_t digest[32];
-    cx_hash_no_throw((cx_hash_t *)&ctx, CX_LAST, NULL, 0, digest, sizeof(digest));
-
-    if (!copy_host_buffer(p_digest, digest, sizeof(digest))) {
-        return false;
-    }
-
-    return true;
-}
-
 static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p_ctx, union cx_hash_ctx_u *ctx)
 {
     ctx_hash_guest_t guest;

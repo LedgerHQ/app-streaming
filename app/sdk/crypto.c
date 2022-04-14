@@ -58,7 +58,11 @@ void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
 
 void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
 {
-    ecall_sha3_256(buffer, size, digest);
+    ctx_sha3_t ctx;
+
+    sha3_256_init(&ctx);
+    sha3_256_update(&ctx, buffer, size);
+    sha3_256_final(&ctx, digest);
 }
 
 void sha3_256_init(ctx_sha3_t *ctx)
