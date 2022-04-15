@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "sdk/api/ecall-params.h"
-#include "sdk/api/uint256.h"
+#include "api/ecall-params.h"
+#include "api/uint256.h"
 
 #include "speculos.h"
 

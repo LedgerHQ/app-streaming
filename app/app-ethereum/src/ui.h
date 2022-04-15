@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "api/uint256.h"
+#include "uint256.h"
 #include "ux/ux.h"
 
 extern int eip712_validated;

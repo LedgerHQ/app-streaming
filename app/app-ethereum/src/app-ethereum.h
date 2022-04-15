@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "api/uint256.h"
 #include "crypto.h"
 #include "sdk.h"
+#include "uint256.h"
 
 #include "message.pb.h"
 

@@ -1,8 +1,7 @@
 #include <string.h>
 
 #include "crypto.h"
-
-#include "api/uint256.h"
+#include "uint256.h"
 
 #define UPPER_P(x) x->elements[0]
 #define LOWER_P(x) x->elements[1]

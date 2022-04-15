@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "api/uint256.h"
 #include "app-ethereum.h"
 #include "sdk.h"
 

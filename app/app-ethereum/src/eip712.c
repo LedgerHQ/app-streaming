@@ -9,6 +9,7 @@
 #include "crypto.h"
 #include "eip712.h"
 #include "sdk.h"
+#include "uint256.h"
 
 #define TOKEN_MAX 128
 #define EIP712_DOMAIN_EXAMPLE_MAIL                                                                 \
