@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+
+// apt install protobuf-c-compiler protobuf-compiler
+// cat message.proto | sed 's/import.*//' | sed 's/\[.*\]//g' > message-nonano.proto && protoc --python_out=. message-nonano.proto && mv message_nonano_pb2.py message_pb2.py && rm message-nonano.proto
+
+// apt install python3-protobuf
+// ./nanopb/generator/nanopb_generator.py app-swap/protobuf/message.proto
+
+message RequestGetVersion {
+};
+
+message ResponseGetVersion {
+  string version = 1 [(nanopb).max_length = 40];
+};
+
+message RequestInitSwap {
+};
+
+message ResponseInitSwap {
+  bytes device_id = 1 [(nanopb).max_size = 10, (nanopb).fixed_length = true];
+};
+
+message RequestInitSell {
+};
+
+message ResponseInitSell {
+  bytes device_id = 1 [(nanopb).max_size = 32, (nanopb).fixed_length = true];
+};
+
+message Partner {
+  string name = 1 [(nanopb).max_length = 15];
+  bytes pubkey = 2 [(nanopb).max_size = 65, (nanopb).fixed_length = true];
+  bytes signature = 3 [(nanopb).max_size = 72];
+};
+
+message RequestSwap {
+  Partner partner = 1;
+  bytes pb_tx = 2 [(nanopb).max_size = 256];
+  bytes signature = 3 [(nanopb).max_size = 72];
+  bytes fee = 4 [(nanopb).max_size = 16];
+
+  repeated uint32 payout_path = 5 [(nanopb).max_count = 10];
+  repeated uint32 refund_path = 6 [(nanopb).max_count = 10];
+
+  bytes payout_addr_params = 7 [(nanopb).max_size = 1, (nanopb).fixed_length = true];
+  bytes refund_addr_params = 8 [(nanopb).max_size = 1, (nanopb).fixed_length = true];
+};
+
+message ResponseSwap {
+  bool approved = 1;
+  bytes signature = 2 [(nanopb).max_size = 72];
+};
+
+message RequestSell {
+  Partner partner = 1;
+  bytes b64_tx = 2 [(nanopb).max_size = 256];
+  bytes signature = 3 [(nanopb).max_size = 72];
+  bytes fee = 4 [(nanopb).max_size = 16];
+};
+
+message ResponseSell {
+  bool approved = 1;
+  bytes signature = 2 [(nanopb).max_size = 72];
+};
+
+message ResponseError {
+  string error_msg = 1 [(nanopb).max_length = 64];
+};
+
+message Request {
+  oneof message_oneof {
+    RequestGetVersion get_version = 1;
+    RequestInitSwap init_swap = 2;
+    RequestInitSell init_sell = 3;
+    RequestSwap swap = 4;
+    RequestSell sell = 5;
+  };
+}
+
+message Response {
+  oneof message_oneof {
+    ResponseGetVersion get_version = 1;
+    ResponseInitSwap init_swap = 2;
+    ResponseInitSell init_sell = 3;
+    ResponseSwap swap = 4;
+    ResponseSell sell = 5;
+    ResponseError error = 6;
+  };
+}

@@ -75,4 +75,5 @@ add_subdirectory(ux)
 
 add_subdirectory(app-ethereum)
 add_subdirectory(app-sha256)
+add_subdirectory(app-swap)
 add_subdirectory(app-wip)

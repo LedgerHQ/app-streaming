@@ -148,5 +148,8 @@ if __name__ == "__main__":
     elif client.plugin.name == "sha256":
         client.call("hash1")
         client.call("hash2")
+    elif client.plugin.name == "swap":
+        client.call("init_swap")
+        client.call("swap")
     else:
         print("unknown plugin")
