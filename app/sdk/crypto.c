@@ -4,17 +4,14 @@
 #include "ecall.h"
 #include "sdk.h"
 
-void ecfp_init_private_key(cx_curve_t curve,
+void ecfp_init_private_key(const cx_curve_t curve,
                            const uint8_t *raw_key,
-                           size_t key_len,
+                           const size_t key_len,
                            cx_ecfp_private_key_t *key)
 {
     key->curve = curve;
-
-    if (raw_key != NULL) {
-        key->d_len = key_len;
-        memcpy(key->d, raw_key, key_len);
-    }
+    key->d_len = key_len;
+    memcpy(key->d, raw_key, key_len);
 }
 
 bool ecfp_generate_keypair(const cx_curve_t curve,
@@ -23,9 +20,9 @@ bool ecfp_generate_keypair(const cx_curve_t curve,
                            cx_ecfp_public_key_t *pubkey,
                            cx_ecfp_private_key_t *privkey)
 {
-    ecfp_init_private_key(CX_CURVE_256K1, rawkey, rawkey_size, privkey);
+    ecfp_init_private_key(curve, rawkey, rawkey_size, privkey);
 
-    return ecall_cx_ecfp_generate_pair(curve, pubkey, privkey, false);
+    return ecall_cx_ecfp_generate_pair(curve, pubkey, privkey, true);
 }
 
 /**
