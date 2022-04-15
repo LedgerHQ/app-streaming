@@ -15,6 +15,7 @@
 
 typedef enum cx_curve_e {
     CX_CURVE_SECP256K1 = 0x21,
+    CX_CURVE_SECP256R1 = 0x22,
 } cx_curve_t;
 
 enum cx_md_e {

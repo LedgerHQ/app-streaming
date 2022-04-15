@@ -10,6 +10,7 @@
 #include "speculos.h"
 
 #define CX_CURVE_256K1 CX_CURVE_SECP256K1
+#define CX_CURVE_256R1 CX_CURVE_SECP256R1
 
 void ecfp_init_private_key(const cx_curve_t curve,
                            const uint8_t *raw_key,
