@@ -221,6 +221,65 @@ cx_err_t cx_bn_sub(cx_bn_t r, const cx_bn_t a, const cx_bn_t b)
     return sys_cx_bn_sub(r, a, b);
 }
 
+cx_err_t cx_bn_cmp_u32(const cx_bn_t a, uint32_t b, int *diff)
+{
+    return sys_cx_bn_cmp_u32(a, b, diff);
+}
+
+cx_err_t cx_bn_copy(cx_bn_t a, const cx_bn_t b)
+{
+    return sys_cx_bn_copy(a, b);
+}
+
+cx_err_t cx_bn_is_odd(const cx_bn_t n, bool *odd)
+{
+    return sys_cx_bn_is_odd(n, odd);
+}
+
+cx_err_t cx_bn_rng(cx_bn_t r, const cx_bn_t n)
+{
+    return sys_cx_bn_rng(r, n);
+}
+
+cx_err_t cx_bn_set_u32(cx_bn_t x, uint32_t n)
+{
+    return sys_cx_bn_set_u32(x, n);
+}
+
+cx_err_t cx_bn_shr(cx_bn_t x, uint32_t n)
+{
+    return sys_cx_bn_shr(x, n);
+}
+
+cx_err_t cx_ecdomain_parameter(cx_curve_t cv, cx_curve_dom_param_t id, uint8_t *p, uint32_t p_len)
+{
+    return sys_cx_ecdomain_parameter(cv, id, p, p_len);
+}
+
+cx_err_t cx_ecdomain_size(cx_curve_t cv, size_t *length)
+{
+    return sys_cx_ecdomain_size(cv, length);
+}
+
+cx_err_t cx_ecpoint_double_scalarmul_bn(cx_ecpoint_t *R,
+                                        cx_ecpoint_t *P,
+                                        cx_ecpoint_t *Q,
+                                        const cx_bn_t bn_k,
+                                        const cx_bn_t bn_r)
+{
+    return sys_cx_ecpoint_double_scalarmul_bn(R, P, Q, bn_k, bn_r);
+}
+
+cx_err_t cx_ecpoint_export_bn(const cx_ecpoint_t *P, cx_bn_t *x, cx_bn_t *y)
+{
+    return sys_cx_ecpoint_export_bn(P, x, y);
+}
+
+cx_err_t cx_ecpoint_is_at_infinity(const cx_ecpoint_t *R, bool *is_infinite)
+{
+    return sys_cx_ecpoint_is_at_infinity(R, is_infinite);
+}
+
 void os_longjmp(unsigned int exception)
 {
     fprintf(stderr, "os_longjmp() called\n");
