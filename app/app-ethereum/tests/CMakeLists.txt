@@ -5,14 +5,18 @@ include_directories(../src/)
 
 add_executable(test_sign_msg
   test_sign_msg.c
+  ../src/get_pubkey.c
   ../src/sign.c
-  ../src/sign_message.c)
+  ../src/sign_message.c
+  ../src/ui.c
+  ../src/utils.c)
 
 add_dependencies(test_sign_msg
   sdk)
 
 target_link_libraries(test_sign_msg PRIVATE
   cmocka
+  ux
   sdk
   cxng
   speculos)
