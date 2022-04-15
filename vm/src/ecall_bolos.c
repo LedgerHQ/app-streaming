@@ -66,6 +66,11 @@ bool _sys_cx_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t 
         if (!copy_guest_buffer(p_privkey, &privkey, sizeof(privkey))) {
             return false;
         }
+
+        if (privkey.d_len > sizeof(privkey.d)) {
+            eret->success = false;
+            goto error;
+        }
     }
 
     cx_err_t err = cx_ecfp_generate_pair_no_throw(curve, &pubkey, &privkey, keep_privkey);
