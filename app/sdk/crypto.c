@@ -98,3 +98,26 @@ void sha3_256_final(ctx_sha3_t *ctx, uint8_t *digest)
         fatal("sha3_256_final");
     }
 }
+
+void sha256_init(ctx_sha256_t *ctx)
+{
+    ctx->blen = 0;
+    memset(ctx->block, 0, sizeof(ctx->block));
+    memset(ctx->acc, 0, sizeof(ctx->acc));
+}
+
+void sha256_update(ctx_sha256_t *ctx, const uint8_t *buffer, const size_t size)
+{
+    if (!hash_update(HASH_ID_SHA256, (ctx_hash_guest_t *)ctx, buffer, size)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("sha256_update");
+    }
+}
+
+void sha256_final(ctx_sha256_t *ctx, uint8_t *digest)
+{
+    if (!hash_final(HASH_ID_SHA256, (ctx_hash_guest_t *)ctx, digest)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("sha256_final");
+    }
+}
