@@ -138,6 +138,36 @@ bool sys_ecdsa_sign(eret_t *eret, const guest_pointer_t p_key, const int mode,
     return true;
 }
 
+bool sys_ecdsa_verify(eret_t *eret, const guest_pointer_t p_key,
+                      const guest_pointer_t p_hash,
+                      const guest_pointer_t p_sig, const size_t sig_len)
+{
+    cx_ecfp_public_key_t key;
+    uint8_t hash[CX_SHA256_SIZE];
+    uint8_t sig[100];
+
+    if (!copy_guest_buffer(p_key, (void *)&key, sizeof(key))) {
+        return false;
+    }
+
+    if (!copy_guest_buffer(p_hash, hash, sizeof(hash))) {
+        return false;
+    }
+
+    if (sig_len > sizeof(sig)) {
+        eret->success = false;
+        return true;
+    }
+
+    if (!copy_guest_buffer(p_sig, sig, sig_len)) {
+        return false;
+    }
+
+    eret->success = cx_ecdsa_verify_no_throw(&key, hash, sizeof(hash), sig, sig_len);
+
+    return true;
+}
+
 /**
  * If m is NULL, mult().
  */

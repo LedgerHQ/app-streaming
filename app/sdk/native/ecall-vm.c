@@ -42,6 +42,20 @@ size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,
     return eret.size;
 }
 
+bool ecall_ecdsa_verify(const cx_ecfp_public_key_t *key,
+                        const uint8_t *hash,
+                        const uint8_t *sig,
+                        const size_t sig_len)
+{
+    eret_t eret;
+
+    if (!sys_ecdsa_verify(&eret, NP(key), NP(hash), NP(sig), sig_len)) {
+        errx(1, "sys_ecdsa_verify failed");
+    }
+
+    return eret.success;
+}
+
 bool ecall_cx_ecfp_generate_pair(cx_curve_t curve,
                                  cx_ecfp_public_key_t *pubkey,
                                  cx_ecfp_private_key_t *privkey,

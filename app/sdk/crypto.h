@@ -11,9 +11,9 @@
 
 #define CX_CURVE_256K1 CX_CURVE_SECP256K1
 
-void ecfp_init_private_key(cx_curve_t curve,
+void ecfp_init_private_key(const cx_curve_t curve,
                            const uint8_t *raw_key,
-                           size_t key_len,
+                           const size_t key_len,
                            cx_ecfp_private_key_t *key);
 bool ecfp_generate_keypair(const cx_curve_t curve,
                            const uint8_t *rawkey,
@@ -52,6 +52,14 @@ static inline size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
                                 size_t sig_len)
 {
     return ecall_ecdsa_sign(key, mode, hash_id, hash, sig, sig_len);
+}
+
+static bool ecdsa_verify(const cx_ecfp_public_key_t *key,
+                         const uint8_t *hash,
+                         const uint8_t *sig,
+                         const size_t sig_len)
+{
+    return ecall_ecdsa_verify(key, hash, sig, sig_len);
 }
 
 static inline bool mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
