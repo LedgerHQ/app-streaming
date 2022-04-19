@@ -45,6 +45,7 @@ bool ecall_cx_ecfp_generate_pair(cx_curve_t curve,
                                  cx_ecfp_public_key_t *pubkey,
                                  cx_ecfp_private_key_t *privkey,
                                  bool keep_privkey);
+void ecall_get_random_bytes(uint8_t *buffer, const size_t size);
 bool ecall_hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest);
 bool ecall_hash_update(const cx_hash_id_t hash_id,
                        ctx_hash_guest_t *ctx,

@@ -25,3 +25,4 @@
 #define ECALL_TOSTRING256           105
 #define ECALL_HASH_UPDATE           106
 #define ECALL_HASH_FINAL            107
+#define ECALL_GET_RANDOM_BYTES      108

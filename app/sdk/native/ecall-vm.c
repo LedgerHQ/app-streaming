@@ -70,6 +70,13 @@ bool ecall_cx_ecfp_generate_pair(cx_curve_t curve,
     return eret.success;
 }
 
+void ecall_get_random_bytes(uint8_t *buffer, const size_t size)
+{
+    if (!sys_get_random_bytes(NP(buffer), size)) {
+        errx(1, "sys_get_random_bytes failed");
+    }
+}
+
 bool ecall_hash_update(const cx_hash_id_t hash_id,
                        ctx_hash_guest_t *ctx,
                        const uint8_t *buffer,

@@ -66,6 +66,11 @@ static bool ecdsa_verify(const cx_ecfp_public_key_t *key,
     return ecall_ecdsa_verify(key, hash, sig, sig_len);
 }
 
+static void get_random_bytes(uint8_t *buffer, const size_t size)
+{
+    ecall_get_random_bytes(buffer, size);
+}
+
 static inline bool mult(uint8_t *r, const uint8_t *a, const uint8_t *b, size_t len)
 {
     return ecall_multm(r, a, b, NULL, len);

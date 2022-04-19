@@ -280,6 +280,11 @@ cx_err_t cx_ecpoint_is_at_infinity(const cx_ecpoint_t *R, bool *is_infinite)
     return sys_cx_ecpoint_is_at_infinity(R, is_infinite);
 }
 
+cx_err_t cx_get_random_bytes(uint8_t *buffer, const size_t size)
+{
+    return sys_cx_get_random_bytes(buffer, size);
+}
+
 void os_longjmp(unsigned int exception)
 {
     fprintf(stderr, "os_longjmp() called\n");
