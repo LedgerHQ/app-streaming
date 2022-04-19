@@ -37,6 +37,7 @@ static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, gue
         ctx->sha256.blen = guest.sha256.blen;
         memcpy(&ctx->sha256.block, guest.sha256.block, sizeof(ctx->sha256.block));
         memcpy(&ctx->sha256.acc, guest.sha256.acc, sizeof(ctx->sha256.acc));
+        break;
     default:
         eret->success = false;
         break;
@@ -67,6 +68,7 @@ static bool save_ctx_from_host(eret_t *eret, const cx_hash_id_t hash_id, guest_p
         if (!copy_host_buffer(p_ctx, &guest.sha256, sizeof(guest.sha256))) {
             return false;
         }
+        break;
     default:
         eret->success = false;
         break;
