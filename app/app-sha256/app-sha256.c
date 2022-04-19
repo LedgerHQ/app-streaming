@@ -47,9 +47,9 @@ int main(void)
         sha256sum(p, size, digest);
     } else {
         SHA256_CTX ctx;
-        sha256_init(&ctx);
-        sha256_update(&ctx, p, size);
-        sha256_final(&ctx, digest);
+        xsha256_init(&ctx);
+        xsha256_update(&ctx, p, size);
+        xsha256_final(&ctx, digest);
     }
 
     free(p);

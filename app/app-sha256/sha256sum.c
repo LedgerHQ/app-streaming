@@ -83,7 +83,7 @@ void sha256_transform(SHA256_CTX *ctx, const BYTE data[])
     ctx->state[7] += h;
 }
 
-void sha256_init(SHA256_CTX *ctx)
+void xsha256_init(SHA256_CTX *ctx)
 {
     ctx->datalen = 0;
     ctx->bitlen = 0;
@@ -97,7 +97,7 @@ void sha256_init(SHA256_CTX *ctx)
     ctx->state[7] = 0x5be0cd19;
 }
 
-void sha256_update(SHA256_CTX *ctx, const BYTE data[], size_t len)
+void xsha256_update(SHA256_CTX *ctx, const BYTE data[], size_t len)
 {
     WORD i;
 
@@ -123,7 +123,7 @@ void sha256_update(SHA256_CTX *ctx, const BYTE data[], size_t len)
     return p;
     }*/
 
-void sha256_final(SHA256_CTX *ctx, BYTE hash[])
+void xsha256_final(SHA256_CTX *ctx, BYTE hash[])
 {
     WORD i;
 
