@@ -8,6 +8,7 @@
 #include "cx.h"
 
 union cx_hash_ctx_u {
+    cx_ripemd160_t ripemd160;
     cx_sha256_t sha256;
     cx_sha3_t sha3;
     cx_hash_t header;
@@ -20,6 +21,15 @@ static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, gue
     eret->success = true;
 
     switch (hash_id) {
+    case HASH_ID_RIPEMD160:
+        if (!copy_guest_buffer(p_ctx, &guest.ripemd160, sizeof(guest.ripemd160))) {
+            return false;
+        }
+        cx_ripemd160_init(&ctx->ripemd160);
+        ctx->ripemd160.blen = guest.ripemd160.blen; /* XXX: check */
+        memcpy(&ctx->ripemd160.block, guest.ripemd160.block, sizeof(ctx->ripemd160.block));
+        memcpy(&ctx->ripemd160.acc, guest.ripemd160.acc, sizeof(ctx->ripemd160.acc));
+        break;
     case HASH_ID_SHA3_256:
         if (!copy_guest_buffer(p_ctx, &guest.sha3, sizeof(guest.sha3))) {
             return false;
@@ -53,6 +63,14 @@ static bool save_ctx_from_host(eret_t *eret, const cx_hash_id_t hash_id, guest_p
     eret->success = true;
 
     switch (hash_id) {
+    case HASH_ID_RIPEMD160:
+        guest.ripemd160.blen = ctx->ripemd160.blen;
+        memcpy(guest.ripemd160.block, &ctx->ripemd160.block, sizeof(ctx->ripemd160.block));
+        memcpy(guest.ripemd160.acc, &ctx->ripemd160.acc, sizeof(ctx->ripemd160.acc));
+        if (!copy_host_buffer(p_ctx, &guest.ripemd160, sizeof(guest.ripemd160))) {
+            return false;
+        }
+        break;
     case HASH_ID_SHA3_256:
         guest.sha3.blen = ctx->sha3.blen;
         memcpy(guest.sha3.block, &ctx->sha3.block, sizeof(ctx->sha3.block));
@@ -99,7 +117,9 @@ bool sys_hash_update(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p
             return false;
         }
 
-        cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0);
+        if (cx_hash_no_throw((cx_hash_t *)&ctx, 0, buffer, n, NULL, 0) != CX_OK) {
+            fatal("error in sys_hash_update");
+        }
 
         p_buffer.addr += n;
         size -= n;
@@ -122,13 +142,17 @@ bool sys_hash_final(eret_t *eret, const cx_hash_id_t hash_id, guest_pointer_t p_
     }
 
     switch (hash_id) {
+    case HASH_ID_RIPEMD160: hash_len = CX_RIPEMD160_SIZE; break;
     case HASH_ID_SHA3_256: hash_len = CX_SHA256_SIZE; break;
     case HASH_ID_SHA256: hash_len = CX_SHA256_SIZE; break;
     default: return false;
     }
 
     uint8_t digest[CX_SHA512_SIZE];
-    cx_hash_no_throw(&ctx.header, CX_LAST, NULL, 0, digest, hash_len);
+    if (cx_hash_no_throw(&ctx.header, CX_LAST, NULL, 0, digest, hash_len) != CX_OK) {
+        fatal("error in sys_hash_final");
+        return false;
+    }
 
     if (!copy_host_buffer(p_digest, digest, hash_len)) {
         return false;

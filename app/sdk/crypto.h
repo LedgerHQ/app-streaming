@@ -28,8 +28,12 @@ bool hash_update(const cx_hash_id_t hash_id,
                  ctx_hash_guest_t *ctx,
                  const uint8_t *buffer,
                  const size_t size);
-
 bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *digest);
+
+void ripemd160_init(ctx_ripemd160_t *ctx);
+void ripemd160_update(ctx_ripemd160_t *ctx, const uint8_t *buffer, const size_t size);
+void ripemd160_final(ctx_ripemd160_t *ctx, uint8_t *digest);
+void ripemd160(const uint8_t *buffer, size_t size, uint8_t *digest);
 void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest);
 void sha256_init(ctx_sha256_t *ctx);
 void sha256_update(ctx_sha256_t *ctx, const uint8_t *buffer, const size_t size);
