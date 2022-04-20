@@ -1,6 +1,7 @@
 if (NOT NATIVE)
   add_library(sdk
     crypto.c
+    risc-v/div.S
     risc-v/ecall-riscv.c
     risc-v/math.c
     risc-v/start.S
