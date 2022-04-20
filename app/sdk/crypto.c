@@ -50,9 +50,7 @@ bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *dige
 
 void ripemd160_init(ctx_ripemd160_t *ctx)
 {
-    ctx->blen = 0;
-    memset(ctx->block, 0, sizeof(ctx->block));
-    memset(ctx->acc, 0, sizeof(ctx->acc));
+    ctx->initialized = false;
 }
 
 void ripemd160_update(ctx_ripemd160_t *ctx, const uint8_t *buffer, const size_t size)
@@ -110,9 +108,7 @@ void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
 
 void sha3_256_init(ctx_sha3_t *ctx)
 {
-    ctx->blen = 0;
-    memset(ctx->block, 0, sizeof(ctx->block));
-    memset(ctx->acc, 0, sizeof(ctx->acc));
+    ctx->initialized = false;
 }
 
 void sha3_256_update(ctx_sha3_t *ctx, const uint8_t *buffer, const size_t size)
@@ -133,9 +129,7 @@ void sha3_256_final(ctx_sha3_t *ctx, uint8_t *digest)
 
 void sha256_init(ctx_sha256_t *ctx)
 {
-    ctx->blen = 0;
-    memset(ctx->block, 0, sizeof(ctx->block));
-    memset(ctx->acc, 0, sizeof(ctx->acc));
+    ctx->initialized = false;
 }
 
 void sha256_update(ctx_sha256_t *ctx, const uint8_t *buffer, const size_t size)

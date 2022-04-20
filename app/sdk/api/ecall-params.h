@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -19,18 +20,21 @@ typedef struct {
 } __attribute__((packed)) packed_bagl_component_t;
 
 typedef struct ctx_ripemd160_s {
+    bool initialized;
     size_t blen;
     uint8_t block[64];
     uint8_t acc[5 * 4];
 } ctx_ripemd160_t;
 
 typedef struct ctx_sha256_s {
+    bool initialized;
     size_t blen;
     uint8_t block[64];
     uint8_t acc[8 * 4];
 } ctx_sha256_t;
 
 typedef struct ctx_sha3_s {
+    bool initialized;
     size_t blen;
     uint8_t block[200];
     uint64_t acc[25];
