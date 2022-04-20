@@ -1,6 +1,7 @@
 if (NOT NATIVE)
   add_library(sdk
     crypto.c
+    risc-v/div.S
     risc-v/ecall-riscv.c
     risc-v/math.c
     risc-v/start.S
@@ -8,7 +9,7 @@ if (NOT NATIVE)
     sdk.c
     uint256.c)
 else()
-  add_compile_options(-DNATIVE_64BITS)
+  add_compile_options(-DNATIVE_64BITS -DOS_LITTLE_ENDIAN)
 
   add_library(speculos
     ${SPECULOS_DIR}/src/bolos/bagl.c

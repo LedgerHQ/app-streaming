@@ -4,9 +4,11 @@
 #include "ecall_hash.h"
 #include "error.h"
 #include "no_throw.h"
+#include "page.h"
 #include "uint256-internal.h"
 
 #include "cx.h"
+#include "os_random.h"
 #include "os_seed.h"
 
 #include "sdk/api/ecall-nr.h"
@@ -164,6 +166,27 @@ bool sys_ecdsa_verify(eret_t *eret, const guest_pointer_t p_key,
     }
 
     eret->success = cx_ecdsa_verify_no_throw(&key, hash, sizeof(hash), sig, sig_len);
+
+    return true;
+}
+
+bool sys_get_random_bytes(guest_pointer_t p_buffer, size_t size)
+{
+    while (size > 0) {
+        const size_t n = BUFFER_MIN_SIZE(p_buffer.addr, size);
+        uint8_t *buffer = get_buffer(p_buffer.addr, n, true);
+        if (buffer == NULL) {
+            return false;
+        }
+
+        if (cx_get_random_bytes(buffer, n) != CX_OK) {
+            /* this should never happen */
+            return false;
+        }
+
+        p_buffer.addr += n;
+        size -= n;
+    }
 
     return true;
 }

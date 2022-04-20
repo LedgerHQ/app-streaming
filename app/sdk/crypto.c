@@ -48,6 +48,36 @@ bool hash_final(const cx_hash_id_t hash_id, ctx_hash_guest_t *ctx, uint8_t *dige
     return ecall_hash_final(hash_id, ctx, digest);
 }
 
+void ripemd160_init(ctx_ripemd160_t *ctx)
+{
+    ctx->initialized = false;
+}
+
+void ripemd160_update(ctx_ripemd160_t *ctx, const uint8_t *buffer, const size_t size)
+{
+    if (!hash_update(HASH_ID_RIPEMD160, (ctx_hash_guest_t *)ctx, buffer, size)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("ripemd160_update");
+    }
+}
+
+void ripemd160_final(ctx_ripemd160_t *ctx, uint8_t *digest)
+{
+    if (!hash_final(HASH_ID_RIPEMD160, (ctx_hash_guest_t *)ctx, digest)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("ripemd160_final");
+    }
+}
+
+void ripemd160(const uint8_t *buffer, size_t size, uint8_t *digest)
+{
+    ctx_ripemd160_t ctx;
+
+    ripemd160_init(&ctx);
+    ripemd160_update(&ctx, buffer, size);
+    ripemd160_final(&ctx, digest);
+}
+
 void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
 {
     ctx_hash_guest_t ctx;
@@ -78,9 +108,7 @@ void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
 
 void sha3_256_init(ctx_sha3_t *ctx)
 {
-    ctx->blen = 0;
-    memset(ctx->block, 0, sizeof(ctx->block));
-    memset(ctx->acc, 0, sizeof(ctx->acc));
+    ctx->initialized = false;
 }
 
 void sha3_256_update(ctx_sha3_t *ctx, const uint8_t *buffer, const size_t size)
@@ -97,4 +125,34 @@ void sha3_256_final(ctx_sha3_t *ctx, uint8_t *digest)
         /* this should never happen unless ctx is corrupted */
         fatal("sha3_256_final");
     }
+}
+
+void sha256_init(ctx_sha256_t *ctx)
+{
+    ctx->initialized = false;
+}
+
+void sha256_update(ctx_sha256_t *ctx, const uint8_t *buffer, const size_t size)
+{
+    if (!hash_update(HASH_ID_SHA256, (ctx_hash_guest_t *)ctx, buffer, size)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("sha256_update");
+    }
+}
+
+void sha256_final(ctx_sha256_t *ctx, uint8_t *digest)
+{
+    if (!hash_final(HASH_ID_SHA256, (ctx_hash_guest_t *)ctx, digest)) {
+        /* this should never happen unless ctx is corrupted */
+        fatal("sha256_final");
+    }
+}
+
+void sha256(const uint8_t *buffer, size_t size, uint8_t *digest)
+{
+    ctx_sha256_t ctx;
+
+    sha256_init(&ctx);
+    sha256_update(&ctx, buffer, size);
+    sha256_final(&ctx, digest);
 }

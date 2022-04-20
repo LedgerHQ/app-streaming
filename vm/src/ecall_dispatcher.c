@@ -84,6 +84,9 @@ bool ecall(struct rv_cpu *cpu)
     case ECALL_ECDSA_VERIFY:
         success = sys_ecdsa_verify(ERET(RV_REG_A0), GP(RV_REG_A0), GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
+    case ECALL_GET_RANDOM_BYTES:
+        success = sys_get_random_bytes(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
+        break;
     case ECALL_MULTM:
         success = sys_multm(ERET(RV_REG_A0), GP(RV_REG_A0), GP(RV_REG_A1), GP(RV_REG_A2), GP(RV_REG_A3), cpu->regs[RV_REG_A4]);
         break;
