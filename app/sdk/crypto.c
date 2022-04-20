@@ -121,3 +121,12 @@ void sha256_final(ctx_sha256_t *ctx, uint8_t *digest)
         fatal("sha256_final");
     }
 }
+
+void sha256(const uint8_t *buffer, size_t size, uint8_t *digest)
+{
+    ctx_sha256_t ctx;
+
+    sha256_init(&ctx);
+    sha256_update(&ctx, buffer, size);
+    sha256_final(&ctx, digest);
+}

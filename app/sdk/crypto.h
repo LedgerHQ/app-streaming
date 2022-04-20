@@ -34,6 +34,7 @@ void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest);
 void sha256_init(ctx_sha256_t *ctx);
 void sha256_update(ctx_sha256_t *ctx, const uint8_t *buffer, const size_t size);
 void sha256_final(ctx_sha256_t *ctx, uint8_t *digest);
+void sha256(const uint8_t *buffer, size_t size, uint8_t *digest);
 void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest);
 void sha3_256_init(ctx_sha3_t *ctx);
 void sha3_256_update(ctx_sha3_t *ctx, const uint8_t *buffer, const size_t size);
