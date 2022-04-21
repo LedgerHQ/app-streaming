@@ -14,6 +14,13 @@ void ecfp_init_private_key(const cx_curve_t curve,
     memcpy(key->d, raw_key, key_len);
 }
 
+void ecfp_init_public_key(const cx_curve_t curve, const uint8_t *raw_key, cx_ecfp_public_key_t *key)
+{
+    key->curve = curve;
+    key->W_len = sizeof(key->W);
+    memcpy(key->W, raw_key, sizeof(key->W));
+}
+
 bool ecfp_generate_keypair(const cx_curve_t curve,
                            const uint8_t *rawkey,
                            const size_t rawkey_size,

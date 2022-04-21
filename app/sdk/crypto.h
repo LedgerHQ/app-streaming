@@ -16,6 +16,9 @@ void ecfp_init_private_key(const cx_curve_t curve,
                            const uint8_t *raw_key,
                            const size_t key_len,
                            cx_ecfp_private_key_t *key);
+void ecfp_init_public_key(const cx_curve_t curve,
+                          const uint8_t *raw_key,
+                          cx_ecfp_public_key_t *key);
 bool ecfp_generate_keypair(const cx_curve_t curve,
                            const uint8_t *rawkey,
                            const size_t rawkey_size,
