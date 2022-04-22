@@ -101,13 +101,13 @@ bool _sys_cx_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t 
 
 bool sys_ecdsa_sign(eret_t *eret, const guest_pointer_t p_key, const int mode,
                     const cx_md_t hash_id, const guest_pointer_t p_hash,
-                    guest_pointer_t p_sig, size_t sig_len)
+                    guest_pointer_t p_sig, size_t sig_len, guest_pointer_t p_parity)
 {
     cx_ecfp_private_key_t key;
     uint8_t hash[CX_SHA512_SIZE];
     size_t hash_len;
     uint8_t sig[100];
-    unsigned int *info = NULL;
+    uint32_t info;
 
     eret->size = 0;
 
@@ -127,15 +127,24 @@ bool sys_ecdsa_sign(eret_t *eret, const guest_pointer_t p_key, const int mode,
         return false;
     }
 
-    eret->size = cx_ecdsa_sign(&key, mode, hash_id, hash, hash_len, sig, sizeof(sig), info);
-    if (eret->size == 0 || eret->size > sig_len) {
-        eret->size = 0;
+    size_t sig_size = sizeof(sig);
+    cx_err_t error = cx_ecdsa_sign_no_throw(&key, mode, hash_id, hash, hash_len, sig, &sig_size, &info);
+    if (error != CX_OK || sig_size > sig_len) {
         return true;
     }
 
-    if (!copy_host_buffer(p_sig, sig, eret->size)) {
+    if (!copy_host_buffer(p_sig, sig, sig_size)) {
         return false;
     }
+
+    if (p_parity.addr != 0) {
+        int int_info = info;
+        if (!copy_host_buffer(p_parity, &int_info, sizeof(int_info))) {
+            return false;
+        }
+    }
+
+    eret->size = sig_size;
 
     return true;
 }

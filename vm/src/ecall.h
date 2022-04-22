@@ -55,7 +55,7 @@ bool _sys_cx_ecfp_generate_pair(eret_t *eret, cx_curve_t curve, guest_pointer_t 
 bool sys_ecfp_get_pubkey(eret_t *eret, cx_curve_t curve, guest_pointer_t p_pubkey, guest_pointer_t p_privkey);
 bool sys_ecdsa_sign(eret_t *eret, const guest_pointer_t p_key, const int mode,
                     const cx_md_t hash_id, const guest_pointer_t p_hash,
-                    guest_pointer_t p_sig, size_t sig_len);
+                    guest_pointer_t p_sig, size_t sig_len, guest_pointer_t p_parity);
 bool sys_ecdsa_verify(eret_t *eret, const guest_pointer_t p_key,
                       const guest_pointer_t p_hash,
                       const guest_pointer_t p_sig, const size_t sig_len);

@@ -60,7 +60,18 @@ static inline size_t ecdsa_sign(const cx_ecfp_private_key_t *key,
                                 uint8_t *sig,
                                 size_t sig_len)
 {
-    return ecall_ecdsa_sign(key, mode, hash_id, hash, sig, sig_len);
+    return ecall_ecdsa_sign(key, mode, hash_id, hash, sig, sig_len, NULL);
+}
+
+static inline size_t extended_ecdsa_sign(const cx_ecfp_private_key_t *key,
+                                         const int mode,
+                                         const cx_md_t hash_id,
+                                         const uint8_t *hash,
+                                         uint8_t *sig,
+                                         size_t sig_len,
+                                         int *parity)
+{
+    return ecall_ecdsa_sign(key, mode, hash_id, hash, sig, sig_len, parity);
 }
 
 static bool ecdsa_verify(const cx_ecfp_public_key_t *key,

@@ -79,7 +79,7 @@ bool ecall(struct rv_cpu *cpu)
         success = _sys_cx_ecfp_generate_pair(ERET(RV_REG_A0), cpu->regs[RV_REG_A0], GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);
         break;
     case ECALL_ECDSA_SIGN:
-        success = sys_ecdsa_sign(ERET(RV_REG_A0), GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4), cpu->regs[RV_REG_A5]);
+        success = sys_ecdsa_sign(ERET(RV_REG_A0), GP(RV_REG_A0), cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], GP(RV_REG_A3), GP(RV_REG_A4), cpu->regs[RV_REG_A5], GP(RV_REG_A6));
         break;
     case ECALL_ECDSA_VERIFY:
         success = sys_ecdsa_verify(ERET(RV_REG_A0), GP(RV_REG_A0), GP(RV_REG_A1), GP(RV_REG_A2), cpu->regs[RV_REG_A3]);

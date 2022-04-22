@@ -31,11 +31,12 @@ size_t ecall_ecdsa_sign(const cx_ecfp_private_key_t *key,
                         const cx_md_t hash_id,
                         const uint8_t *hash,
                         uint8_t *sig,
-                        size_t sig_len)
+                        size_t sig_len,
+                        int *parity)
 {
     eret_t eret;
 
-    if (!sys_ecdsa_sign(&eret, NP(key), mode, hash_id, NP(hash), NP(sig), sig_len)) {
+    if (!sys_ecdsa_sign(&eret, NP(key), mode, hash_id, NP(hash), NP(sig), sig_len, NP(parity))) {
         errx(1, "sys_ecdsa_sign failed");
     }
 
