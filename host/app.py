@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 from typing import List, Optional, Type
 from zipfile import ZipFile
 
-from comm import exchange, get_client, import_ledgerwallet
+from comm import get_client, import_ledgerwallet
 from elf import Segment
 from manifest import Manifest
 
@@ -91,13 +91,13 @@ def decrypt_hmac(enc_macs, aes):
     return result
 
 
-def device_sign_app(app: App) -> None:
-    client = get_client()
+def device_sign_app(app: App, transport: str) -> None:
+    client = get_client(transport)
 
     signature = app.manifest_hsm_signature
     data = app.manifest + signature.ljust(72, b"\x00") + len(signature).to_bytes(1, "little")
 
-    apdu = exchange(client, ins=0x11, data=data, cla=0x34)
+    apdu = client.exchange(ins=0x11, data=data, cla=0x34)
     assert apdu.status == 0x6801
 
     code_macs: List[bytes] = []
@@ -108,13 +108,13 @@ def device_sign_app(app: App) -> None:
         for page in pages:
             assert apdu.status == 0x6801
 
-            apdu = exchange(client, 0x01, data=page[1:], p2=page[0], cla=0x34)
+            apdu = client.exchange(0x01, data=page[1:], p2=page[0], cla=0x34)
             assert apdu.status == 0x6802
             print(hex(apdu.status), apdu.data.hex())
             mac = apdu.data
             macs.append(mac)
 
-            apdu = exchange(client, 0x01, data=b"")
+            apdu = client.exchange(0x01, data=b"")
 
     assert apdu.status == 0x9000
 
@@ -137,6 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("--app-path", type=str, help="path to the app (.zip)")
     parser.add_argument("--show-manifest", action="store_true", help="display an app manifest in a readable format (.zip)")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
+    parser.add_argument("--transport", default="usb", choices=["ble", "usb"])
 
     args = parser.parse_args()
 
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     import_ledgerwallet(args.speculos)
-    device_sign_app(app)
+    device_sign_app(app, args.transport)
     app.export_zip(args.app_path)
 
     # ensure that the generated file is valid

@@ -2,7 +2,9 @@ import logging
 import os
 import sys
 
+from abc import ABC, abstractmethod
 from collections import namedtuple
+from typing import Union
 
 from ledgerwallet.client import LedgerClient
 from ledgerwallet.transport import enumerate_devices
@@ -11,7 +13,8 @@ from ledgerwallet.utils import serialize
 
 Apdu = namedtuple("Apdu", "status data")
 logger = logging.getLogger("comm")
-client = None
+CLA = 0x12
+USE_BLE = True
 
 
 def import_ledgerwallet(use_speculos: bool) -> None:
@@ -23,26 +26,56 @@ def import_ledgerwallet(use_speculos: bool) -> None:
         logger.setLevel(logging.DEBUG)
 
 
-def get_client() -> LedgerClient:
-    global client
+class CommClient(ABC):
+    def exchange(self, ins: int, data=b"", p1=0, p2=0, cla=CLA) -> Apdu:
+        apdu = bytes([cla, ins, p1, p2])
+        apdu += serialize(data)
 
-    if client is None:
-        CLA = 0x12
+        response = self._exchange(apdu)
+
+        status_word = int.from_bytes(response[-2:], "big")
+        return Apdu(status_word, response[:-2])
+
+    @abstractmethod
+    def _exchange(self, data: bytes):
+        pass
+
+
+class CommClientUSB(CommClient):
+    def __init__(self):
         devices = enumerate_devices()
         if len(devices) == 0:
             logger.error("No Ledger device has been found.")
             sys.exit(0)
 
-        client = LedgerClient(devices[0], cla=CLA)
+        self.client = LedgerClient(devices[0], cla=CLA)
+
+    def _exchange(self, data: bytes):
+        return self.client.raw_exchange(data)
+
+
+class CommClientBLE(CommClient):
+    def __init__(self):
+        from ble import exchange_ble, get_client_ble
+        self.exchange_ble = exchange_ble
+        self.client = get_client_ble()
+
+    def _exchange(self, data: bytes):
+        return self.exchange_ble(self.client, data)
+
+
+client: Union[CommClientUSB, CommClientBLE] = None
+
+
+def get_client(transport="usb") -> Union[CommClientUSB, CommClientBLE]:
+    global client
+
+    if client is None:
+        if transport.lower() == "usb":
+            client = CommClientUSB()
+        elif transport.lower() == "ble":
+            client = CommClientBLE()
+        else:
+            assert False
 
     return client
-
-
-def exchange(client: LedgerClient, ins: int, data=b"", p1=0, p2=0, cla=0) -> Apdu:
-    if cla == 0:
-        cla = client.cla
-    apdu = bytes([cla, ins, p1, p2])
-    apdu += serialize(data)
-    response = client.raw_exchange(apdu)
-    status_word = int.from_bytes(response[-2:], "big")
-    return Apdu(status_word, response[:-2])

@@ -7,7 +7,7 @@ import zipfile
 from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from typing import Any, Dict
 
-from comm import Apdu, exchange, get_client, import_ledgerwallet
+from comm import Apdu, get_client, import_ledgerwallet
 from app import App, device_sign_app
 from hsm import hsm_sign_app
 from manifest import Manifest
@@ -33,7 +33,7 @@ class Stream:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    def __init__(self, app: App) -> None:
+    def __init__(self, app: App, transport: str) -> None:
         self.pages: Dict[int, Page] = {}
         self.merkletree = MerkleTree()
         self.manifest = app.manifest
@@ -62,7 +62,7 @@ class Stream:
         self.recv_buffer = b""
         self.recv_buffer_counter = 0
 
-        self.client = get_client()
+        self.client = get_client(transport)
 
     def _get_page(self, addr: int) -> Page:
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
@@ -84,11 +84,11 @@ class Stream:
         return struct.parse(data)
 
     def init_app(self) -> Apdu:
-        apdu = exchange(self.client, ins=0x00, data=self.signature)
+        apdu = self.client.exchange(ins=0x00, data=self.signature)
         assert apdu.status == 0x6701
         # pad with 3 bytes because of alignment
         data = b"\x00" * 3 + self.manifest
-        return exchange(self.client, ins=0x00, data=data)
+        return self.client.exchange(ins=0x00, data=data)
 
     def handle_read_access(self, data: bytes) -> Apdu:
         request = Stream._parse_request(Struct("addr" / Int32ul), data)
@@ -98,12 +98,12 @@ class Stream:
         # 2. send encrypted page data
         page = self._get_page(request.addr)
         assert len(page.data) == Stream.PAGE_SIZE
-        apdu = exchange(self.client, 0x01, data=page.data[1:], p2=page.data[0])
+        apdu = self.client.exchange(0x01, data=page.data[1:], p2=page.data[0])
         assert apdu.status == 0x6102
 
         # 4. send iv and mac
         data = Struct("iv" / Int32ul, "mac" / Bytes(32)).build(dict(iv=page.iv, mac=page.mac))
-        apdu = exchange(self.client, 0x02, data=data)
+        apdu = self.client.exchange(0x02, data=data)
 
         # 5. send merkle proof
         if not page.read_only:
@@ -114,7 +114,7 @@ class Stream:
 
             # TODO: handle larger proofs
             assert len(proof) <= 250
-            apdu = exchange(self.client, 0x03, data=proof)
+            apdu = self.client.exchange(0x03, data=proof)
 
         return apdu
 
@@ -124,7 +124,7 @@ class Stream:
         page_data = data
 
         # 2. receive addr, iv and mac
-        apdu = exchange(self.client, 0x01)
+        apdu = self.client.exchange(0x01)
         assert apdu.status == 0x6202
 
         request = Stream._parse_request(Struct("addr" / Int32ul, "iv" / Int32ul, "mac" / Bytes(32)), apdu.data)
@@ -146,7 +146,7 @@ class Stream:
         # TODO: handle larger proofs
         assert len(proof) <= 250
 
-        return exchange(self.client, 0x02, data=proof)
+        return self.client.exchange(0x02, data=proof)
 
     def handle_send_buffer(self, data: bytes) -> Apdu:
         logger.info(f"got buffer {data}")
@@ -166,7 +166,7 @@ class Stream:
             self.send_buffer = b""
             self.send_buffer_counter = 0
 
-        return exchange(self.client, 0x00, data=b"")
+        return self.client.exchange(0x00, data=b"")
 
     def handle_recv_buffer(self, data: bytes) -> Apdu:
         request = Stream._parse_request(Struct("counter" / Int32ul, "maxsize" / Int16ul), data)
@@ -196,7 +196,7 @@ class Stream:
         else:
             p2 = 0x00
 
-        return exchange(self.client, 0x00, p1=last, p2=p2, data=buf)
+        return self.client.exchange(0x00, p1=last, p2=p2, data=buf)
 
     def handle_exit(self, data: bytes) -> None:
         request = Stream._parse_request(Struct("code" / Int32ul), data)
@@ -215,6 +215,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RISC-V vm companion.")
     parser.add_argument("--app", type=str, required=True, help="encrypted application path (.zip)")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
+    parser.add_argument("--transport", default="usb", choices=["ble", "usb"])
     parser.add_argument("--verbose", action="store_true", help="")
 
     args = parser.parse_args()
@@ -235,10 +236,10 @@ if __name__ == "__main__":
 
     if app.manifest_device_signature is None:
         logger.warn("making the device sign the app")
-        device_sign_app(app)
+        device_sign_app(app, args.transport)
         app.export_zip(zip_path)
 
-    stream = Stream(app)
+    stream = Stream(app, args.transport)
     apdu = stream.init_app()
 
     while True:
