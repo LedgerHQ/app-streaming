@@ -4,7 +4,7 @@
 Script to run streamed apps over BLE. This is a quick and dirty PoC since it
 serves no other purposes.
 
-The script should be run along bluetoothctl and the device must disconnected:
+The script should be ran along bluetoothctl and the device must be disconnected:
 
   $ bluetoothctl --agent
   remove DE:F1:03:1E:30:7B
@@ -34,8 +34,37 @@ from typing import List
 
 ADDRESS = "DE:F1:03:1E:30:7B"
 
+# 13d63400-2c97-0004-0001-4c6564676572
+HANDLE_CHAR_ENABLE_NOTIF = 13
+
+# 13d63400-2c97-0004-0002-4c6564676572
+HANDLE_CHAR_WRITE = 16
+
 
 queue: asyncio.Queue = asyncio.Queue()
+
+
+async def list_services(client):
+    print("Services:")
+
+    for service in client.services:
+        print(f"[Service] {service.uuid}: {service.description}")
+        for char in service.characteristics:
+            if "read" in char.properties:
+                try:
+                    value = bytes(await client.read_gatt_char(char.uuid))
+                except Exception as e:
+                    value = str(e).encode()
+            else:
+                value = None
+
+            properties = ",".join(char.properties)
+            print(f"  [Characteristic] {char.uuid}: (Handle: {char.handle}) ({properties}) | "
+                  f"Name: {char.description}, Value: {value}")
+
+            for desc in char.descriptors:
+                value = await client.read_gatt_descriptor(desc.handle)
+                print(f"    [Descriptor] {desc.uuid}: (Handle: {desc.handle}) | Value: {value}")
 
 
 def callback(sender: int, data: bytes):
@@ -76,102 +105,10 @@ async def wait_for_apdu():
     return apdu
 
 
-async def list_services(client):
-    print("Services:")
-    for service in client.services:
-        print("[Service] {0}: {1}".format(service.uuid, service.description))
-        for char in service.characteristics:
-            if "read" in char.properties:
-                try:
-                    value = bytes(await client.read_gatt_char(char.uuid))
-                except Exception as e:
-                    value = str(e).encode()
-            else:
-                value = None
-            print(
-                "\t[Characteristic] {0}: (Handle: {1}) ({2}) | Name: {3}, Value: {4} ".format(
-                    char.uuid,
-                    char.handle,
-                    ",".join(char.properties),
-                    char.description,
-                    value,
-                )
-            )
-            for descriptor in char.descriptors:
-                value = await client.read_gatt_descriptor(descriptor.handle)
-                print(
-                    "\t\t[Descriptor] {0}: (Handle: {1}) | Value: {2} ".format(
-                        descriptor.uuid, descriptor.handle, bytes(value)
-                    )
-                )
-
-
-async def main(ble_address: str):
-    device = await BleakScanner.find_device_by_address(ble_address, timeout=1.0)
-    if not device:
-        raise BleakError(f"A device with address {ble_address} could not be found.")
-
-    # Connect to the device explicitly instead of using the following line which
-    # prevents the client from being returner:
-    #   with BleakClient(device) as client:
-    client = BleakClient(device)
-    await client.connect()
-
-    if False:
-        await list_services(client)
-
-    # enable notifications
-    print("starting notification handler")
-    await client.start_notify("13d63400-2c97-0004-0001-4c6564676572", callback)
-
-    print("enabling notifications")
-    await asyncio.sleep(0.1)
-
-    print("writing 1 to handle 16")
-    await client.write_gatt_char("13d63400-2c97-0004-0002-4c6564676572", bytes.fromhex("0001"))
-    await asyncio.sleep(0.1)
-
-    assert await wait_for_response() == b"\x00\x00\x00\x00\x00"
-
-    print("get MTU")
-    await client.write_gatt_char("13d63400-2c97-0004-0002-4c6564676572", bytes.fromhex("0800000000"))
-    await asyncio.sleep(0.1)
-
-    assert await wait_for_response() == b"\x08\x00\x00\x00\x01\x99"
-
-    return client
-
-
-async def ble_wait_response():
-    return await wait_for_apdu()
-
-
-async def async_get_client_ble(ble_address: str) -> BleakClient:
-    device = await BleakScanner.find_device_by_address(ble_address, timeout=1.0)
-    if not device:
-        raise BleakError(f"A device with address {ble_address} could not be found.")
-
-    client = BleakClient(device)
-    await client.connect()
-
-    # register notification callback
-    await client.start_notify("13d63400-2c97-0004-0001-4c6564676572", callback)
-
-    # enable notifications
-    await client.write_gatt_char("13d63400-2c97-0004-0002-4c6564676572", bytes.fromhex("0001"))
-    assert await wait_for_response() == b"\x00\x00\x00\x00\x00"
-
-    return client
-
-
 def asyncio_run(coro):
     # asyncio.run doesn't seem to exist on Python 3.6.9 / Bleak 0.14.2
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(coro)
-
-
-def get_client_ble():
-    return asyncio_run(async_get_client_ble(ADDRESS))
 
 
 async def async_exchange_ble(client: BleakClient, apdu: bytes) -> bytes:
@@ -196,9 +133,9 @@ async def async_exchange_ble(client: BleakClient, apdu: bytes) -> bytes:
         header += i.to_bytes(2, "big")
         if i == 0:
             header += len(apdu).to_bytes(2, "big")
-        await client.write_gatt_char("13d63400-2c97-0004-0002-4c6564676572", header + chunk)
+        await client.write_gatt_char(HANDLE_CHAR_WRITE, header + chunk)
 
-    response = await ble_wait_response()
+    response = await wait_for_apdu()
 
     return response
 
@@ -207,10 +144,41 @@ def exchange_ble(client: BleakClient, data: bytes) -> bytes:
     return asyncio_run(async_exchange_ble(client, data))
 
 
+async def async_get_client_ble(ble_address: str) -> BleakClient:
+    device = await BleakScanner.find_device_by_address(ble_address, timeout=1.0)
+    if not device:
+        raise BleakError(f"A device with address {ble_address} could not be found.")
+
+    # Connect to the device explicitly instead of using the following line which
+    # prevents the client from being returner:
+    #   with BleakClient(device) as client:
+    client = BleakClient(device)
+    await client.connect()
+
+    if False:
+        await list_services(client)
+
+    # register notification callback
+    await client.start_notify(HANDLE_CHAR_ENABLE_NOTIF, callback)
+
+    # enable notifications
+    await client.write_gatt_char(HANDLE_CHAR_WRITE, bytes.fromhex("0001"))
+    assert await wait_for_response() == b"\x00\x00\x00\x00\x00"
+
+    # confirm that the MTU is 0x99
+    await client.write_gatt_char(HANDLE_CHAR_WRITE, bytes.fromhex("0800000000"))
+    assert await wait_for_response() == b"\x08\x00\x00\x00\x01\x99"
+
+    return client
+
+
+def get_client_ble(ble_address=ADDRESS):
+    return asyncio_run(async_get_client_ble(ble_address))
+
+
 if __name__ == "__main__":
-    client = asyncio_run(main(ADDRESS))
+    client = get_client_ble(ADDRESS)
 
     print(exchange_ble(client, b"\xE0\x01\x00\x00\x00"))
 
-    print("disconnecting")
-    client = asyncio_run(client.disconnect())
+    asyncio_run(client.disconnect())
