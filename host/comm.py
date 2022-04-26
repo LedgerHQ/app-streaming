@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import time
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
@@ -50,15 +51,30 @@ class CommClientUSB(CommClient):
             sys.exit(0)
 
         self.client = LedgerClient(devices[0], cla=CLA)
+        self.number_exchanges = 0
+        self.total_time = 0.0
+
+        logger_ledgerwallet = logging.getLogger("ledgerwallet")
+        logger_ledgerwallet.setLevel(logging.INFO)
 
         return self
 
     def __exit__(self, type, value, traceback):
+        average = int((self.total_time * 1000) // self.number_exchanges)
+        logger.info(f"{self.number_exchanges} exchanges in {self.total_time:.1f} s, ~{average} ms / exchange")
+
         self.client.close()
         self.client = None
 
     def _exchange(self, data: bytes) -> bytes:
-        return self.client.raw_exchange(data)
+        start = time.time()
+        response = self.client.raw_exchange(data)
+        end = time.time()
+
+        self.number_exchanges += 1
+        self.total_time += end - start
+
+        return response
 
 
 class CommClientBLE(CommClient):
@@ -71,14 +87,26 @@ class CommClientBLE(CommClient):
 
     def __enter__(self) -> "CommClientBLE":
         self.client = self.get_client_ble()
+        self.number_exchanges = 0
+        self.total_time = 0.0
         return self
 
     def __exit__(self, type, value, traceback):
+        average = int((self.total_time * 1000) // self.number_exchanges)
+        logger.info(f"{self.number_exchanges} exchanges in {self.total_time:.1f} s, ~{average} ms / exchange")
+
         self.disconnect_ble_client(self.client)
         self.client = None
 
     def _exchange(self, data: bytes) -> bytes:
-        return self.exchange_ble(self.client, data)
+        start = time.time()
+        response = self.exchange_ble(self.client, data)
+        end = time.time()
+
+        self.number_exchanges += 1
+        self.total_time += end - start
+
+        return response
 
 
 client: Union[CommClientUSB, CommClientBLE] = None
