@@ -7,7 +7,7 @@ import zipfile
 from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from typing import Any, Dict
 
-from comm import Apdu, get_client, import_ledgerwallet
+from comm import Apdu, CommClient, get_client, import_ledgerwallet
 from app import App, device_sign_app
 from hsm import hsm_sign_app
 from manifest import Manifest
@@ -33,7 +33,7 @@ class Stream:
     PAGE_MASK = 0xffffff00
     PAGE_MASK_INVERT = (~PAGE_MASK & 0xffffffff)
 
-    def __init__(self, app: App, transport: str) -> None:
+    def __init__(self, app: App, client: CommClient) -> None:
         self.pages: Dict[int, Page] = {}
         self.merkletree = MerkleTree()
         self.manifest = app.manifest
@@ -62,7 +62,7 @@ class Stream:
         self.recv_buffer = b""
         self.recv_buffer_counter = 0
 
-        self.client = get_client(transport)
+        self.client = client
 
     def _get_page(self, addr: int) -> Page:
         assert (addr & Stream.PAGE_MASK_INVERT) == 0
@@ -236,28 +236,30 @@ if __name__ == "__main__":
 
     if app.manifest_device_signature is None:
         logger.warn("making the device sign the app")
-        device_sign_app(app, args.transport)
+        with get_client(args.transport) as client:
+            device_sign_app(client, app)
         app.export_zip(zip_path)
 
-    stream = Stream(app, args.transport)
-    apdu = stream.init_app()
+    with get_client(args.transport) as client:
+        stream = Stream(app, client)
+        apdu = stream.init_app()
 
-    while True:
-        logger.debug(f"[<] {apdu.status:#06x} {apdu.data[:8].hex()}...")
-        if apdu.status == 0x6101:
-            apdu = stream.handle_read_access(apdu.data)
-        elif apdu.status == 0x6201:
-            apdu = stream.handle_write_access(apdu.data)
-        elif apdu.status == 0x6301:
-            apdu = stream.handle_send_buffer(apdu.data)
-        elif apdu.status == 0x6401:
-            apdu = stream.handle_recv_buffer(apdu.data)
-        elif apdu.status == 0x6501:
-            stream.handle_exit(apdu.data)
-            break
-        elif apdu.status == 0x6601:
-            stream.handle_fatal(apdu.data)
-            break
-        else:
-            logger.error(f"unexpected status {apdu.status:#06x}, {apdu.data}")
-            assert False
+        while True:
+            logger.debug(f"[<] {apdu.status:#06x} {apdu.data[:8].hex()}...")
+            if apdu.status == 0x6101:
+                apdu = stream.handle_read_access(apdu.data)
+            elif apdu.status == 0x6201:
+                apdu = stream.handle_write_access(apdu.data)
+            elif apdu.status == 0x6301:
+                apdu = stream.handle_send_buffer(apdu.data)
+            elif apdu.status == 0x6401:
+                apdu = stream.handle_recv_buffer(apdu.data)
+            elif apdu.status == 0x6501:
+                stream.handle_exit(apdu.data)
+                break
+            elif apdu.status == 0x6601:
+                stream.handle_fatal(apdu.data)
+                break
+            else:
+                logger.error(f"unexpected status {apdu.status:#06x}, {apdu.data}")
+                assert False

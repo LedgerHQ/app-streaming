@@ -36,12 +36,23 @@ class CommClient(ABC):
         return Apdu(status_word, response[:-2])
 
     @abstractmethod
-    def _exchange(self, data: bytes):
+    def __enter__(self) -> "CommClient":
+        pass
+
+    @abstractmethod
+    def __exit__(self, type, value, traceback):
+        pass
+
+    @abstractmethod
+    def _exchange(self, data: bytes) -> bytes:
         pass
 
 
 class CommClientUSB(CommClient):
     def __init__(self):
+        self.client = None
+
+    def __enter__(self) -> "CommClientUSB":
         devices = enumerate_devices()
         if len(devices) == 0:
             logger.error("No Ledger device has been found.")
@@ -49,17 +60,33 @@ class CommClientUSB(CommClient):
 
         self.client = LedgerClient(devices[0], cla=CLA)
 
-    def _exchange(self, data: bytes):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.client.close()
+        self.client = None
+
+    def _exchange(self, data: bytes) -> bytes:
         return self.client.raw_exchange(data)
 
 
 class CommClientBLE(CommClient):
     def __init__(self):
-        from ble import exchange_ble, get_client_ble
+        from ble import disconnect_ble_client, exchange_ble, get_client_ble
+        self.disconnect_ble_client = disconnect_ble_client
         self.exchange_ble = exchange_ble
-        self.client = get_client_ble()
+        self.get_client_ble = get_client_ble
+        self.client = None
 
-    def _exchange(self, data: bytes):
+    def __enter__(self) -> "CommClientBLE":
+        self.client = self.get_client_ble()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.disconnect_ble_client(self.client)
+        self.client = None
+
+    def _exchange(self, data: bytes) -> bytes:
         return self.exchange_ble(self.client, data)
 
 

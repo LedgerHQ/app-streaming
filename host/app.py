@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 from typing import List, Optional, Type
 from zipfile import ZipFile
 
-from comm import get_client, import_ledgerwallet
+from comm import get_client, import_ledgerwallet, CommClient
 from elf import Segment
 from manifest import Manifest
 
@@ -51,7 +51,7 @@ class App:
         return macs
 
     @classmethod
-    def from_zip(cls: Type[object], zip_path: str):
+    def from_zip(cls: Type[object], zip_path: str) -> "App":
         app = cls.__new__(cls)
         with ZipFile(zip_path, "r") as zf:
             app.manifest = zf.read("manifest.bin")
@@ -91,9 +91,7 @@ def decrypt_hmac(enc_macs, aes):
     return result
 
 
-def device_sign_app(app: App, transport: str) -> None:
-    client = get_client(transport)
-
+def device_sign_app(client: CommClient, app: App) -> None:
     signature = app.manifest_hsm_signature
     data = app.manifest + signature.ljust(72, b"\x00") + len(signature).to_bytes(1, "little")
 
@@ -153,7 +151,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     import_ledgerwallet(args.speculos)
-    device_sign_app(app, args.transport)
+    with get_client(args.transport) as client:
+        device_sign_app(client, app)
     app.export_zip(args.app_path)
 
     # ensure that the generated file is valid

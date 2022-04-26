@@ -176,9 +176,13 @@ def get_client_ble(ble_address=ADDRESS):
     return asyncio_run(async_get_client_ble(ble_address))
 
 
+def disconnect_ble_client(client: BleakClient):
+    asyncio_run(client.disconnect())
+
+
 if __name__ == "__main__":
     client = get_client_ble(ADDRESS)
 
     print(exchange_ble(client, b"\xE0\x01\x00\x00\x00"))
 
-    asyncio_run(client.disconnect())
+    disconnect_ble_client(client)
