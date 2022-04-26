@@ -27,10 +27,13 @@ To improve performances drastically:
 """
 
 import asyncio
+import logging
 
 from bleak import BleakClient, BleakScanner
 from bleak.exc import BleakError
 from typing import List
+
+logger = logging.getLogger("BLE")
 
 ADDRESS = "DE:F1:03:1E:30:7B"
 
@@ -45,10 +48,10 @@ queue: asyncio.Queue = asyncio.Queue()
 
 
 async def list_services(client):
-    print("Services:")
+    logger.info("Services:")
 
     for service in client.services:
-        print(f"[Service] {service.uuid}: {service.description}")
+        logger.info(f"[Service] {service.uuid}: {service.description}")
         for char in service.characteristics:
             if "read" in char.properties:
                 try:
@@ -59,16 +62,16 @@ async def list_services(client):
                 value = None
 
             properties = ",".join(char.properties)
-            print(f"  [Characteristic] {char.uuid}: (Handle: {char.handle}) ({properties}) | "
+            logger.info(f"  [Characteristic] {char.uuid}: (Handle: {char.handle}) ({properties}) | "
                   f"Name: {char.description}, Value: {value}")
 
             for desc in char.descriptors:
                 value = await client.read_gatt_descriptor(desc.handle)
-                print(f"    [Descriptor] {desc.uuid}: (Handle: {desc.handle}) | Value: {value}")
+                logger.info(f"    [Descriptor] {desc.uuid}: (Handle: {desc.handle}) | Value: {value}")
 
 
 def callback(sender: int, data: bytes):
-    #print(f"{sender}: {data}")
+    #logger.debug(f"< {sender}: {data}")
 
     response = bytes(data)
     queue.put_nowait(response)
@@ -183,6 +186,7 @@ def disconnect_ble_client(client: BleakClient):
 if __name__ == "__main__":
     client = get_client_ble(ADDRESS)
 
-    print(exchange_ble(client, b"\xE0\x01\x00\x00\x00"))
+    version = exchange_ble(client, b"\xE0\x01\x00\x00\x00")
+    logger.debug(f"version: {version}")
 
     disconnect_ble_client(client)
