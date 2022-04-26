@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 from typing import List, Optional, Type
 from zipfile import ZipFile
 
-from comm import get_client, import_ledgerwallet, CommClient
+from comm import get_client, CommClient
 from elf import Segment
 from manifest import Manifest
 
@@ -150,8 +150,7 @@ if __name__ == "__main__":
         print(manifest)
         sys.exit(1)
 
-    import_ledgerwallet(args.speculos)
-    with get_client(args.transport) as client:
+    with get_client(args.transport, args.speculos) as client:
         device_sign_app(client, app)
     app.export_zip(args.app_path)
 

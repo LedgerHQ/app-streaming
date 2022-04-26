@@ -16,15 +16,6 @@ logger = logging.getLogger("comm")
 CLA = 0x12
 
 
-def import_ledgerwallet(use_speculos: bool) -> None:
-    if use_speculos:
-        os.environ["LEDGER_PROXY_ADDRESS"] = "127.0.0.1"
-        os.environ["LEDGER_PROXY_PORT"] = "9999"
-
-    if False:
-        logger.setLevel(logging.DEBUG)
-
-
 class CommClient(ABC):
     def exchange(self, ins: int, data=b"", p1=0, p2=0, cla=CLA) -> Apdu:
         apdu = bytes([cla, ins, p1, p2])
@@ -93,8 +84,12 @@ class CommClientBLE(CommClient):
 client: Union[CommClientUSB, CommClientBLE] = None
 
 
-def get_client(transport="usb") -> Union[CommClientUSB, CommClientBLE]:
+def get_client(transport="usb", use_speculos=False) -> Union[CommClientUSB, CommClientBLE]:
     global client
+
+    if use_speculos and transport == "usb":
+        os.environ["LEDGER_PROXY_ADDRESS"] = "127.0.0.1"
+        os.environ["LEDGER_PROXY_PORT"] = "9999"
 
     if client is None:
         if transport.lower() == "usb":

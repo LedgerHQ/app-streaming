@@ -7,7 +7,7 @@ import zipfile
 from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from typing import Any, Dict
 
-from comm import Apdu, CommClient, get_client, import_ledgerwallet
+from comm import Apdu, CommClient, get_client
 from app import App, device_sign_app
 from hsm import hsm_sign_app
 from manifest import Manifest
@@ -223,8 +223,6 @@ if __name__ == "__main__":
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    import_ledgerwallet(args.speculos)
-
     if zipfile.is_zipfile(args.app):
         zip_path = args.app
         app = App.from_zip(zip_path)
@@ -236,11 +234,11 @@ if __name__ == "__main__":
 
     if app.manifest_device_signature is None:
         logger.warn("making the device sign the app")
-        with get_client(args.transport) as client:
+        with get_client(args.transport, args.speculos) as client:
             device_sign_app(client, app)
         app.export_zip(zip_path)
 
-    with get_client(args.transport) as client:
+    with get_client(args.transport, args.speculos) as client:
         stream = Stream(app, client)
         apdu = stream.init_app()
 
