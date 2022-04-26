@@ -14,7 +14,6 @@ from ledgerwallet.utils import serialize
 Apdu = namedtuple("Apdu", "status data")
 logger = logging.getLogger("comm")
 CLA = 0x12
-USE_BLE = True
 
 
 def import_ledgerwallet(use_speculos: bool) -> None:
