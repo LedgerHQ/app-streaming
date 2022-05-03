@@ -4,6 +4,10 @@
 #include "no_throw.h"
 #include "syscalls.h"
 
+#ifndef SYSCALL_os_perso_derive_node_bip32_ID
+#define SYSCALL_os_perso_derive_node_bip32_ID SYSCALL_os_perso_derive_node_bip32_ID_IN
+#endif
+
 __attribute__((naked)) bool svc_call_no_throw(unsigned int id __attribute__((unused)),
                                               ptrdiff_t *parameters __attribute__((unused)))
 {
@@ -27,5 +31,5 @@ bool os_perso_derive_node_bip32_nt(cx_curve_t curve, const uint32_t *path, size_
     parameters[3] = (ptrdiff_t)privateKey;
     parameters[4] = (ptrdiff_t)chain;
 
-    return svc_call_no_throw(SYSCALL_os_perso_derive_node_bip32_ID_IN, parameters);
+    return svc_call_no_throw(SYSCALL_os_perso_derive_node_bip32_ID, parameters);
 }
