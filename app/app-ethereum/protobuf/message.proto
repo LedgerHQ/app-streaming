@@ -1,9 +1,7 @@
 syntax = "proto3";
 
-import "nanopb.proto";
-
 // apt install protobuf-c-compiler protobuf-compiler
-// cat message.proto | sed 's/import.*//' | sed 's/\[.*\]//g' > message-nonano.proto && protoc --python_out=. message-nonano.proto && mv message_nonano_pb2.py message_pb2.py && rm message-nonano.proto
+// protoc --proto_path=app-ethereum/protobuf/ --python_out=app-ethereum/protobuf/ app-ethereum/protobuf/message.proto
 
 // apt install python3-protobuf
 // ./nanopb/generator/nanopb_generator.py app-ethereum/protobuf/message.proto
@@ -12,56 +10,56 @@ message RequestGetVersion {
 };
 
 message ResponseGetVersion {
-  string version = 1 [(nanopb).max_length = 40];
+  string version = 1;
 };
 
 message RequestGetPubKey {
-  repeated uint32 path = 1 [(nanopb).max_count = 10];
+  repeated uint32 path = 1;
   bool confirm = 2;
   bool get_chain_code = 3;
 };
 
 message ResponseGetPubKey {
   bool approved = 1;
-  bytes pubkey = 2 [(nanopb).max_size = 65, (nanopb).fixed_length = true];
-  string address = 3 [(nanopb).max_length = 40, (nanopb).fixed_length = true];
-  bytes chain_code = 4 [(nanopb).max_size = 32, (nanopb).fixed_length = true];
+  bytes pubkey = 2;
+  string address = 3;
+  bytes chain_code = 4;
 };
 
 message RequestSignTx {
-  repeated uint32 path = 1 [(nanopb).max_count = 10];
-  bytes raw_tx = 2 [(nanopb).max_size = 1024];
+  repeated uint32 path = 1;
+  bytes raw_tx = 2;
   uint64 chain_id = 3;
 };
 
 message ResponseSignTx {
   bool approved = 1;
-  bytes signature = 2 [(nanopb).max_size = 100];
+  bytes signature = 2;
 };
 
 message RequestSignMsg {
-  repeated uint32 path = 1 [(nanopb).max_count = 10];
-  bytes message = 2 [(nanopb).max_size = 1024];
+  repeated uint32 path = 1;
+  bytes message = 2;
 };
 
 message ResponseSignMsg {
   bool approved = 1;
-  bytes signature = 2 [(nanopb).max_size = 100];
+  bytes signature = 2;
 };
 
 message RequestSignEip712 {
-  repeated uint32 path = 1 [(nanopb).max_count = 10];
-  bytes domain_separator = 2 [(nanopb).max_size = 32, (nanopb).fixed_length = true];
-  string message = 3 [(nanopb).max_size = 2048];
+  repeated uint32 path = 1;
+  bytes domain_separator = 2;
+  string message = 3;
 };
 
 message ResponseSignEip712 {
   bool approved = 1;
-  bytes signature = 2 [(nanopb).max_size = 100];
+  bytes signature = 2;
 };
 
 message ResponseError {
-  string error_msg = 1 [(nanopb).max_length = 64];
+  string error_msg = 1;
 };
 
 message Request {

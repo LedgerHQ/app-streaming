@@ -1,0 +1,29 @@
+ResponseGetVersion.version max_length:40;
+
+RequestGetPubKey.path max_count:10;
+
+ResponseGetPubKey.pubkey max_size:65
+ResponseGetPubKey.pubkey fixed_length:true;
+ResponseGetPubKey.address max_length:40
+ResponseGetPubKey.address fixed_length:true;
+ResponseGetPubKey.chain_code max_size:32
+ResponseGetPubKey.chain_code fixed_length:true;
+
+RequestSignTx.path max_count:10;
+RequestSignTx.raw_tx max_size:1024;
+
+ResponseSignTx.signature max_size:100;
+
+RequestSignMsg.path max_count:10;
+RequestSignMsg.message max_size:1024;
+
+ResponseSignMsg.signature max_size:100;
+
+RequestSignEip712.path max_count:10;
+RequestSignEip712.domain_separator max_size:32
+RequestSignEip712.domain_separator fixed_length:true;
+RequestSignEip712.message max_size:2048;
+
+ResponseSignEip712.signature max_size:100;
+
+ResponseError.error_msg max_length:64;
