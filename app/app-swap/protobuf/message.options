@@ -1,0 +1,32 @@
+ResponseGetVersion.version max_length:40;
+
+ResponseInitSwap.device_id max_size:10;
+ResponseInitSwap.device_id fixed_length:true;
+
+ResponseInitSell.device_id max_size:32
+ResponseInitSell.device_id fixed_length:true;
+
+Partner.name max_length:15;
+Partner.pubkey max_size:65
+Partner.pubkey fixed_length:true;
+Partner.signature max_size:72;
+
+RequestSwap.pb_tx max_size:256;
+RequestSwap.signature max_size:72;
+RequestSwap.fee max_size:16;
+RequestSwap.payout_path max_count:10;
+RequestSwap.refund_path max_count:10;
+RequestSwap.payout_addr_params max_size:1, 
+RequestSwap.payout_addr_params fixed_length:true;
+RequestSwap.refund_addr_params max_size:1, 
+RequestSwap.refund_addr_params fixed_length:true;
+
+ResponseSwap.signature max_size:72;
+
+RequestSell.b64_tx max_size:256;
+RequestSell.signature max_size:72;
+RequestSell.fee max_size:16;
+
+ResponseSell.signature max_size:72;
+
+ResponseError.error_msg max_length:64;
