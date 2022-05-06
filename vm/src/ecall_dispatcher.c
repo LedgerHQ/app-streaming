@@ -7,18 +7,18 @@
 #include "sdk/api/ecall-nr.h"
 
 /*
- * Return true if the ecall either exit() or unsupported, false otherwise.
+ * Return false if the ecall either exit() or unsupported, false otherwise.
  */
 bool ecall(struct rv_cpu *cpu)
 {
     uint32_t nr = cpu->regs[RV_REG_T0];
-    bool stop = false;
     bool success = true;
 
     switch (nr) {
     case ECALL_FATAL:
         success = sys_fatal(GP(RV_REG_A0));
-        stop = true;
+        // stop execution
+        success = false;
         break;
     case ECALL_XSEND:
         success = sys_xsend(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
@@ -28,7 +28,8 @@ bool ecall(struct rv_cpu *cpu)
         break;
     case ECALL_EXIT:
         sys_exit(cpu->regs[RV_REG_A0]);
-        stop = true;
+        // stop execution
+        success = false;
         break;
 #ifdef TARGET_NANOX
     case ECALL_UX_RECTANGLE:
@@ -101,13 +102,9 @@ bool ecall(struct rv_cpu *cpu)
         break;
     default:
         sys_exit(0xdeaddead);
-        stop = true;
+        success = false;
         break;
     }
 
-    if (!success) {
-        stop = true;
-    }
-
-    return stop;
+    return success;
 }

@@ -354,7 +354,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             break;
 
         case RV_OP_ECALL:
-            success = !ecall(cpu);
+            success = ecall(cpu);
             break;
 
         case RV_OP_MUL:
