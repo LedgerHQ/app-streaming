@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <string.h>
 
 #include "merkle.h"
@@ -65,13 +66,14 @@ static size_t bit_count(uint32_t x)
 
 bool merkle_insert(const struct entry_s *entry, const struct proof_s *proof, size_t count)
 {
-    /* XXX: check that n doesn't overflow */
-
     if (ctx.n == 0) {
         hash_entry(entry, ctx.root_hash);
         memcpy(&ctx.last_entry, entry, sizeof(*entry));
         ctx.n++;
         return true;
+    } else if (ctx.n == ULONG_MAX) {
+        /* the merkle tree size will overflow */
+        return false;
     }
 
     struct proof_s tmp_proof;
