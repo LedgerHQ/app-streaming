@@ -57,6 +57,11 @@ endif()
 
 add_compile_options(-Werror)
 
+# NanoPB
+# PB_BUFFER_ONLY - Disable support for custom streams. Only supports encoding and decoding with
+#                  memory buffers. Speeds up execution and slightly decreases code size.
+add_compile_definitions(PB_BUFFER_ONLY)
+
 # Compute the absolute path of jsmn/ and nanopb/ and store them in the variables JSMN_PATH and NANOPB_PATH
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.19.0")
   file(REAL_PATH nanopb/ NANOPB_PATH)
