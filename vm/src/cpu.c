@@ -162,7 +162,7 @@ static inline uint32_t sign_extend_b(uint32_t x) {
 }
 
 /*
- * Return true if the CPU has stopped (because the app exited for instance, or
+ * Return false if the CPU has stopped (because the app exited for instance, or
  * the instruction isn't recognized, false otherwise.)
  */
 bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
@@ -171,8 +171,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
     enum rv_op op = rv_cpu_decode(instruction);
     uint32_t pc_inc = INST_SIZE;
     uint32_t pc_set = cpu->pc;
-    bool stop = false;
-    bool success;
+    bool success = true;
     uint32_t value;
 
     switch (op) {
@@ -297,70 +296,65 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             break;
 
         case RV_OP_LB:
-            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 1, &value);
-            if (success) {
+            if (mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 1, &value)) {
                 cpu->regs[inst.rd] = sign_extend_b(value);
             } else {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_LH:
-            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 2, &value);
-            if (success) {
+            if (mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 2, &value)) {
                 cpu->regs[inst.rd] = sign_extend_h(value);
             } else {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_LW:
-            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 4, &value);
-            if (success) {
+            if (mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 4, &value)) {
                 cpu->regs[inst.rd] = value;
             } else {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_LBU:
-            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 1, &value);
-            if (success) {
+            if (mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 1, &value)) {
                 cpu->regs[inst.rd] = value;
             } else {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_LHU:
-            success = mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 2, &value);
-            if (success) {
+            if (mem_read(cpu->regs[inst.rs1] + (int32_t) imm_i(inst), 2, &value)) {
                 cpu->regs[inst.rd] = value;
             } else {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_SB:
             if (!mem_write(cpu->regs[inst.rs1] + (int32_t) imm_s(inst), 1, cpu->regs[inst.rs2])) {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_SH:
             if (!mem_write(cpu->regs[inst.rs1] + (int32_t) imm_s(inst), 2, cpu->regs[inst.rs2])) {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_SW:
             if (!mem_write(cpu->regs[inst.rs1] + (int32_t) imm_s(inst), 4, cpu->regs[inst.rs2])) {
-                stop = true;
+                success = false;
             }
             break;
 
         case RV_OP_ECALL:
-            stop = ecall(cpu);
+            success = !ecall(cpu);
             break;
 
         case RV_OP_MUL:
@@ -401,7 +395,7 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
         case RV_OP_EBREAK:
         default:
             fatal("instruction not implemented\n");
-            stop = true;
+            success = false;
             break;
     }
 
@@ -409,5 +403,5 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
     cpu->regs[RV_REG_ZERO] = 0;
     cpu->pc = pc_set + pc_inc;
 
-    return stop;
+    return success;
 }

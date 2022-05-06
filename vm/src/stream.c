@@ -740,7 +740,7 @@ void stream_run_app(void)
         if (0) {
             debug_cpu(app.cpu.pc, instruction);
         }
-        stop = rv_cpu_execute(&app.cpu, instruction);
+        stop = !rv_cpu_execute(&app.cpu, instruction);
         app_loading_inc_counter();
     } while (!stop);
 }
