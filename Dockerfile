@@ -3,7 +3,7 @@
 FROM dockcross/linux-riscv32:latest
 
 RUN apt-get -yq update && \
-    apt-get -yq install clang less python3-protobuf protobuf-compiler
+    apt-get -yq install clang clang-format less python3-protobuf protobuf-compiler
 
 # newlib can also be built with clang using the following env variables
 # CC=clang CFLAGS='--target=riscv32 -march=rv32im'
