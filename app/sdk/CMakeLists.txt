@@ -54,13 +54,6 @@ else()
     native/speculos.c
     )
 
-  # rename libspeculos.a symbols to prevent symbol collision with libcxng.a
-  add_custom_command(TARGET speculos
-    POST_BUILD
-    COMMAND /tools/update-library-symbols.py "$<TARGET_FILE:speculos>"
-    VERBATIM
-    )
-
   target_include_directories (speculos PUBLIC ${SPECULOS_DIR}/src/ ${SPECULOS_DIR}/src/bolos/)
 
   add_library(cxng
