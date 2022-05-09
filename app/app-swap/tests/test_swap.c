@@ -190,7 +190,7 @@ static void test_btc_to_eth(void **state __attribute__((unused)))
 
     sign_tx(&req, &partner_privkey);
 
-    //dump_req(&req);
+    // dump_req(&req);
 
     ResponseSwap response;
     const char *error = handle_swap(&req, &response, &ctx);

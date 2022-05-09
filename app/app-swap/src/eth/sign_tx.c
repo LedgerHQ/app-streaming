@@ -21,7 +21,8 @@ static size_t sign(const uint32_t *path,
     ecfp_init_private_key(CX_CURVE_256K1, privkey_data, sizeof(privkey_data), &privkey);
 
     int parity;
-    size_t size = extended_ecdsa_sign(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256, hash, sig, MAX_SIG_SIZE, &parity);
+    size_t size = extended_ecdsa_sign(&privkey, CX_RND_RFC6979 | CX_LAST, CX_SHA256, hash, sig,
+                                      MAX_SIG_SIZE, &parity);
 
     explicit_bzero(privkey_data, sizeof(privkey_data));
     explicit_bzero(&privkey, sizeof(privkey));

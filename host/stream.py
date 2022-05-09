@@ -149,7 +149,7 @@ class Stream:
         return self.client.exchange(0x02, data=proof)
 
     def handle_send_buffer(self, data: bytes) -> Apdu:
-        logger.info(f"got buffer {data}")
+        logger.info(f"got buffer {data!r}")
 
         request = Stream._parse_request(Struct("data" / Bytes(249), "size" / Int8ul, "counter" / Int32ul), data)
 
@@ -161,7 +161,7 @@ class Stream:
         self.send_buffer += request.data[:request.size]
 
         if stop:
-            logger.info(f"received buffer: {self.send_buffer} (len: {len(self.send_buffer)})")
+            logger.info(f"received buffer: {self.send_buffer!r} (len: {len(self.send_buffer)})")
             self.server.send_response(self.send_buffer)
             self.send_buffer = b""
             self.send_buffer_counter = 0
@@ -180,8 +180,8 @@ class Stream:
 
         buf = self.recv_buffer[:request.maxsize]
         self.recv_buffer = self.recv_buffer[request.maxsize:]
-        print(f"buf: {buf}")
-        print(f"buffer: {self.recv_buffer}")
+        print(f"buf: {buf!r}")
+        print(f"buffer: {self.recv_buffer!r}")
         if len(self.recv_buffer) == 0:
             logger.debug(f"recv buffer last (size: {request.maxsize}, {len(buf)})")
             self.recv_buffer_counter = 0

@@ -1,0 +1,37 @@
+# Build the RISC-V apps
+
+name: RISC-V apps
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    name: Build apps
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/ledgerhq/app-streaming-builder:latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT }}
+
+      - name: Lint code
+        run: |
+          pip3 install flake8 mypy
+          ./tools/clang-format.sh
+          ./tools/mypy.sh
+
+      - name: Build
+        working-directory: ./app
+        run: |
+           cmake -Bbuild -H.
+           make -j -C build/

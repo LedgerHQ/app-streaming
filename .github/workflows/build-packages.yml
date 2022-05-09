@@ -1,0 +1,64 @@
+# Build app-streaming-builder and app-streaming-native-builder and push the
+# resulting docker images to GitHub Packages.
+
+name: App Streaming Builder
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-packages.yml
+      - native.Dockerfile
+      - Dockerfile
+
+jobs:
+  build:
+    name: Build and push app-streaming-builder image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+    - name: Clone
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.PAT }}
+
+    - name: Build and push app-streaming-builder to GitHub Packages
+      uses: docker/build-push-action@v1
+      with:
+        dockerfile: Dockerfile
+        repository: ledgerhq/app-streaming-builder
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        tag_with_sha: true
+        tags: latest
+
+# TODO - Incomplete until cxlib is open-sourced.
+
+#jobs:
+#  build:
+#    name: Build and push app-streaming-native-builder image
+#    runs-on: ubuntu-latest
+#    permissions:
+#      packages: write
+#
+#    steps:
+#    - name: Clone
+#      uses: actions/checkout@v3
+#      with:
+#        token: ${{ secrets.PAT }}
+#
+#    - name: Build and push app-streaming-native-builder to GitHub Packages
+#      uses: docker/build-push-action@v1
+#      with:
+#        dockerfile: native.Dockerfile
+#        repository: ledgerhq/app-streaming-native-builder
+#        registry: ghcr.io
+#        username: ${{ github.actor }}
+#        password: ${{ secrets.GITHUB_TOKEN }}
+#        tag_with_sha: true
+#        tags: latest

@@ -4,7 +4,7 @@ import sys
 
 from construct import Bytes, Int8ul, Struct
 from Crypto.Cipher import AES
-from typing import List, Optional, Type
+from typing import cast, List, Optional, Type
 from zipfile import ZipFile
 
 from comm import get_client, CommClient
@@ -13,7 +13,9 @@ from manifest import Manifest
 
 
 class App:
-    def __init__(self, manifest: bytes, hsm_signature: bytes, code_pages: bytes, data_pages: bytes, device_signature: Optional[bytes] = None, code_macs: Optional[bytes] = None, data_macs: Optional[bytes] = None) -> None:
+    def __init__(self, manifest: bytes, hsm_signature: bytes, code_pages: bytes, data_pages: bytes,
+                 device_signature: Optional[bytes] = None, code_macs: Optional[bytes] = None,
+                 data_macs: Optional[bytes] = None) -> None:
         self.code_pages = App._pages_to_list(code_pages)
         self.data_pages = App._pages_to_list(data_pages)
 
@@ -52,7 +54,7 @@ class App:
 
     @classmethod
     def from_zip(cls: Type[object], zip_path: str) -> "App":
-        app = cls.__new__(cls)
+        app = cast(App, cls.__new__(cls))
         with ZipFile(zip_path, "r") as zf:
             app.manifest = zf.read("manifest.bin")
             app.manifest_hsm_signature = zf.read("manifest.hsm.sig")
@@ -65,8 +67,6 @@ class App:
                 app.data_macs = App._macs_to_list(zf.read("device/data.mac.bin"))
             else:
                 app.manifest_device_signature = None
-                app.code_macs = None
-                app.data_macs = None
 
         return app
 
@@ -133,7 +133,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Tool to sign app using a Ledger device.")
     parser.add_argument("--app-path", type=str, help="path to the app (.zip)")
-    parser.add_argument("--show-manifest", action="store_true", help="display an app manifest in a readable format (.zip)")
+    parser.add_argument("--show-manifest", action="store_true",
+                        help="display an app manifest in a readable format (.zip)")
     parser.add_argument("--speculos", action="store_true", help="use speculos")
     parser.add_argument("--transport", default="usb", choices=["ble", "usb"])
 

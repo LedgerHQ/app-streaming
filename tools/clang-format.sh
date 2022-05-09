@@ -14,5 +14,4 @@ find app/app-*/ app/sdk/ \
      -name '*.[ch]' \
      ! -name '*.pb-c.*' \
      ! -name '*.pb.*' \
-     -print0 \
-     | xargs -0 -L1 ${CLANG_FORMAT} -i -style=file
+     -exec "${CLANG_FORMAT}" -style=file -Werror --dry-run '{}' '+'
