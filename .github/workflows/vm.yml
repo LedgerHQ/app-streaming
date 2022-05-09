@@ -1,0 +1,36 @@
+# Build the VM app
+
+name: VM
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    name: Clang Static Analyzer
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Build
+        run: |
+           make -C vm/ BOLOS_SDK=$NANOX_SDK
+
+      - name: Build with Clang Static Analyzer
+        run: |
+          scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make -C vm/ BOLOS_SDK=$NANOX_SDK
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: scan-build
+          path: scan-build
