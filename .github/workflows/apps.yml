@@ -20,8 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.PAT }}
+
+      - name: Lint code
+        run: |
+          pip3 install flake8 mypy
+          ./tools/clang-format.sh
+          ./tools/mypy.sh
 
       - name: Build
         working-directory: ./app
