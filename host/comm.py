@@ -5,7 +5,7 @@ import time
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Union
+from typing import Optional, Union
 
 from ledgerwallet.client import LedgerClient
 from ledgerwallet.transport import enumerate_devices
@@ -109,7 +109,7 @@ class CommClientBLE(CommClient):
         return response
 
 
-client: Union[CommClientUSB, CommClientBLE] = None
+client: Optional[Union[CommClientUSB, CommClientBLE]] = None
 
 
 def get_client(transport="usb", use_speculos=False) -> Union[CommClientUSB, CommClientBLE]:

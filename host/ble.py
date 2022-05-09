@@ -63,7 +63,7 @@ async def list_services(client):
 
             properties = ",".join(char.properties)
             logger.info(f"  [Characteristic] {char.uuid}: (Handle: {char.handle}) ({properties}) | "
-                  f"Name: {char.description}, Value: {value}")
+                        f"Name: {char.description}, Value: {value}")
 
             for desc in char.descriptors:
                 value = await client.read_gatt_descriptor(desc.handle)
@@ -71,8 +71,7 @@ async def list_services(client):
 
 
 def callback(sender: int, data: bytes):
-    #logger.debug(f"< {sender}: {data}")
-
+    # logger.debug(f"< {sender}: {data}")
     response = bytes(data)
     queue.put_nowait(response)
 
@@ -187,6 +186,6 @@ if __name__ == "__main__":
     client = get_client_ble(ADDRESS)
 
     version = exchange_ble(client, b"\xE0\x01\x00\x00\x00")
-    logger.debug(f"version: {version}")
+    logger.debug(f"version: {version!r}")
 
     disconnect_ble_client(client)
