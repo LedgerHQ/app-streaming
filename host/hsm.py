@@ -69,12 +69,11 @@ class HsmApp:
         self.merkletree = HsmApp.compute_merkle_tree(self.data_start, self.data_end)
 
     def compute_app_hash(self) -> bytes:
-        code_size = self.code_end - self.code_start
-        data_size = self.data_end - self.data_start
-
         m = hashlib.sha256()
-        m.update(code_size.to_bytes(4, "little"))
-        m.update(data_size.to_bytes(4, "little"))
+        m.update(self.code_start.to_bytes(4, "little"))
+        m.update(self.code_end.to_bytes(4, "little"))
+        m.update(self.data_start.to_bytes(4, "little"))
+        m.update(self.data_end.to_bytes(4, "little"))
         m.update(self.code)
         m.update(self.data)
         return m.digest()

@@ -137,13 +137,13 @@ bool handle_sign_app(const struct cmd_response_app_s *response, size_t *tx)
     const uint32_t code_end = manifest.sections[SECTION_CODE].end;
     const uint32_t data_start = manifest.sections[SECTION_DATA].start;
     const uint32_t data_end = manifest.bss;
-    const uint32_t code_size = code_end - code_start;
-    const uint32_t data_size = data_end - data_start;
 
     cx_sha256_t ctx;
     cx_sha256_init_no_throw(&ctx);
-    cx_hash_no_throw((cx_hash_t *)&ctx, 0, (uint8_t *)&code_size, sizeof(code_size), NULL, 0);
-    cx_hash_no_throw((cx_hash_t *)&ctx, 0, (uint8_t *)&data_size, sizeof(data_size), NULL, 0);
+    cx_hash_no_throw((cx_hash_t *)&ctx, 0, (uint8_t *)&code_start, sizeof(code_start), NULL, 0);
+    cx_hash_no_throw((cx_hash_t *)&ctx, 0, (uint8_t *)&code_end, sizeof(code_end), NULL, 0);
+    cx_hash_no_throw((cx_hash_t *)&ctx, 0, (uint8_t *)&data_start, sizeof(data_start), NULL, 0);
+    cx_hash_no_throw((cx_hash_t *)&ctx, 0, (uint8_t *)&data_end, sizeof(data_end), NULL, 0);
 
     /* Generate random AES key to encrypt HMACs. This key will be transmitted to
        the host if and only if the signature over the app manifest and the
