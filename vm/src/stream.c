@@ -513,7 +513,11 @@ static int binary_search(const struct page_s *pages, const size_t npage, const u
  */
 static struct page_s *sort_pages(struct page_s *pages, const size_t npage, const uint32_t addr)
 {
-    size_t n = 0;
+    size_t n = npage;
+
+    if (pages[0].addr == addr) {
+        n = 0;
+    }
 
     for (size_t i = 1; i < npage; i++) {
         struct page_s tmp;
@@ -535,7 +539,7 @@ static struct page_s *sort_pages(struct page_s *pages, const size_t npage, const
         }
     }
 
-    return &pages[n];
+    return (n < npage) ? &pages[n] : NULL;
 }
 
 static struct page_s *sort_cache(struct cache_s *cache, const uint32_t addr)
