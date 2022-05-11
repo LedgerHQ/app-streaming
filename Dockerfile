@@ -12,7 +12,7 @@ RUN apt-get -yq update && \
 RUN git clone --depth 1 git://cygwin.com/git/newlib-cygwin.git /tmp/newlib-cygwin/ && \
     mkdir /tmp/newlib-cygwin/newlib/build && \
     cd /tmp/newlib-cygwin/newlib/build && \
-    CFLAGS='-march=rv32g -mabi=ilp32' ../configure --host riscv32-unknown-linux-gnu --target riscv32-unknown-linux-gnu --enable-multilib --disable-newlib-supplied-syscalls --enable-newlib-nano-malloc --enable-lite-exit --disable-newlib-io-float && \
+    CFLAGS='-DPREFER_SIZE_OVER_SPEED=1 -Os -march=rv32g -mabi=ilp32' ../configure --host riscv32-unknown-linux-gnu --target riscv32-unknown-linux-gnu --enable-multilib --disable-newlib-supplied-syscalls --enable-newlib-nano-malloc --enable-lite-exit --disable-newlib-io-float --enable-newlib-reent-small --disable-newlib-fvwrite-in-streamio --disable-newlib-fseek-optimization --disable-newlib-wide-orient --disable-newlib-unbuf-stream-opt --enable-newlib-nano-formatted-io && \
     make && \
     make install && \
     cd / && \
