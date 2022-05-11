@@ -461,6 +461,12 @@ static bool create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
     return true;
 }
 
+/**
+ * Find a page in the cache given its address. If the page isn't cached, a
+ * random page is returned through the result pointer.
+ *
+ * @return true if the page is cached, false otherwise
+ */
 static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct page_s **result)
 {
     struct page_s *page = &pages[0];
