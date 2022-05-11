@@ -35,7 +35,6 @@ struct page_s {
     uint32_t addr;
     uint8_t data[PAGE_SIZE];
     uint32_t iv;
-    size_t usage;
 };
 
 struct key_s {
@@ -478,7 +477,7 @@ static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct 
             found = &pages[i];
             *result = found;
             return true;
-        } else if (pages[i].usage == 0) {
+        } else if (pages[i].addr == 0) {
             page = &pages[i];
             *result = page;
             return false;
@@ -556,7 +555,6 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     }
 
     page->addr = addr;
-    page->usage = 1;
 
     if (!zero_page) {
         if (!stream_request_page(page, !writeable)) {
@@ -604,7 +602,6 @@ static bool get_instruction(const uint32_t addr, uint32_t *instruction)
     } else {
         if (!find_page(page_addr, app.code, NPAGE_CODE, &page)) {
             page->addr = page_addr;
-            page->usage = 1;
             if (!stream_request_page(page, true)) {
                 return false;
             }
