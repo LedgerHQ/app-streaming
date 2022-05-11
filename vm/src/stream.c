@@ -37,6 +37,12 @@ struct page_s {
     uint32_t iv;
 };
 
+struct cache_s {
+    struct page_s *pages;
+    size_t npage;
+    bool writeable;
+};
+
 struct key_s {
     cx_aes_key_t aes;
     uint8_t hmac[32];
@@ -47,9 +53,14 @@ struct app_s {
 
     struct section_s sections[NUM_SECTIONS];
 
-    struct page_s code[NPAGE_CODE];
-    struct page_s stack[NPAGE_STACK];
-    struct page_s data[NPAGE_DATA];
+    struct page_s code_pages[NPAGE_CODE];
+    struct page_s stack_pages[NPAGE_STACK];
+    struct page_s data_pages[NPAGE_DATA];
+
+    struct cache_s code;
+    struct cache_s stack;
+    struct cache_s data;
+
     struct page_s *current_code_page;
 
     uint32_t bss_max;
@@ -331,6 +342,16 @@ static bool stream_commit_page(struct page_s *page, bool insert)
     return true;
 }
 
+static void init_cache(struct cache_s *cache,
+                       struct page_s *pages,
+                       const size_t npage,
+                       const bool writeable)
+{
+    cache->pages = pages;
+    cache->npage = npage;
+    cache->writeable = writeable;
+}
+
 static void init_static_key(struct hmac_key_s *key)
 {
     memcpy(app.hmac_static_key, key->bytes, sizeof(app.hmac_static_key));
@@ -409,6 +430,11 @@ bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
 
     app.cpu.pc = manifest->pc;
     app.cpu.regs[RV_REG_SP] = sp - 4;
+
+    init_cache(&app.code, app.code_pages, NPAGE_CODE, false);
+    init_cache(&app.stack, app.stack_pages, NPAGE_STACK, true);
+    init_cache(&app.data, app.data_pages, NPAGE_DATA, true);
+
     app.current_code_page = NULL;
 
     init_merkle_tree(manifest->merkle_tree_root_hash, manifest->merkle_tree_size,
@@ -483,8 +509,7 @@ static int binary_search(const struct page_s *pages, const size_t npage, const u
 /**
  * Sort a set of pages using the insertion sort algorithm.
  *
- * @param keep_page
- * @return
+ * @return the page whose address is given as parameter
  */
 static struct page_s *sort_pages(struct page_s *pages, const size_t npage, const uint32_t addr)
 {
@@ -513,71 +538,42 @@ static struct page_s *sort_pages(struct page_s *pages, const size_t npage, const
     return &pages[n];
 }
 
-static struct page_s *find_page(uint32_t addr, const struct page_s *pages, const size_t npage)
+static struct page_s *sort_cache(struct cache_s *cache, const uint32_t addr)
 {
-    int n = binary_search(pages, npage, addr);
+    return sort_pages(cache->pages, cache->npage, addr);
+}
+
+static struct page_s *find_page(struct cache_s *cache, uint32_t addr)
+{
+    int n = binary_search(cache->pages, cache->npage, addr);
 
     if (n < 0) {
         return NULL;
     } else {
-        return &pages[n];
+        return &cache->pages[n];
     }
 }
 
-static struct page_s *choose_page(struct page_s *pages, size_t npage)
+static struct page_s *choose_page(struct cache_s *cache)
 {
     size_t n;
 
     /* since pages are sorted by their addresses, free pages are first the array entries */
-    if (pages[0].addr == 0) {
+    if (cache->pages[0].addr == 0) {
         n = 0;
     } else {
-        n = lfsr_get_random() % npage;
+        n = lfsr_get_random() % cache->npage;
     }
 
-    return &pages[n];
+    return &cache->pages[n];
 }
 
-/**
- * @return NULL on error
- */
-static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
+static struct page_s *create_page(struct cache_s *cache, const uint32_t addr)
 {
-    struct page_s *pages, *page;
-    size_t npage = 0;
-    bool writeable = false;
-
-    addr = PAGE_START(addr);
-
-    if (in_section(SECTION_CODE, addr)) {
-        if (page_prot != PAGE_PROT_RO) {
-            err("write access to code page\n");
-            return NULL;
-        }
-        pages = app.code;
-        npage = NPAGE_CODE;
-    } else if (in_section(SECTION_DATA, addr)) {
-        pages = app.data;
-        npage = NPAGE_DATA;
-        writeable = true;
-    } else if (in_section(SECTION_STACK, addr)) {
-        pages = app.stack;
-        npage = NPAGE_STACK;
-        writeable = true;
-    } else {
-        err("invalid addr (no section found)\n");
-        return NULL;
-    }
-
-    page = find_page(addr, pages, npage);
-    if (page != NULL) {
-        return page;
-    }
-
-    page = choose_page(pages, npage);
+    struct page_s *page = choose_page(cache);
 
     /* don't commit page if it never was retrieved (its address is zero) */
-    if (writeable && page->addr != 0) {
+    if (cache->writeable && page->addr != 0) {
         if (!stream_commit_page(page, false)) {
             return NULL;
         }
@@ -588,7 +584,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
      * exist (initialized with zeroes).
      */
     bool zero_page = false;
-    if (pages == app.data) {
+    if (cache == &app.data) {
         if (addr >= app.bss_max) {
             if (!create_empty_pages(app.bss_max, addr + PAGE_SIZE, page)) {
                 return NULL;
@@ -596,7 +592,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
             app.bss_max = addr + PAGE_SIZE;
             zero_page = true;
         }
-    } else if (pages == app.stack) {
+    } else if (cache == &app.stack) {
         if (addr < app.stack_min) {
             if (!create_empty_pages(PAGE_START(addr), app.stack_min, page)) {
                 return NULL;
@@ -607,7 +603,7 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
     }
 
     if (!zero_page) {
-        if (!stream_request_page(page, addr, !writeable)) {
+        if (!stream_request_page(page, addr, !cache->writeable)) {
             return NULL;
         }
     } else {
@@ -617,10 +613,53 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         memset(page->data, '\x00', sizeof(page->data));
     }
 
-    // XXX - invalidate current code page?
-    //app.current_code_page = NULL;
+    if (cache == &app.code) {
+        // The code pages will be sorted, which might result in a stale
+        // current_code_page pointer.
+        app.current_code_page = NULL;
+    }
 
-    return sort_pages(pages, npage, page->addr);
+    return sort_cache(cache, page->addr);
+}
+
+static struct cache_s *get_cache(const uint32_t addr, const enum page_prot_e page_prot)
+{
+    if (in_section(SECTION_CODE, addr)) {
+        if (page_prot != PAGE_PROT_RO) {
+            err("write access to code page\n");
+            return NULL;
+        }
+        return &app.code;
+    } else if (in_section(SECTION_DATA, addr)) {
+        return &app.data;
+    } else if (in_section(SECTION_STACK, addr)) {
+        return &app.stack;
+    } else {
+        err("invalid addr (no section found)\n");
+        return NULL;
+    }
+}
+
+/**
+ * @return NULL on error
+ */
+static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
+{
+    addr = PAGE_START(addr);
+
+    struct cache_s *cache = get_cache(addr, page_prot);
+    if (cache == NULL) {
+        return NULL;
+    }
+
+    struct page_s *page = find_page(cache, addr);
+    if (page != NULL) {
+        return page;
+    }
+
+    // If the page isn't in the cache, evict a random page from the cache and
+    // initialize it.
+    return create_page(cache, addr);
 }
 
 /**
@@ -641,15 +680,19 @@ static bool fit_in_page(uint32_t addr, size_t size)
     return true;
 }
 
-static struct page_s *request_code_page(const uint32_t addr)
+static struct page_s *get_code_page(const uint32_t addr)
 {
-    struct page_s *page = choose_page(app.code, NPAGE_CODE);
+    struct page_s *page = find_page(&app.code, addr);
+    if (page != NULL) {
+        return page;
+    }
 
+    page = choose_page(&app.code);
     if (!stream_request_page(page, addr, true)) {
         return NULL;
     }
 
-    return sort_pages(app.code, NPAGE_CODE, page->addr);
+    return sort_cache(&app.code, page->addr);
 }
 
 static bool get_instruction(const uint32_t addr, uint32_t *instruction)
@@ -665,16 +708,13 @@ static bool get_instruction(const uint32_t addr, uint32_t *instruction)
     if (app.current_code_page != NULL && app.current_code_page->addr == page_addr) {
         page = app.current_code_page;
     } else {
-        page = find_page(page_addr, app.code, NPAGE_CODE);
+        page = get_code_page(page_addr);
         if (page == NULL) {
-            page = request_code_page(page_addr);
-            if (page == NULL) {
-                // this shouldn't happen
-                return false;
-            }
-
-            app.current_code_page = page;
+            // this shouldn't happen
+            return false;
         }
+
+        app.current_code_page = page;
     }
 
     uint32_t offset = addr - page_addr;
