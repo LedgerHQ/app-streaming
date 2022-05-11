@@ -136,7 +136,7 @@ static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
     }
 }
 
-static bool stream_request_page(struct page_s *page, bool read_only)
+static bool stream_request_page(struct page_s *page, const uint32_t addr, const bool read_only)
 {
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
@@ -145,7 +145,7 @@ static bool stream_request_page(struct page_s *page, bool read_only)
 
     /* 1. retrieve page data */
 
-    cmd->addr = page->addr;
+    cmd->addr = addr;
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
@@ -161,6 +161,7 @@ static bool stream_request_page(struct page_s *page, bool read_only)
     }
 
     /* the first byte of the page is in p2 */
+    page->addr = addr;
     page->data[0] = apdu->p2;
     memcpy(&page->data[1], apdu->data, PAGE_SIZE - 1);
 
@@ -460,33 +461,81 @@ static bool create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
     return true;
 }
 
-/**
- * Find a page in the cache given its address. If the page isn't cached, a
- * random page is returned through the result pointer.
- *
- * @return true if the page is cached, false otherwise
- */
-static bool find_page(uint32_t addr, struct page_s *pages, size_t npage, struct page_s **result)
+static int binary_search(const struct page_s *pages, const size_t npage, const uint32_t addr)
 {
-    struct page_s *page = &pages[0];
-    struct page_s *found = NULL;
+    int l = 0;
+    int r = npage - 1;
 
-    for (size_t i = 0; i < npage; i++) {
-        /* return the page if address matches */
-        if (addr == pages[i].addr) {
-            found = &pages[i];
-            *result = found;
-            return true;
-        } else if (pages[i].addr == 0) {
-            page = &pages[i];
-            *result = page;
-            return false;
+    while (l <= r) {
+        int m = l + (r - l) / 2;
+        if (pages[m].addr == addr) {
+            return m;
+        } else if (pages[m].addr < addr) {
+            l = m + 1;
+        } else {
+            r = m - 1;
         }
     }
 
-    size_t n = lfsr_get_random() % npage;
-    *result = &pages[n];
-    return false;
+    return -1;
+}
+
+/**
+ * Sort a set of pages using the insertion sort algorithm.
+ *
+ * @param keep_page
+ * @return
+ */
+static struct page_s *sort_pages(struct page_s *pages, const size_t npage, const uint32_t addr)
+{
+    size_t n = 0;
+
+    for (size_t i = 1; i < npage; i++) {
+        struct page_s tmp;
+
+        memcpy(&tmp, &pages[i], sizeof(tmp));
+
+        ssize_t j = i - 1;
+        while (j >= 0 && pages[j].addr > tmp.addr) {
+            memcpy(&pages[j + 1], &pages[j], sizeof(*pages));
+            if (pages[j].addr == addr) {
+                n = j + 1;
+            }
+            j--;
+        }
+
+        memcpy(&pages[j + 1], &tmp, sizeof(tmp));
+        if (tmp.addr == addr) {
+            n = j + 1;
+        }
+    }
+
+    return &pages[n];
+}
+
+static struct page_s *find_page(uint32_t addr, const struct page_s *pages, const size_t npage)
+{
+    int n = binary_search(pages, npage, addr);
+
+    if (n < 0) {
+        return NULL;
+    } else {
+        return &pages[n];
+    }
+}
+
+static struct page_s *choose_page(struct page_s *pages, size_t npage)
+{
+    size_t n;
+
+    /* since pages are sorted by their addresses, free pages are first the array entries */
+    if (pages[0].addr == 0) {
+        n = 0;
+    } else {
+        n = lfsr_get_random() % npage;
+    }
+
+    return &pages[n];
 }
 
 /**
@@ -520,9 +569,12 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         return NULL;
     }
 
-    if (find_page(addr, pages, npage, &page)) {
+    page = find_page(addr, pages, npage);
+    if (page != NULL) {
         return page;
     }
+
+    page = choose_page(pages, npage);
 
     /* don't commit page if it never was retrieved (its address is zero) */
     if (writeable && page->addr != 0) {
@@ -554,19 +606,21 @@ static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
         }
     }
 
-    page->addr = addr;
-
     if (!zero_page) {
-        if (!stream_request_page(page, !writeable)) {
+        if (!stream_request_page(page, addr, !writeable)) {
             return NULL;
         }
     } else {
+        page->addr = addr;
         /* the IV was incremented by 1 during commit */
         page->iv = 1;
         memset(page->data, '\x00', sizeof(page->data));
     }
 
-    return page;
+    // XXX - invalidate current code page?
+    //app.current_code_page = NULL;
+
+    return sort_pages(pages, npage, page->addr);
 }
 
 /**
@@ -587,6 +641,17 @@ static bool fit_in_page(uint32_t addr, size_t size)
     return true;
 }
 
+static struct page_s *request_code_page(const uint32_t addr)
+{
+    struct page_s *page = choose_page(app.code, NPAGE_CODE);
+
+    if (!stream_request_page(page, addr, true)) {
+        return NULL;
+    }
+
+    return sort_pages(app.code, NPAGE_CODE, page->addr);
+}
+
 static bool get_instruction(const uint32_t addr, uint32_t *instruction)
 {
     struct page_s *page;
@@ -600,11 +665,14 @@ static bool get_instruction(const uint32_t addr, uint32_t *instruction)
     if (app.current_code_page != NULL && app.current_code_page->addr == page_addr) {
         page = app.current_code_page;
     } else {
-        if (!find_page(page_addr, app.code, NPAGE_CODE, &page)) {
-            page->addr = page_addr;
-            if (!stream_request_page(page, true)) {
+        page = find_page(page_addr, app.code, NPAGE_CODE);
+        if (page == NULL) {
+            page = request_code_page(page_addr);
+            if (page == NULL) {
+                // this shouldn't happen
                 return false;
             }
+
             app.current_code_page = page;
         }
     }
