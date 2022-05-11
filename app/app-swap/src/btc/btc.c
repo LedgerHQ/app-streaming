@@ -138,7 +138,7 @@ static bool btc_get_printable_amount(const uint8_t *bytes,
 
     uint8_t amount[8] = { 0 };
     memcpy(amount + (8 - size), bytes, size);
-    btchip_convert_hex_amount_to_displayable(amount, out + 4);
+    btchip_convert_hex_amount_to_displayable(amount, (uint8_t *)(out + 4));
 
     return true;
 }

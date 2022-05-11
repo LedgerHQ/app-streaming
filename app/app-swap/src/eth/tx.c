@@ -18,6 +18,7 @@ static uint8_t unhex_helper(char c)
     } else {
         // XXX
         // fatal("invalid hex character");
+        return 0;
     }
 }
 
@@ -137,7 +138,7 @@ static bool encode_gas_limit(uint8_t **buffer, size_t *maxsize)
 // address size: 42 bytes
 static bool encode_address(const char *address, uint8_t **buffer, size_t *maxsize)
 {
-    const uint8_t *p = (strncmp(address, "0x", 2) != 0) ? address : address + 2;
+    const char *p = (strncmp(address, "0x", 2) != 0) ? address : address + 2;
     const size_t len = strlen(p);
 
     uint8_t bin[20];
