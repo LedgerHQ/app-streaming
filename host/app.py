@@ -14,8 +14,8 @@ from manifest import Manifest
 
 class App:
     def __init__(self, manifest: bytes, hsm_signature: bytes, code_pages: bytes, data_pages: bytes,
-                 device_signature: Optional[bytes] = None, code_macs: Optional[bytes] = None,
-                 data_macs: Optional[bytes] = None) -> None:
+                 device_signature: Optional[bytes] = None, device_pubkey: Optional[bytes] = None,
+                 code_macs: Optional[bytes] = None, data_macs: Optional[bytes] = None) -> None:
         self.code_pages = App._pages_to_list(code_pages)
         self.data_pages = App._pages_to_list(data_pages)
 
@@ -23,6 +23,8 @@ class App:
             self.code_macs = App._macs_to_list(code_macs)
         if data_macs:
             self.data_macs = App._macs_to_list(data_macs)
+        if device_pubkey:
+            self.device_pubkey = device_pubkey
 
         self.manifest = manifest
         self.manifest_hsm_signature = hsm_signature
@@ -65,6 +67,7 @@ class App:
                 app.manifest_device_signature = zf.read("device/manifest.device.sig")
                 app.code_macs = App._macs_to_list(zf.read("device/code.mac.bin"))
                 app.data_macs = App._macs_to_list(zf.read("device/data.mac.bin"))
+                app.device_pubkey = zf.read("device/device.pubkey")
             else:
                 app.manifest_device_signature = None
 
@@ -81,6 +84,7 @@ class App:
                 zf.writestr("device/manifest.device.sig", self.manifest_device_signature)
                 zf.writestr("device/code.mac.bin", b"".join(self.code_macs))
                 zf.writestr("device/data.mac.bin", b"".join(self.data_macs))
+                zf.writestr("device/device.pubkey", self.device_pubkey)
 
 
 def decrypt_hmac(enc_macs, aes):
@@ -91,7 +95,16 @@ def decrypt_hmac(enc_macs, aes):
     return result
 
 
+def device_get_pubkey(client: CommClient, app: App) -> bytes:
+    app_hash = Manifest(app.manifest).app_hash
+    apdu = client.exchange(0x10, data=app_hash, cla=0x34)
+    assert apdu.status == 0x9000
+    return apdu.data
+
+
 def device_sign_app(client: CommClient, app: App) -> None:
+    device_pubkey = device_get_pubkey(client, app)
+
     signature = app.manifest_hsm_signature
     data = app.manifest + signature.ljust(72, b"\x00") + len(signature).to_bytes(1, "little")
 
@@ -125,6 +138,7 @@ def device_sign_app(client: CommClient, app: App) -> None:
     app.code_macs = decrypt_hmac(code_macs, aes)
     app.data_macs = decrypt_hmac(data_macs, aes)
     app.manifest_device_signature = s.signature[:s.sig_size]
+    app.device_pubkey = device_pubkey
 
 
 if __name__ == "__main__":

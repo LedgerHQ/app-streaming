@@ -30,15 +30,6 @@ struct cmd_request_signature_s {
 _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct cmd_request_signature_s),
                "invalid struct cmd_request_signature_s");
 
-struct cmd_response_app_s {
-    struct manifest_s manifest;
-    uint8_t signature[72];
-    size_t signature_size;
-} __attribute__((packed));
-
-_Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct cmd_response_app_s),
-               "invalid struct cmd_response_app_s");
-
 static void generate_hmac(const uint32_t addr,
                           const uint8_t *page,
                           const uint8_t *hmac_key,

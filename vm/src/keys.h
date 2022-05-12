@@ -13,6 +13,7 @@ struct hmac_key_s {
 void nv_app_state_init(void);
 void derive_hmac_key(const uint8_t *app_hash, struct hmac_key_s *key);
 bool sign_manifest(const struct manifest_s *manifest, uint8_t *sig, size_t *sig_size);
+bool get_device_pubkey(const uint8_t *app_hash, cx_ecfp_public_key_t *pubkey);
 bool verify_manifest_device_signature(const struct manifest_s *manifest,
                                       const uint8_t *signature,
                                       const size_t signature_size);
