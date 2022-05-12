@@ -8,7 +8,7 @@ from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from typing import Any, Dict
 
 from comm import Apdu, CommClient, get_client
-from app import App, device_sign_app
+from app import App, device_get_pubkey, device_sign_app
 from hsm import hsm_sign_app
 from manifest import Manifest
 from merkletree import Entry, MerkleTree
@@ -226,6 +226,11 @@ if __name__ == "__main__":
     if zipfile.is_zipfile(args.app):
         zip_path = args.app
         app = App.from_zip(zip_path)
+        with get_client(args.transport, args.speculos) as client:
+            device_pubkey = device_get_pubkey(client, app)
+        if app.device_pubkey != device_pubkey:
+            logger.warn("the app isn't signed for this device...")
+            app.manifest_device_signature = None
     else:
         logger.warn("app is an ELF file... retrieving the HSM signature")
         zip_path = "/tmp/app.zip"
