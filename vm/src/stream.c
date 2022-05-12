@@ -10,38 +10,11 @@
 #include "apdu.h"
 #include "error.h"
 #include "keys.h"
-#include "lfsr.h"
 #include "loading.h"
+#include "memory.h"
 #include "merkle.h"
 #include "stream.h"
 #include "ui.h"
-
-#ifdef TARGET_NANOX
-#define NPAGE_CODE  65
-#define NPAGE_STACK 10
-#define NPAGE_DATA  10
-#else
-#define NPAGE_CODE  3
-#define NPAGE_STACK 3
-#define NPAGE_DATA  1
-#endif
-
-enum page_prot_e {
-    PAGE_PROT_RO,
-    PAGE_PROT_RW,
-};
-
-struct page_s {
-    uint32_t addr;
-    uint8_t data[PAGE_SIZE];
-    uint32_t iv;
-};
-
-struct cache_s {
-    struct page_s *pages;
-    size_t npage;
-    bool writeable;
-};
 
 struct key_s {
     cx_aes_key_t aes;
@@ -50,21 +23,6 @@ struct key_s {
 
 struct app_s {
     struct rv_cpu cpu;
-
-    struct section_s sections[NUM_SECTIONS];
-
-    struct page_s code_pages[NPAGE_CODE];
-    struct page_s stack_pages[NPAGE_STACK];
-    struct page_s data_pages[NPAGE_DATA];
-
-    struct cache_s code;
-    struct cache_s stack;
-    struct cache_s data;
-
-    struct page_s *current_code_page;
-
-    uint32_t bss_max;
-    uint32_t stack_min;
 
     uint8_t hmac_static_key[32];
     struct key_s dynamic_key;
@@ -147,7 +105,7 @@ static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
     }
 }
 
-static bool stream_request_page(struct page_s *page, const uint32_t addr, const bool read_only)
+bool stream_request_page(struct page_s *page, const uint32_t addr, const bool read_only)
 {
     struct cmd_request_page_s *cmd = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
@@ -255,7 +213,7 @@ static bool stream_request_page(struct page_s *page, const uint32_t addr, const 
 /**
  * @return true on success, false otherwise
  */
-static bool stream_commit_page(struct page_s *page, bool insert)
+bool stream_commit_page(struct page_s *page, bool insert)
 {
     struct cmd_commit_page_s *cmd1 = (struct cmd_commit_page_s *)G_io_apdu_buffer;
     cx_hmac_sha256_t hmac_sha256_ctx;
@@ -342,16 +300,6 @@ static bool stream_commit_page(struct page_s *page, bool insert)
     return true;
 }
 
-static void init_cache(struct cache_s *cache,
-                       struct page_s *pages,
-                       const size_t npage,
-                       const bool writeable)
-{
-    cache->pages = pages;
-    cache->npage = npage;
-    cache->writeable = writeable;
-}
-
 static void init_static_key(struct hmac_key_s *key)
 {
     memcpy(app.hmac_static_key, key->bytes, sizeof(app.hmac_static_key));
@@ -417,30 +365,24 @@ bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
     init_dynamic_keys();
 
     /* 5. initialize app characteristics from the manifest */
-    memcpy(app.sections, manifest->sections, sizeof(app.sections));
+    init_memory_sections(manifest->sections);
 
-    uint32_t sp = app.sections[SECTION_STACK].end;
+    uint32_t sp = manifest->sections[SECTION_STACK].end;
     if (PAGE_START(sp) != sp) {
         err("invalid stack end\n");
         return false;
     }
 
-    app.stack_min = sp;
-    app.bss_max = PAGE_START(manifest->bss);
+    init_memory_addresses(manifest->bss, sp);
 
     app.cpu.pc = manifest->pc;
     app.cpu.regs[RV_REG_SP] = sp - 4;
 
-    init_cache(&app.code, app.code_pages, NPAGE_CODE, false);
-    init_cache(&app.stack, app.stack_pages, NPAGE_STACK, true);
-    init_cache(&app.data, app.data_pages, NPAGE_DATA, true);
-
-    app.current_code_page = NULL;
+    init_caches();
 
     init_merkle_tree(manifest->merkle_tree_root_hash, manifest->merkle_tree_size,
                      (struct entry_s *)manifest->last_entry_init);
 
-    lfsr_init();
     sys_app_loading_stop();
     set_app_name(manifest->name);
 
@@ -456,214 +398,6 @@ static void u32hex(uint32_t n, char *buf)
         buf[i * 2] = hex[(n >> ((24 - i * 8) + 4)) & 0xf];
         buf[i * 2 + 1] = hex[(n >> (24 - i * 8)) & 0xf];
     }
-}
-
-static bool in_section(enum section_e section, uint32_t addr)
-{
-    return addr >= app.sections[section].start && addr < app.sections[section].end;
-}
-
-/**
- * The page argument is just here to avoid declaring this structure on the stack
- * since this struct is quite large.
- *
- * @return true on success, false otherwise
- */
-static bool create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
-{
-    uint32_t addr;
-
-    for (addr = from; addr < to; addr += PAGE_SIZE) {
-        memset(page->data, '\x00', sizeof(page->data));
-        page->addr = addr;
-        /* During the first commit, the IV will be incremented to 1 and the
-         * dynamic keys will be used for decryption and HMAC. */
-        page->iv = 0;
-        if (!stream_commit_page(page, true)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-static int binary_search(const struct page_s *pages, const size_t npage, const uint32_t addr)
-{
-    int l = 0;
-    int r = npage - 1;
-
-    while (l <= r) {
-        int m = l + (r - l) / 2;
-        if (pages[m].addr == addr) {
-            return m;
-        } else if (pages[m].addr < addr) {
-            l = m + 1;
-        } else {
-            r = m - 1;
-        }
-    }
-
-    return -1;
-}
-
-/**
- * Sort a set of pages using the insertion sort algorithm.
- *
- * @return the page whose address is given as parameter
- */
-static struct page_s *sort_pages(struct page_s *pages, const size_t npage, const uint32_t addr)
-{
-    size_t n = npage;
-
-    if (pages[0].addr == addr) {
-        n = 0;
-    }
-
-    for (size_t i = 1; i < npage; i++) {
-        struct page_s tmp;
-
-        memcpy(&tmp, &pages[i], sizeof(tmp));
-
-        ssize_t j = i - 1;
-        while (j >= 0 && pages[j].addr > tmp.addr) {
-            memcpy(&pages[j + 1], &pages[j], sizeof(*pages));
-            if (pages[j].addr == addr) {
-                n = j + 1;
-            }
-            j--;
-        }
-
-        memcpy(&pages[j + 1], &tmp, sizeof(tmp));
-        if (tmp.addr == addr) {
-            n = j + 1;
-        }
-    }
-
-    return (n < npage) ? &pages[n] : NULL;
-}
-
-static struct page_s *sort_cache(struct cache_s *cache, const uint32_t addr)
-{
-    return sort_pages(cache->pages, cache->npage, addr);
-}
-
-static struct page_s *find_page(struct cache_s *cache, uint32_t addr)
-{
-    int n = binary_search(cache->pages, cache->npage, addr);
-
-    if (n < 0) {
-        return NULL;
-    } else {
-        return &cache->pages[n];
-    }
-}
-
-static struct page_s *choose_page(struct cache_s *cache)
-{
-    size_t n;
-
-    /* since pages are sorted by their addresses, free pages are first the array entries */
-    if (cache->pages[0].addr == 0) {
-        n = 0;
-    } else {
-        n = lfsr_get_random() % cache->npage;
-    }
-
-    return &cache->pages[n];
-}
-
-static struct page_s *create_page(struct cache_s *cache, const uint32_t addr)
-{
-    struct page_s *page = choose_page(cache);
-
-    /* don't commit page if it never was retrieved (its address is zero) */
-    if (cache->writeable && page->addr != 0) {
-        if (!stream_commit_page(page, false)) {
-            return NULL;
-        }
-    }
-
-    /*
-     * If a heap/stack page is accessed, create unexisting pages if they don't
-     * exist (initialized with zeroes).
-     */
-    bool zero_page = false;
-    if (cache == &app.data) {
-        if (addr >= app.bss_max) {
-            if (!create_empty_pages(app.bss_max, addr + PAGE_SIZE, page)) {
-                return NULL;
-            }
-            app.bss_max = addr + PAGE_SIZE;
-            zero_page = true;
-        }
-    } else if (cache == &app.stack) {
-        if (addr < app.stack_min) {
-            if (!create_empty_pages(PAGE_START(addr), app.stack_min, page)) {
-                return NULL;
-            }
-            app.stack_min = addr;
-            zero_page = true;
-        }
-    }
-
-    if (!zero_page) {
-        if (!stream_request_page(page, addr, !cache->writeable)) {
-            return NULL;
-        }
-    } else {
-        page->addr = addr;
-        /* the IV was incremented by 1 during commit */
-        page->iv = 1;
-        memset(page->data, '\x00', sizeof(page->data));
-    }
-
-    if (cache == &app.code) {
-        // The code pages will be sorted, which might result in a stale
-        // current_code_page pointer.
-        app.current_code_page = NULL;
-    }
-
-    return sort_cache(cache, page->addr);
-}
-
-static struct cache_s *get_cache(const uint32_t addr, const enum page_prot_e page_prot)
-{
-    if (in_section(SECTION_CODE, addr)) {
-        if (page_prot != PAGE_PROT_RO) {
-            err("write access to code page\n");
-            return NULL;
-        }
-        return &app.code;
-    } else if (in_section(SECTION_DATA, addr)) {
-        return &app.data;
-    } else if (in_section(SECTION_STACK, addr)) {
-        return &app.stack;
-    } else {
-        err("invalid addr (no section found)\n");
-        return NULL;
-    }
-}
-
-/**
- * @return NULL on error
- */
-static struct page_s *get_page(uint32_t addr, enum page_prot_e page_prot)
-{
-    addr = PAGE_START(addr);
-
-    struct cache_s *cache = get_cache(addr, page_prot);
-    if (cache == NULL) {
-        return NULL;
-    }
-
-    struct page_s *page = find_page(cache, addr);
-    if (page != NULL) {
-        return page;
-    }
-
-    // If the page isn't in the cache, evict a random page from the cache and
-    // initialize it.
-    return create_page(cache, addr);
 }
 
 /**
@@ -684,41 +418,18 @@ static bool fit_in_page(uint32_t addr, size_t size)
     return true;
 }
 
-static struct page_s *get_code_page(const uint32_t addr)
-{
-    struct page_s *page = find_page(&app.code, addr);
-    if (page != NULL) {
-        return page;
-    }
-
-    page = choose_page(&app.code);
-    if (!stream_request_page(page, addr, true)) {
-        return NULL;
-    }
-
-    return sort_cache(&app.code, page->addr);
-}
-
 static bool get_instruction(const uint32_t addr, uint32_t *instruction)
 {
-    struct page_s *page;
-    uint32_t page_addr;
-
     if (!fit_in_page(addr, sizeof(uint32_t))) {
         return false;
     }
-    page_addr = PAGE_START(addr);
 
-    if (app.current_code_page != NULL && app.current_code_page->addr == page_addr) {
-        page = app.current_code_page;
-    } else {
-        page = get_code_page(page_addr);
-        if (page == NULL) {
-            // this shouldn't happen
-            return false;
-        }
+    uint32_t page_addr = PAGE_START(addr);
 
-        app.current_code_page = page;
+    struct page_s *page = get_code_page(page_addr);
+    if (page == NULL) {
+        // this shouldn't happen
+        return false;
     }
 
     uint32_t offset = addr - page_addr;
