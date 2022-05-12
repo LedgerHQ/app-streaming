@@ -3,19 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "page.h"
-
-enum section_e {
-    SECTION_CODE,
-    SECTION_STACK,
-    SECTION_DATA,
-    NUM_SECTIONS,
-};
-
-struct section_s {
-    uint32_t start;
-    uint32_t end;
-} __attribute__((packed));
+#include "memory.h"
 
 struct manifest_s {
     uint32_t manifest_version; /* not used for now */
@@ -34,5 +22,7 @@ struct manifest_s {
 
 bool stream_init_app(const uint8_t *buffer, const size_t size);
 void stream_run_app(void);
+bool stream_commit_page(struct page_s *page, bool insert);
+bool stream_request_page(struct page_s *page, const uint32_t addr, const bool read_only);
 bool mem_read(const uint32_t addr, const size_t size, uint32_t *value);
 bool mem_write(const uint32_t addr, const size_t size, const uint32_t value);

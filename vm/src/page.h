@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define PAGE_SIZE 256
 #define PAGE_MASK ~(PAGE_SIZE - 1)
 
@@ -14,3 +16,14 @@
 
 /* returns the minimum size of a guest buffer within a page */
 #define BUFFER_MIN_SIZE(addr, size) MIN(BUFFER_MAX_SIZE(addr), size)
+
+enum page_prot_e {
+    PAGE_PROT_RO,
+    PAGE_PROT_RW,
+};
+
+struct page_s {
+    uint32_t addr;
+    uint8_t data[PAGE_SIZE];
+    uint32_t iv;
+};
