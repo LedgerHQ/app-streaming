@@ -43,9 +43,16 @@ struct apdu_s {
 
 _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct apdu_s), "invalid IO_APDU_BUFFER_SIZE");
 
-struct cmd_response_app_s;
+struct cmd_response_app_s {
+    struct manifest_s manifest;
+    uint8_t signature[72];
+    uint8_t signature_size;
+} __attribute__((packed));
 
-size_t handle_general_apdu(uint8_t ins, uint8_t *data);
+_Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct cmd_response_app_s),
+               "invalid struct cmd_response_app_s");
+
+size_t handle_general_apdu(uint8_t ins, uint8_t *data, size_t size);
 bool handle_sign_app(const struct cmd_response_app_s *response, size_t *tx);
 
 static inline struct apdu_s *parse_apdu(size_t size)

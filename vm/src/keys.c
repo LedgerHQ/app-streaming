@@ -118,7 +118,7 @@ bool sign_manifest(const struct manifest_s *manifest, uint8_t *sig, size_t *sig_
     return true;
 }
 
-static bool get_device_pubkey(const uint8_t *app_hash, cx_ecfp_public_key_t *pubkey)
+bool get_device_pubkey(const uint8_t *app_hash, cx_ecfp_public_key_t *pubkey)
 {
     cx_ecfp_private_key_t privkey;
     if (!get_privkey(app_hash, &privkey)) {

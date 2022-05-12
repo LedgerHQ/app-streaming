@@ -64,13 +64,14 @@ static void app_main_(void)
         ret = io_exchange(CHANNEL_APDU, tx);
 
         if (!apdu_parser(&cmd, G_io_apdu_buffer, ret)) {
-            //PRINTF("=> /!\\ BAD LENGTH: %.*H\n", ret, G_io_apdu_buffer);
-            //io_send_sw(SW_WRONG_DATA_LENGTH);
+            G_io_apdu_buffer[0] = 0x63;
+            G_io_apdu_buffer[1] = 0x63;
+            tx = 2;
             continue;
         }
 
         if (cmd.cla == CLA_GENERAL) {
-            tx = handle_general_apdu(cmd.ins, &G_io_apdu_buffer[OFFSET_CDATA]);
+            tx = handle_general_apdu(cmd.ins, &G_io_apdu_buffer[OFFSET_CDATA], cmd.lc);
             continue;
         }
 
