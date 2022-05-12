@@ -350,7 +350,7 @@ bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
 
     /* 3. verify manifest signature */
     if (!verify_manifest_device_signature(manifest, signature, signature_size)) {
-        err("invalid manifest\n");
+        err("invalid manifest signature\n");
         return false;
     }
 
