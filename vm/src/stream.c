@@ -41,6 +41,9 @@ struct cache_s {
     struct page_s *pages;
     size_t npage;
     bool writeable;
+    // Only used for the code page cache currently. It doesn't improve
+    // performances for stack and data pages.
+    struct page_s *current_page;
 };
 
 struct key_s {
@@ -60,8 +63,6 @@ struct app_s {
     struct cache_s code;
     struct cache_s stack;
     struct cache_s data;
-
-    struct page_s *current_code_page;
 
     uint32_t bss_max;
     uint32_t stack_min;
@@ -350,6 +351,7 @@ static void init_cache(struct cache_s *cache,
     cache->pages = pages;
     cache->npage = npage;
     cache->writeable = writeable;
+    cache->current_page = NULL;
 }
 
 static void init_static_key(struct hmac_key_s *key)
@@ -434,8 +436,6 @@ bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
     init_cache(&app.code, app.code_pages, NPAGE_CODE, false);
     init_cache(&app.stack, app.stack_pages, NPAGE_STACK, true);
     init_cache(&app.data, app.data_pages, NPAGE_DATA, true);
-
-    app.current_code_page = NULL;
 
     init_merkle_tree(manifest->merkle_tree_root_hash, manifest->merkle_tree_size,
                      (struct entry_s *)manifest->last_entry_init);
@@ -617,11 +617,8 @@ static struct page_s *create_page(struct cache_s *cache, const uint32_t addr)
         memset(page->data, '\x00', sizeof(page->data));
     }
 
-    if (cache == &app.code) {
-        // The code pages will be sorted, which might result in a stale
-        // current_code_page pointer.
-        app.current_code_page = NULL;
-    }
+    // The code pages will be sorted and cache->current_page might point to
+    // another page. It has no consequences.
 
     return sort_cache(cache, page->addr);
 }
@@ -709,8 +706,8 @@ static bool get_instruction(const uint32_t addr, uint32_t *instruction)
     }
     page_addr = PAGE_START(addr);
 
-    if (app.current_code_page != NULL && app.current_code_page->addr == page_addr) {
-        page = app.current_code_page;
+    if (app.code.current_page != NULL && app.code.current_page->addr == page_addr) {
+        page = app.code.current_page;
     } else {
         page = get_code_page(page_addr);
         if (page == NULL) {
@@ -718,7 +715,7 @@ static bool get_instruction(const uint32_t addr, uint32_t *instruction)
             return false;
         }
 
-        app.current_code_page = page;
+        app.code.current_page = page;
     }
 
     uint32_t offset = addr - page_addr;
