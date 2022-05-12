@@ -95,44 +95,44 @@ static int binary_search(const struct page_s *pages, const size_t npage, const u
 }
 
 /**
- * Sort a set of pages using the insertion sort algorithm.
+ * Reorder an array of pages given an unsorted page. It requires the other pages
+ * to be sorted in ascending order according to their addresses.
  *
- * @return the page whose address is given as parameter
+ * @return the page given as argument, after reordering
  */
-static struct page_s *sort_pages(struct page_s *pages, const size_t npage, const uint32_t addr)
+static struct page_s *reorder_pages(struct page_s *pages, const size_t npage, struct page_s *page)
 {
-    size_t n = npage;
+    const uint32_t addr = page->addr;
+    const size_t n = page - pages;
 
-    if (pages[0].addr == addr) {
-        n = 0;
-    }
-
-    for (size_t i = 1; i < npage; i++) {
-        struct page_s tmp;
-
-        memcpy(&tmp, &pages[i], sizeof(tmp));
-
-        ssize_t j = i - 1;
-        while (j >= 0 && pages[j].addr > tmp.addr) {
-            memcpy(&pages[j + 1], &pages[j], sizeof(*pages));
-            if (pages[j].addr == addr) {
-                n = j + 1;
+    if (n > 0 && addr < pages[n - 1].addr) {
+        for (size_t i = 0; i < n; i++) {
+            if (addr < pages[i].addr) {
+                struct page_s tmp;
+                memcpy(&tmp, page, sizeof(*page));
+                memmove(&pages[i + 1], &pages[i], (n - i) * sizeof(*pages));
+                memcpy(&pages[i], &tmp, sizeof(tmp));
+                return &pages[i];
             }
-            j--;
         }
-
-        memcpy(&pages[j + 1], &tmp, sizeof(tmp));
-        if (tmp.addr == addr) {
-            n = j + 1;
+    } else if (n < npage - 1 && addr > pages[n + 1].addr) {
+        for (size_t i = npage - 1; i > n; i--) {
+            if (addr > pages[i].addr) {
+                struct page_s tmp;
+                memcpy(&tmp, page, sizeof(*page));
+                memmove(&pages[n], &pages[n + 1], (i - n) * sizeof(*pages));
+                memcpy(&pages[i], &tmp, sizeof(tmp));
+                return &pages[i];
+            }
         }
     }
 
-    return (n < npage) ? &pages[n] : NULL;
+    return page;
 }
 
-static struct page_s *sort_cache(struct cache_s *cache, const uint32_t addr)
+static struct page_s *reorder_cache(struct cache_s *cache, struct page_s *page)
 {
-    return sort_pages(cache->pages, cache->npage, addr);
+    return reorder_pages(cache->pages, cache->npage, page);
 }
 
 static struct page_s *find_page(struct cache_s *cache, uint32_t addr)
@@ -146,11 +146,11 @@ static struct page_s *find_page(struct cache_s *cache, uint32_t addr)
     }
 }
 
-static struct page_s *choose_page(struct cache_s *cache)
+static struct page_s *evict_page(struct cache_s *cache)
 {
     size_t n;
 
-    /* since pages are sorted by their addresses, free pages are first the array entries */
+    /* since pages are sorted by their addresses, free pages are the first array entries */
     if (cache->pages[0].addr == 0) {
         n = 0;
     } else {
@@ -186,7 +186,7 @@ static bool create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
 
 static struct page_s *create_page(struct cache_s *cache, const uint32_t addr)
 {
-    struct page_s *page = choose_page(cache);
+    struct page_s *page = evict_page(cache);
 
     /* don't commit page if it never was retrieved (its address is zero) */
     if (cache->writeable && page->addr != 0) {
@@ -232,7 +232,7 @@ static struct page_s *create_page(struct cache_s *cache, const uint32_t addr)
     // The code pages will be sorted and cache->current_page might point to
     // another page. It has no consequences.
 
-    return sort_cache(cache, page->addr);
+    return reorder_cache(cache, page);
 }
 
 static bool in_section(enum section_e section, uint32_t addr)
@@ -291,12 +291,12 @@ struct page_s *get_code_page(const uint32_t addr)
         return page;
     }
 
-    page = choose_page(&memory.code);
+    page = evict_page(&memory.code);
     if (!stream_request_page(page, addr, true)) {
         return NULL;
     }
 
-    memory.code.current_page = sort_cache(&memory.code, page->addr);
+    memory.code.current_page = reorder_cache(&memory.code, page);
 
     return memory.code.current_page;
 }
