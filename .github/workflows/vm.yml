@@ -8,8 +8,11 @@ on:
   pull_request:
     branches: [ main ]
 
-jobs:
+defaults:
+  run:
+    working-directory: vm/
 
+jobs:
   build:
     name: Clang Static Analyzer
     runs-on: ubuntu-latest
@@ -23,13 +26,23 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
 
+      - name: Lint tests
+        run: |
+          find tests/ -name '*.[ch]' -exec clang-format -style=file -Werror --dry-run '{}' '+'
+
+      - name: Tests
+        run: |
+          cmake -Bbuild -Htests/
+          make -C build/
+          make -C build/ test
+
       - name: Build
         run: |
-           make -C vm/ BOLOS_SDK=$NANOX_SDK
+          make BOLOS_SDK=$NANOX_SDK
 
       - name: Build with Clang Static Analyzer
         run: |
-          scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make -C vm/ BOLOS_SDK=$NANOX_SDK
+          scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make BOLOS_SDK=$NANOX_SDK
       - uses: actions/upload-artifact@v2
         if: failure()
         with:

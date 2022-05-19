@@ -286,6 +286,10 @@ struct page_s *get_code_page(const uint32_t addr)
         return memory.code.current_page;
     }
 
+    if (!in_section(SECTION_CODE, addr)) {
+        return NULL;
+    }
+
     struct page_s *page = find_page(&memory.code, addr);
     if (page != NULL) {
         return page;
