@@ -11,4 +11,4 @@ Big picture and concepts of the streaming idea:
 ## How-to develop apps
 
 - [How to build a RISC-V app](app-dev.md)
-- [How to build native apps](build-native.dev) and run tests
+- [How to build native apps](build-native.md) and run tests
