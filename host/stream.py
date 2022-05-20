@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import argparse
 import logging
 import zipfile
 
+from argparse import ArgumentParser
 from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from comm import Apdu, CommClient, get_client
 from app import App, device_get_pubkey, device_sign_app
@@ -13,6 +13,9 @@ from hsm import hsm_sign_app
 from manifest import Manifest
 from merkletree import Entry, MerkleTree
 from server import Server
+
+
+logger = logging.getLogger()
 
 
 class Page:
@@ -62,6 +65,7 @@ class Stream:
         self.recv_buffer = b""
         self.recv_buffer_counter = 0
 
+        self.initialized = False
         self.client = client
 
     def _get_page(self, addr: int) -> Page:
@@ -84,10 +88,15 @@ class Stream:
         return struct.parse(data)
 
     def init_app(self) -> Apdu:
+        assert not self.initialized
+
         apdu = self.client.exchange(ins=0x00, data=self.signature)
         assert apdu.status == 0x6701
         # pad with 3 bytes because of alignment
         data = b"\x00" * 3 + self.manifest
+
+        self.initialized = True
+
         return self.client.exchange(ins=0x00, data=data)
 
     def handle_read_access(self, data: bytes) -> Apdu:
@@ -148,7 +157,7 @@ class Stream:
 
         return self.client.exchange(0x02, data=proof)
 
-    def handle_send_buffer(self, data: bytes) -> Apdu:
+    def handle_send_buffer(self, data: bytes) -> bool:
         logger.info(f"got buffer {data!r}")
 
         request = Stream._parse_request(Struct("data" / Bytes(249), "size" / Int8ul, "counter" / Int32ul), data)
@@ -160,20 +169,10 @@ class Stream:
         assert request.size <= 249
         self.send_buffer += request.data[:request.size]
 
-        if stop:
-            logger.info(f"received buffer: {self.send_buffer!r} (len: {len(self.send_buffer)})")
-            self.server.send_response(self.send_buffer)
-            self.send_buffer = b""
-            self.send_buffer_counter = 0
-
-        return self.client.exchange(0x00, data=b"")
+        return stop
 
     def handle_recv_buffer(self, data: bytes) -> Apdu:
         request = Stream._parse_request(Struct("counter" / Int32ul, "maxsize" / Int16ul), data)
-
-        if len(self.recv_buffer) == 0:
-            self.server = Server()
-            self.recv_buffer = self.server.recv_request()
 
         assert self.recv_buffer_counter == request.counter
         self.recv_buffer_counter += 1
@@ -207,62 +206,120 @@ class Stream:
         message = request.message.rstrip(b"\x00")
         logger.warn(f"app encountered a fatal error: {message}")
 
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
-    logger = logging.getLogger("stream")
-
-    parser = argparse.ArgumentParser(description="RISC-V vm companion.")
-    parser.add_argument("--app", type=str, required=True, help="encrypted application path (.zip)")
-    parser.add_argument("--speculos", action="store_true", help="use speculos")
-    parser.add_argument("--transport", default="usb", choices=["ble", "usb"])
-    parser.add_argument("--verbose", action="store_true", help="")
-
-    args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    if zipfile.is_zipfile(args.app):
-        zip_path = args.app
-        app = App.from_zip(zip_path)
-        with get_client(args.transport, args.speculos) as client:
-            device_pubkey = device_get_pubkey(client, app)
-        if app.device_pubkey != device_pubkey:
-            logger.warn("the app isn't signed for this device...")
-            app.manifest_device_signature = None
-    else:
-        logger.warn("app is an ELF file... retrieving the HSM signature")
-        zip_path = "/tmp/app.zip"
-        app = hsm_sign_app(args.app)
-        app.export_zip(zip_path)
-
-    if app.manifest_device_signature is None:
-        logger.warn("making the device sign the app")
-        with get_client(args.transport, args.speculos) as client:
-            device_sign_app(client, app)
-        app.export_zip(zip_path)
-
-    with get_client(args.transport, args.speculos) as client:
-        stream = Stream(app, client)
-        apdu = stream.init_app()
+    def exchange(self, recv_buffer: bytes) -> Optional[bytes]:
+        if not self.initialized:
+            apdu = self.init_app()
+        else:
+            # resume execution after previous exchange call
+            apdu = self.client.exchange(0x00, data=b"")
 
         while True:
             logger.debug(f"[<] {apdu.status:#06x} {apdu.data[:8].hex()}...")
             if apdu.status == 0x6101:
-                apdu = stream.handle_read_access(apdu.data)
+                apdu = self.handle_read_access(apdu.data)
             elif apdu.status == 0x6201:
-                apdu = stream.handle_write_access(apdu.data)
+                apdu = self.handle_write_access(apdu.data)
             elif apdu.status == 0x6301:
-                apdu = stream.handle_send_buffer(apdu.data)
+                stop = self.handle_send_buffer(apdu.data)
+                if stop:
+                    logger.info(f"received buffer: {self.send_buffer!r} (len: {len(self.send_buffer)})")
+                    data = self.send_buffer
+                    self.send_buffer = b""
+                    self.send_buffer_counter = 0
+                    return data
+                else:
+                    apdu = self.client.exchange(0x00, data=b"")
             elif apdu.status == 0x6401:
-                apdu = stream.handle_recv_buffer(apdu.data)
+                if len(self.recv_buffer) == 0:
+                    # The app mustn't call recv() twice without having called
+                    # send() after the first call.
+                    assert recv_buffer is not None
+                    self.recv_buffer = recv_buffer
+                    recv_buffer = None
+                apdu = self.handle_recv_buffer(apdu.data)
             elif apdu.status == 0x6501:
-                stream.handle_exit(apdu.data)
+                self.handle_exit(apdu.data)
                 break
             elif apdu.status == 0x6601:
-                stream.handle_fatal(apdu.data)
+                self.handle_fatal(apdu.data)
                 break
             else:
                 logger.error(f"unexpected status {apdu.status:#06x}, {apdu.data}")
                 assert False
+
+        return None
+
+
+def setup_logging(verbose: bool) -> logging.Logger:
+    log_level = logging.INFO
+    if verbose:
+        log_level = logging.DEBUG
+
+    logging.basicConfig(level=log_level, format="%(asctime)s.%(msecs)03d:%(name)s: %(message)s", datefmt="%H:%M:%S")
+
+    return logging.getLogger("stream")
+
+
+class Streamer:
+    def __init__(self, args) -> None:
+        global logger
+
+        logger = setup_logging(args.verbose)
+
+        if zipfile.is_zipfile(args.app):
+            zip_path = args.app
+            app = App.from_zip(zip_path)
+            with get_client(args.transport, args.speculos) as client:
+                device_pubkey = device_get_pubkey(client, app)
+            if app.device_pubkey != device_pubkey:
+                logger.warn("the app isn't signed for this device...")
+                app.manifest_device_signature = None
+        else:
+            logger.warn("app is an ELF file... retrieving the HSM signature")
+            zip_path = "/tmp/app.zip"
+            app = hsm_sign_app(args.app)
+            app.export_zip(zip_path)
+
+        if app.manifest_device_signature is None:
+            logger.warn("making the device sign the app")
+            with get_client(args.transport, args.speculos) as client:
+                device_sign_app(client, app)
+            app.export_zip(zip_path)
+
+        self.client = get_client(args.transport, args.speculos)
+        self.app = app
+
+    def __enter__(self):
+        self.client.__enter__()
+        self.stream = Stream(self.app, self.client)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.client.__exit__(type, value, traceback)
+        self.client = None
+
+    def exchange(self, recv_buffer: bytes) -> Optional[bytes]:
+        return self.stream.exchange(recv_buffer)
+
+
+def get_stream_arg_parser() -> ArgumentParser:
+    parser = ArgumentParser(description="RISC-V vm companion.")
+    parser.add_argument("--app", type=str, required=True, help="encrypted application path (.zip)")
+    parser.add_argument("--speculos", action="store_true", help="use speculos")
+    parser.add_argument("--transport", default="usb", choices=["ble", "usb"])
+    parser.add_argument("--verbose", action="store_true", help="")
+    return parser
+
+
+if __name__ == "__main__":
+    parser = get_stream_arg_parser()
+    args = parser.parse_args()
+
+    with Streamer(args) as streamer:
+        while True:
+            server = Server()
+            data = server.recv_request()
+            data = streamer.exchange(data)
+            if data is None:
+                break
+            server.send_response(data)
