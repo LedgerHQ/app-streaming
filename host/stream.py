@@ -213,6 +213,7 @@ class Stream:
             # resume execution after previous exchange call
             apdu = self.client.exchange(0x00, data=b"")
 
+        buffer_received = False
         while True:
             logger.debug(f"[<] {apdu.status:#06x} {apdu.data[:8].hex()}...")
             if apdu.status == 0x6101:
@@ -233,9 +234,9 @@ class Stream:
                 if len(self.recv_buffer) == 0:
                     # The app mustn't call recv() twice without having called
                     # send() after the first call.
-                    assert recv_buffer is not None
+                    assert buffer_received is False
                     self.recv_buffer = recv_buffer
-                    recv_buffer = None
+                    buffer_received = True
                 apdu = self.handle_recv_buffer(apdu.data)
             elif apdu.status == 0x6501:
                 self.handle_exit(apdu.data)
@@ -320,10 +321,10 @@ if __name__ == "__main__":
             # read hex line from stdin
             print("> ", end="")
             sys.stdout.flush()
-            data = bytes.fromhex(sys.stdin.readline().strip())
+            request = bytes.fromhex(sys.stdin.readline().strip())
 
-            data = streamer.exchange(data)
-            if data is None:
+            response = streamer.exchange(request)
+            if response is None:
                 break
 
-            print("<", data.hex())
+            print("<", response.hex())
