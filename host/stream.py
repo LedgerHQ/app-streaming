@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import sys
 import zipfile
 
 from argparse import ArgumentParser
@@ -12,7 +13,6 @@ from app import App, device_get_pubkey, device_sign_app
 from hsm import hsm_sign_app
 from manifest import Manifest
 from merkletree import Entry, MerkleTree
-from server import Server
 
 
 logger = logging.getLogger()
@@ -289,7 +289,7 @@ class Streamer:
         self.client = get_client(args.transport, args.speculos)
         self.app = app
 
-    def __enter__(self):
+    def __enter__(self) -> "Streamer":
         self.client.__enter__()
         self.stream = Stream(self.app, self.client)
         return self
@@ -317,9 +317,13 @@ if __name__ == "__main__":
 
     with Streamer(args) as streamer:
         while True:
-            server = Server()
-            data = server.recv_request()
+            # read hex line from stdin
+            print("> ", end="")
+            sys.stdout.flush()
+            data = bytes.fromhex(sys.stdin.readline().strip())
+
             data = streamer.exchange(data)
             if data is None:
                 break
-            server.send_response(data)
+
+            print("<", data.hex())
