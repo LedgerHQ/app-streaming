@@ -179,8 +179,8 @@ class Stream:
 
         buf = self.recv_buffer[:request.maxsize]
         self.recv_buffer = self.recv_buffer[request.maxsize:]
-        print(f"buf: {buf!r}")
-        print(f"buffer: {self.recv_buffer!r}")
+        logger.debug(f"buf: {buf!r}")
+        logger.debug(f"buffer: {self.recv_buffer!r}")
         if len(self.recv_buffer) == 0:
             logger.debug(f"recv buffer last (size: {request.maxsize}, {len(buf)})")
             self.recv_buffer_counter = 0
