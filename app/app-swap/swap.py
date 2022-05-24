@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--action", default="swap", choices=["swap"])
     args = parser.parse_args()
 
-    with stream.Streamer(args) as streamer:
+    with stream.get_streamer(args) as streamer:
         swap = Swap()
 
         data = streamer.exchange(swap.init_swap_prepare_request())

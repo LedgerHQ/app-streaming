@@ -147,7 +147,7 @@ if __name__ == "__main__":
     parser.add_argument("--action", default="get_version", choices=actions)
     args = parser.parse_args()
 
-    with stream.Streamer(args) as streamer:
+    with stream.get_streamer(args) as streamer:
         eth = Eth()
 
         method_name = f"{args.action}_prepare_request"

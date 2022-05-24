@@ -2,6 +2,10 @@ import ctypes
 import signal
 import subprocess
 
+from typing import Optional
+
+from streamer import StreamerABC, setup_logging
+
 
 def set_pdeath(sig=signal.SIGTERM) -> None:
     """Set the parent death signal of the calling process."""
@@ -11,8 +15,16 @@ def set_pdeath(sig=signal.SIGTERM) -> None:
     libc.prctl(PR_SET_PDEATHSIG, sig)
 
 
-class NativeStreamer:
+class NativeStreamer(StreamerABC):
+    """
+    Run a native app (usually x86-64).
+
+    There's no streaming involved since there are no memory restriction in
+    contrary to devices.
+    """
+
     def __init__(self, args) -> None:
+        setup_logging(args.verbose)
         self.path = args.app
 
     def __enter__(self) -> "NativeStreamer":
@@ -33,7 +45,7 @@ class NativeStreamer:
             size -= len(chunk)
         return data
 
-    def exchange(self, request: bytes) -> bytes:
+    def exchange(self, request: bytes) -> Optional[bytes]:
         rsize = len(request).to_bytes(4, "little")
         if self.proc.stdin is None:
             # fix mypy error: Item "None" of "Optional[IO[bytes]]" has no attribute "write"

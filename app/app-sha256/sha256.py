@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser = stream.get_stream_arg_parser()
     args = parser.parse_args()
 
-    with stream.Streamer(args) as streamer:
+    with stream.get_streamer(args) as streamer:
         to_hash = b"a" * 1024
 
         rsize = len(to_hash).to_bytes(4, "little")
