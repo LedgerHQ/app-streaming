@@ -20,6 +20,10 @@ def get_stream_arg_parser() -> ArgumentParser:
 
 
 def get_streamer(args) -> Union[DeviceStreamer, NativeStreamer]:
+    """
+    A metaclass would be better than a function but I failed at making it work
+    with typing.
+    """
     if args.native:
         return NativeStreamer(args)
     else:
