@@ -33,17 +33,30 @@ make load
 
 ### Run the app
 
-Using speculos (2.0.0):
+Using speculos:
 
 ```console
-$ speculos.py --model nanox --display headless vm/bin/app.elf &
-$ ./host/stream.py --speculos --verbose --app ./app/build/app-wip/app
+$ speculos.py --model nanox --sdk 2.0.2 vm/bin/app.elf &
+$ ./host/stream.py --speculos --app ./app/build/app-swap/app-swap
 ```
 
-Or using a real device (2.0.2):
+Or using a real device:
 
 ```console
-$ ./host/stream.py --verbose --app ./app/build/app-wip/app
+$ ./host/stream.py --app ./app/build/app-swap/app-swap
+```
+
+Requests can then be entered in hexadecimal on stdin. Clients are also
+available, for instance for app-swap:
+
+```console
+$ ./app/app-swap/swap.py --speculos --app ./app/build/app-swap/app-swap
+```
+
+Once the app is signed, the `.zip` can be passed as an argument:
+
+```console
+$ ./app/app-swap/swap.py --speculos --app /tmp/app.zip
 ```
 
 ### Sign the app
@@ -52,7 +65,7 @@ While everything is done transparently when passing an ELF file to `stream.py`,
 the following commands can be used to sign an app manually. The app is first
 signed by a (fake) Ledger HSM, then by the device:
 
-```shell
-python host/hsm.py --elf-path app/build/app-ethereum/app-ethereum --app-path /tmp/app.zip
-python host/app.py --speculos --app-path /tmp/app.zip
+```console
+$ python host/hsm.py --elf-path app/build/app-ethereum/app-ethereum --app-path /tmp/app.zip
+$ python host/app.py --speculos --app-path /tmp/app.zip
 ```

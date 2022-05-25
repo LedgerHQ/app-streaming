@@ -22,10 +22,10 @@ Build everything:
 make -C build/native/
 ```
 
-Launch and communicate with a native binary:
+Launch and communicate with a native binary using `--native`:
 
 ```console
-../host/client.py --app build/native/app-ethereum/app-ethereum --plugin app-ethereum/plugin-ethereum.py
+./host/stream.py --native --app ./app/build/app-swap/app-swap
 ```
 
 ## Tests
