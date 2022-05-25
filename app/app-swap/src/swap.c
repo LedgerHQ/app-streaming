@@ -127,13 +127,15 @@ const char *handle_swap(const RequestSwap *req, ResponseSwap *response, swap_ctx
     }
 
     /* generate tx (BTC) */
-    uint8_t buffer[512];
     size_t tx_size = from->create_tx(req->refund_path, req->refund_path_count, tx.payin_address,
                                      tx.amount_to_provider.bytes, tx.amount_to_provider.size,
-                                     req->fee.bytes, req->fee.size, buffer, sizeof(buffer));
+                                     req->fee.bytes, req->fee.size, response->tx.bytes,
+                                     sizeof(response->tx.bytes));
     if (tx_size == 0) {
         return "failed to create tx";
     }
+
+    response->tx.size = tx_size;
 
     return NULL;
 }

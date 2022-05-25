@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rmessage.proto\"\x13\n\x11RequestGetVersion\"%\n\x12ResponseGetVersion\x12\x0f\n\x07version\x18\x01 \x01(\t\"\x11\n\x0fRequestInitSwap\"%\n\x10ResponseInitSwap\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\"\x11\n\x0fRequestInitSell\"%\n\x10ResponseInitSell\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\":\n\x07Partner\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\"\xb9\x01\n\x0bRequestSwap\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\r\n\x05pb_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\x12\x13\n\x0bpayout_path\x18\x05 \x03(\r\x12\x13\n\x0brefund_path\x18\x06 \x03(\r\x12\x1a\n\x12payout_addr_params\x18\x07 \x01(\x0c\x12\x1a\n\x12refund_addr_params\x18\x08 \x01(\x0c\"3\n\x0cResponseSwap\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"X\n\x0bRequestSell\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\x0e\n\x06\x62\x36\x34_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\"3\n\x0cResponseSell\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"\"\n\rResponseError\x12\x11\n\terror_msg\x18\x01 \x01(\t\"\xcf\x01\n\x07Request\x12)\n\x0bget_version\x18\x01 \x01(\x0b\x32\x12.RequestGetVersionH\x00\x12%\n\tinit_swap\x18\x02 \x01(\x0b\x32\x10.RequestInitSwapH\x00\x12%\n\tinit_sell\x18\x03 \x01(\x0b\x32\x10.RequestInitSellH\x00\x12\x1c\n\x04swap\x18\x04 \x01(\x0b\x32\x0c.RequestSwapH\x00\x12\x1c\n\x04sell\x18\x05 \x01(\x0b\x32\x0c.RequestSellH\x00\x42\x0f\n\rmessage_oneof\"\xf6\x01\n\x08Response\x12*\n\x0bget_version\x18\x01 \x01(\x0b\x32\x13.ResponseGetVersionH\x00\x12&\n\tinit_swap\x18\x02 \x01(\x0b\x32\x11.ResponseInitSwapH\x00\x12&\n\tinit_sell\x18\x03 \x01(\x0b\x32\x11.ResponseInitSellH\x00\x12\x1d\n\x04swap\x18\x04 \x01(\x0b\x32\r.ResponseSwapH\x00\x12\x1d\n\x04sell\x18\x05 \x01(\x0b\x32\r.ResponseSellH\x00\x12\x1f\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x0e.ResponseErrorH\x00\x42\x0f\n\rmessage_oneofb\x06proto3'
+  serialized_pb=b'\n\rmessage.proto\"\x13\n\x11RequestGetVersion\"%\n\x12ResponseGetVersion\x12\x0f\n\x07version\x18\x01 \x01(\t\"\x11\n\x0fRequestInitSwap\"%\n\x10ResponseInitSwap\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\"\x11\n\x0fRequestInitSell\"%\n\x10ResponseInitSell\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\":\n\x07Partner\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\"\xb9\x01\n\x0bRequestSwap\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\r\n\x05pb_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\x12\x13\n\x0bpayout_path\x18\x05 \x03(\r\x12\x13\n\x0brefund_path\x18\x06 \x03(\r\x12\x1a\n\x12payout_addr_params\x18\x07 \x01(\x0c\x12\x1a\n\x12refund_addr_params\x18\x08 \x01(\x0c\",\n\x0cResponseSwap\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\n\n\x02tx\x18\x02 \x01(\x0c\"X\n\x0bRequestSell\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\x0e\n\x06\x62\x36\x34_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\"3\n\x0cResponseSell\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"\"\n\rResponseError\x12\x11\n\terror_msg\x18\x01 \x01(\t\"\xcf\x01\n\x07Request\x12)\n\x0bget_version\x18\x01 \x01(\x0b\x32\x12.RequestGetVersionH\x00\x12%\n\tinit_swap\x18\x02 \x01(\x0b\x32\x10.RequestInitSwapH\x00\x12%\n\tinit_sell\x18\x03 \x01(\x0b\x32\x10.RequestInitSellH\x00\x12\x1c\n\x04swap\x18\x04 \x01(\x0b\x32\x0c.RequestSwapH\x00\x12\x1c\n\x04sell\x18\x05 \x01(\x0b\x32\x0c.RequestSellH\x00\x42\x0f\n\rmessage_oneof\"\xf6\x01\n\x08Response\x12*\n\x0bget_version\x18\x01 \x01(\x0b\x32\x13.ResponseGetVersionH\x00\x12&\n\tinit_swap\x18\x02 \x01(\x0b\x32\x11.ResponseInitSwapH\x00\x12&\n\tinit_sell\x18\x03 \x01(\x0b\x32\x11.ResponseInitSellH\x00\x12\x1d\n\x04swap\x18\x04 \x01(\x0b\x32\r.ResponseSwapH\x00\x12\x1d\n\x04sell\x18\x05 \x01(\x0b\x32\r.ResponseSellH\x00\x12\x1f\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x0e.ResponseErrorH\x00\x42\x0f\n\rmessage_oneofb\x06proto3'
 )
 
 
@@ -339,7 +339,7 @@ _RESPONSESWAP = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='signature', full_name='ResponseSwap.signature', index=1,
+      name='tx', full_name='ResponseSwap.tx', index=1,
       number=2, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=b"",
       message_type=None, enum_type=None, containing_type=None,
@@ -358,7 +358,7 @@ _RESPONSESWAP = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=441,
-  serialized_end=492,
+  serialized_end=485,
 )
 
 
@@ -410,8 +410,8 @@ _REQUESTSELL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=494,
-  serialized_end=582,
+  serialized_start=487,
+  serialized_end=575,
 )
 
 
@@ -449,8 +449,8 @@ _RESPONSESELL = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=584,
-  serialized_end=635,
+  serialized_start=577,
+  serialized_end=628,
 )
 
 
@@ -481,8 +481,8 @@ _RESPONSEERROR = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=637,
-  serialized_end=671,
+  serialized_start=630,
+  serialized_end=664,
 )
 
 
@@ -546,8 +546,8 @@ _REQUEST = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=674,
-  serialized_end=881,
+  serialized_start=667,
+  serialized_end=874,
 )
 
 
@@ -618,8 +618,8 @@ _RESPONSE = _descriptor.Descriptor(
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=884,
-  serialized_end=1130,
+  serialized_start=877,
+  serialized_end=1123,
 )
 
 _REQUESTSWAP.fields_by_name['partner'].message_type = _PARTNER

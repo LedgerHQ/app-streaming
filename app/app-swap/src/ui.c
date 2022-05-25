@@ -1,17 +1,3 @@
-/*
-Send
-BTC 0.0001234
-
-Get
-ETH 0.04321
-
-Fees
-BTC 0.00017136
-
-Accept
-and send
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 

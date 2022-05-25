@@ -21,7 +21,7 @@ RequestSwap.payout_addr_params fixed_length:true;
 RequestSwap.refund_addr_params max_size:1, 
 RequestSwap.refund_addr_params fixed_length:true;
 
-ResponseSwap.signature max_size:72;
+ResponseSwap.tx max_size:256;
 
 RequestSell.b64_tx max_size:256;
 RequestSell.signature max_size:72;

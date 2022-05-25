@@ -51,10 +51,10 @@ typedef struct _ResponseSell {
     ResponseSell_signature_t signature; 
 } ResponseSell;
 
-typedef PB_BYTES_ARRAY_T(72) ResponseSwap_signature_t;
+typedef PB_BYTES_ARRAY_T(256) ResponseSwap_tx_t;
 typedef struct _ResponseSwap { 
     bool approved; 
-    ResponseSwap_signature_t signature; 
+    ResponseSwap_tx_t tx; 
 } ResponseSwap;
 
 typedef PB_BYTES_ARRAY_T(256) RequestSell_b64_tx_t;
@@ -154,7 +154,7 @@ extern "C" {
 #define ResponseSell_approved_tag                1
 #define ResponseSell_signature_tag               2
 #define ResponseSwap_approved_tag                1
-#define ResponseSwap_signature_tag               2
+#define ResponseSwap_tx_tag                      2
 #define RequestSell_partner_tag                  1
 #define RequestSell_b64_tx_tag                   2
 #define RequestSell_signature_tag                3
@@ -232,7 +232,7 @@ X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, refund_addr_params,   8)
 
 #define ResponseSwap_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, BOOL,     approved,          1) \
-X(a, STATIC,   SINGULAR, BYTES,    signature,         2)
+X(a, STATIC,   SINGULAR, BYTES,    tx,                2)
 #define ResponseSwap_CALLBACK NULL
 #define ResponseSwap_DEFAULT NULL
 
@@ -330,8 +330,8 @@ extern const pb_msgdesc_t Response_msg;
 #define ResponseInitSell_size                    34
 #define ResponseInitSwap_size                    12
 #define ResponseSell_size                        76
-#define ResponseSwap_size                        76
-#define Response_size                            78
+#define ResponseSwap_size                        261
+#define Response_size                            264
 
 #ifdef __cplusplus
 } /* extern "C" */
