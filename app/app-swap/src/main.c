@@ -105,10 +105,9 @@ int main(void)
         }
 
         app_loading_stop();
+        ux_idle();
 
         xsend(buf, ostream.bytes_written);
-
-        ux_idle();
     }
 
     return 0;
