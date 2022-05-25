@@ -30,7 +30,7 @@ PB_BIND(Partner, Partner, AUTO)
 PB_BIND(RequestSwap, RequestSwap, 2)
 
 
-PB_BIND(ResponseSwap, ResponseSwap, AUTO)
+PB_BIND(ResponseSwap, ResponseSwap, 2)
 
 
 PB_BIND(RequestSell, RequestSell, 2)
@@ -45,7 +45,7 @@ PB_BIND(ResponseError, ResponseError, AUTO)
 PB_BIND(Request, Request, 2)
 
 
-PB_BIND(Response, Response, AUTO)
+PB_BIND(Response, Response, 2)
 
 
 

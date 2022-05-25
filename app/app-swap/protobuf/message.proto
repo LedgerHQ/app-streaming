@@ -48,7 +48,7 @@ message RequestSwap {
 
 message ResponseSwap {
   bool approved = 1;
-  bytes signature = 2;
+  bytes tx = 2;
 };
 
 message RequestSell {
