@@ -85,25 +85,6 @@ void ripemd160(const uint8_t *buffer, size_t size, uint8_t *digest)
     ripemd160_final(&ctx, digest);
 }
 
-void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
-{
-    ctx_hash_guest_t ctx;
-
-    ctx.sha256.blen = 0;
-    memset(ctx.sha256.block, 0, sizeof(ctx.sha256.block));
-    memset(ctx.sha256.acc, 0, sizeof(ctx.sha256.acc));
-
-    if (!hash_update(HASH_ID_SHA256, &ctx, buffer, size)) {
-        /* this should never happen unless ctx is corrupted */
-        fatal("hash_update SHA256");
-    }
-
-    if (!hash_final(HASH_ID_SHA256, &ctx, digest)) {
-        /* this should never happen unless ctx is corrupted */
-        fatal("hash_final SHA256");
-    }
-}
-
 void sha3_256(const uint8_t *buffer, size_t size, uint8_t *digest)
 {
     ctx_sha3_t ctx;
@@ -162,4 +143,9 @@ void sha256(const uint8_t *buffer, size_t size, uint8_t *digest)
     sha256_init(&ctx);
     sha256_update(&ctx, buffer, size);
     sha256_final(&ctx, digest);
+}
+
+void sha256sum(const uint8_t *buffer, size_t size, uint8_t *digest)
+{
+    return sha256(buffer, size, digest);
 }
