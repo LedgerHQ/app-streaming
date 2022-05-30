@@ -21,6 +21,7 @@ typedef struct {
 
 typedef struct ctx_ripemd160_s {
     bool initialized;
+    uint32_t counter;
     size_t blen;
     uint8_t block[64];
     uint8_t acc[5 * 4];
@@ -28,6 +29,7 @@ typedef struct ctx_ripemd160_s {
 
 typedef struct ctx_sha256_s {
     bool initialized;
+    uint32_t counter;
     size_t blen;
     uint8_t block[64];
     uint8_t acc[8 * 4];
@@ -35,6 +37,7 @@ typedef struct ctx_sha256_s {
 
 typedef struct ctx_sha3_s {
     bool initialized;
+    uint32_t counter;
     size_t blen;
     uint8_t block[200];
     uint64_t acc[25];

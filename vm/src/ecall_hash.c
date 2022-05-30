@@ -31,6 +31,7 @@ static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, gue
                 eret->success = false;
                 break;
             }
+            ctx->ripemd160.header.counter = guest.ripemd160.counter;
             ctx->ripemd160.blen = guest.ripemd160.blen;
             memcpy(&ctx->ripemd160.block, guest.ripemd160.block, sizeof(ctx->ripemd160.block));
             memcpy(&ctx->ripemd160.acc, guest.ripemd160.acc, sizeof(ctx->ripemd160.acc));
@@ -46,6 +47,7 @@ static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, gue
                 eret->success = false;
                 break;
             }
+            ctx->sha3.header.counter = guest.sha3.counter;
             ctx->sha3.blen = guest.sha3.blen;
             memcpy(&ctx->sha3.block, guest.sha3.block, sizeof(ctx->sha3.block));
             memcpy(&ctx->sha3.acc, guest.sha3.acc, sizeof(ctx->sha3.acc));
@@ -61,6 +63,7 @@ static bool restore_ctx_from_guest(eret_t *eret, const cx_hash_id_t hash_id, gue
                 eret->success = false;
                 break;
             }
+            ctx->sha256.header.counter = guest.sha256.counter;
             ctx->sha256.blen = guest.sha256.blen;
             memcpy(&ctx->sha256.block, guest.sha256.block, sizeof(ctx->sha256.block));
             memcpy(&ctx->sha256.acc, guest.sha256.acc, sizeof(ctx->sha256.acc));
@@ -83,6 +86,7 @@ static bool save_ctx_from_host(eret_t *eret, const cx_hash_id_t hash_id, guest_p
     switch (hash_id) {
     case HASH_ID_RIPEMD160:
         guest.ripemd160.initialized = true;
+        guest.ripemd160.counter = ctx->ripemd160.header.counter;
         guest.ripemd160.blen = ctx->ripemd160.blen;
         memcpy(guest.ripemd160.block, &ctx->ripemd160.block, sizeof(ctx->ripemd160.block));
         memcpy(guest.ripemd160.acc, &ctx->ripemd160.acc, sizeof(ctx->ripemd160.acc));
@@ -92,6 +96,7 @@ static bool save_ctx_from_host(eret_t *eret, const cx_hash_id_t hash_id, guest_p
         break;
     case HASH_ID_SHA3_256:
         guest.sha3.initialized = true;
+        guest.sha3.counter = ctx->sha3.header.counter;
         guest.sha3.blen = ctx->sha3.blen;
         memcpy(guest.sha3.block, &ctx->sha3.block, sizeof(ctx->sha3.block));
         memcpy(guest.sha3.acc, &ctx->sha3.acc, sizeof(ctx->sha3.acc));
@@ -101,6 +106,7 @@ static bool save_ctx_from_host(eret_t *eret, const cx_hash_id_t hash_id, guest_p
         break;
     case HASH_ID_SHA256:
         guest.sha256.initialized = true;
+        guest.sha256.counter = ctx->sha256.header.counter;
         guest.sha256.blen = ctx->sha256.blen;
         memcpy(guest.sha256.block, &ctx->sha256.block, sizeof(ctx->sha256.block));
         memcpy(guest.sha256.acc, &ctx->sha256.acc, sizeof(ctx->sha256.acc));
