@@ -8,6 +8,8 @@ if (NOT NATIVE)
     risc-v/std.c
     sdk.c
     uint256.c)
+
+  add_subdirectory(ux)
 else()
   add_compile_options(-DNATIVE_64BITS -DOS_LITTLE_ENDIAN)
 
@@ -99,6 +101,8 @@ else()
     ../../vm/src/ecall_hash.c
     ../../vm/src/uint256.c
     )
+
+  add_subdirectory(ux)
 
   target_include_directories (sdk PUBLIC ${BOLOS_SDK_DIR}/include ${BOLOS_SDK_DIR}/lib_cxng/include)
 endif()
