@@ -1,18 +1,25 @@
 [target.x86_64-unknown-linux-gnu]
 rustflags = [
-  "-l", "sdk", "-L", "../build/native/sdk",
-  "-l", "c",
-  "-l", "crypto",
-  "-C", "link-arg=-nostdlib",
+  "-L../build/native/sdk",
+  "-L./lib/x64/",
+  "-lcxng",
+  "-lsdk",
+  "-lspeculos",
+  "-lcrypto",
 ]
 
 [target.riscv32i-unknown-none-elf]
 rustflags = [
   "-l", "sdk", "-L", "../build/sdk",
+  "-l", "ux", "-L", "../build/ux",
 
-  #"-C", "llvm-args=--target-abi=riscv32",
-  #"-C", "link-arg=-Tscript.ld",
-  #"-Clink-arg=-znoseparate-code"
+  # force link against libc coming from the RISC-V container (/usr/local/riscv32-unknown-linux-gnu/lib/libc.a)
+  # TODO: put this libc.a into the container
+  "-l", "c", "-L", "./lib/risc-v/",
+
+  # The VM expects ELF binaries with 2 segments (rx and rw). Don't put
+  # read-only non-executable sections in their own segment.
+  "-Clink-arg=--no-rosegment",
 ]
 
 [build]
