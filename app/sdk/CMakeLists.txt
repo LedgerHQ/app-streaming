@@ -11,7 +11,7 @@ if (NOT NATIVE)
 
   add_subdirectory(ux)
 else()
-  add_compile_options(-DNATIVE_64BITS -DOS_LITTLE_ENDIAN)
+  add_compile_options(-DOS_LITTLE_ENDIAN)
 
   add_library(speculos
     ${SPECULOS_DIR}/src/bolos/bagl.c
