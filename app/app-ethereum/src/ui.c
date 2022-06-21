@@ -8,58 +8,29 @@
 
 #include "ui.h"
 
-static int validated;
-int eip712_validated;
 static char g_ux_get_pubkey_full_address[64];
 
-UX_STEP_NOCB(ux_get_pubkey_1_step, pnn, { &C_icon_eye, "Verify", "address" });
-UX_STEP_NOCB(ux_get_pubkey_2_step, nn, { "Address:", g_ux_get_pubkey_full_address });
-UX_STEP_CB(ux_get_pubkey_3_step, pb, validated = 1, { &C_icon_validate_14, "Approve" });
-UX_STEP_CB(ux_get_pubkey_4_step, pb, validated = -1, { &C_icon_crossmark, "Reject" });
-
-UX_FLOW(ux_get_pubkey_flow,
-        &ux_get_pubkey_1_step,
-        &ux_get_pubkey_2_step,
-        &ux_get_pubkey_3_step,
-        &ux_get_pubkey_4_step);
+static struct ux_item_s ux_get_pubkey[] = {
+    { &C_icon_eye, "Verify", "address", UX_ACTION_NONE },
+    { NULL, "Address:", g_ux_get_pubkey_full_address, UX_ACTION_NONE },
+    { &C_icon_validate_14, "Approve", NULL, UX_ACTION_VALIDATE },
+    { &C_icon_crossmark, "Reject", NULL, UX_ACTION_REJECT },
+};
 
 static char g_ux_sign_tx_amount[79];
 static char g_ux_sign_tx_full_address[41];
 static char g_ux_sign_tx_max_fee[50];
 static char g_ux_sign_tx_network_name[79];
 
-UX_STEP_NOCB(ux_sign_tx_1_step, pnn, { &C_icon_eye, "Review", "transaction" });
-UX_STEP_NOCB(ux_sign_tx_2_step, nn, { "Amount", g_ux_sign_tx_amount });
-UX_STEP_NOCB(ux_sign_tx_3_step, nn, { "Address", g_ux_sign_tx_full_address });
-UX_STEP_NOCB(ux_sign_tx_4_step, nn, { "Max Fees", g_ux_sign_tx_max_fee });
-UX_STEP_NOCB(ux_sign_tx_5_step, nn, { "Network", g_ux_sign_tx_network_name });
-UX_STEP_CB(ux_sign_tx_6_step, pbb, validated = 1, { &C_icon_validate_14, "Accept", "and send" });
-UX_STEP_CB(ux_sign_tx_7_step, pb, validated = -1, { &C_icon_crossmark, "Reject" });
-
-UX_FLOW(ux_sign_tx_flow,
-        &ux_sign_tx_1_step,
-        &ux_sign_tx_2_step,
-        &ux_sign_tx_3_step,
-        &ux_sign_tx_4_step,
-        &ux_sign_tx_5_step,
-        &ux_sign_tx_6_step,
-        &ux_sign_tx_7_step);
-
-static void ui_button_helper(int button)
-{
-    unsigned int button_mask = button | BUTTON_EVT_RELEASED;
-
-    if (G_ux.stack[0].button_push_callback != NULL) {
-        G_ux.stack[0].button_push_callback(button_mask, 0);
-    }
-}
-
-static void ui_init(const ux_flow_step_t *const *steps)
-{
-    memset(&G_ux, 0, sizeof(G_ux));
-    ux_stack_push();
-    ux_flow_init(0, steps, NULL);
-}
+static struct ux_item_s ux_sign_tx[] = {
+    { &C_icon_eye, "Review", "transaction", UX_ACTION_NONE },
+    { NULL, "Amount", g_ux_sign_tx_amount, UX_ACTION_NONE },
+    { NULL, "Address", g_ux_sign_tx_full_address, UX_ACTION_NONE },
+    { NULL, "Max Fees", g_ux_sign_tx_max_fee, UX_ACTION_NONE },
+    { NULL, "Network", g_ux_sign_tx_network_name, UX_ACTION_NONE },
+    { &C_icon_validate_14, "Accept", "and send", UX_ACTION_VALIDATE },
+    { &C_icon_crossmark, "Reject", NULL, UX_ACTION_REJECT },
+};
 
 void ui_set_pubkey_address(char *address)
 {
@@ -70,16 +41,9 @@ void ui_set_pubkey_address(char *address)
 /* return true if the user approved the tx, false otherwise */
 bool ui_get_pubkey_validation(void)
 {
-    validated = 0;
-
     bool app_loading = app_loading_stop();
 
-    ui_init(ux_get_pubkey_flow);
-
-    while (validated == 0) {
-        int button = wait_button();
-        ui_button_helper(button);
-    }
+    bool validated = ux_validate(ux_get_pubkey, ARRAY_SIZE(ux_get_pubkey));
 
     if (app_loading) {
         app_loading_start(NULL);
@@ -87,7 +51,7 @@ bool ui_get_pubkey_validation(void)
         ux_idle();
     }
 
-    return (validated == 1);
+    return validated;
 }
 
 void ui_set_tx_address(uint64_t chain_id, uint8_t *to)
@@ -114,16 +78,9 @@ void ui_set_tx_amount(uint64_t chain_id, const uint256_t *amount)
 /* return true if the user approved the tx, false otherwise */
 bool ui_sign_tx_validation(void)
 {
-    validated = 0;
-
     bool app_loading = app_loading_stop();
 
-    ui_init(ux_sign_tx_flow);
-
-    while (validated == 0) {
-        int button = wait_button();
-        ui_button_helper(button);
-    }
+    bool validated = ux_validate(ux_sign_tx, ARRAY_SIZE(ux_sign_tx));
 
     if (app_loading) {
         app_loading_start("Signing transaction...");
@@ -131,22 +88,15 @@ bool ui_sign_tx_validation(void)
         ux_idle();
     }
 
-    return (validated == 1);
+    return validated;
 }
 
 /* return true if the user approved the tx, false otherwise */
-bool ui_eip712(const ux_flow_step_t *const *steps)
+bool ui_eip712(struct ux_item_s *items, size_t count)
 {
-    eip712_validated = 0;
-
     bool app_loading = app_loading_stop();
 
-    ui_init(steps);
-
-    while (eip712_validated == 0) {
-        int button = wait_button();
-        ui_button_helper(button);
-    }
+    bool validated = ux_validate(items, count);
 
     if (app_loading) {
         app_loading_start("Signing EIP712...");
@@ -154,5 +104,5 @@ bool ui_eip712(const ux_flow_step_t *const *steps)
         ux_idle();
     }
 
-    return (eip712_validated == 1);
+    return validated;
 }

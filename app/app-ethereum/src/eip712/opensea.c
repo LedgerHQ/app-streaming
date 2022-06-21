@@ -103,25 +103,15 @@ static char g_taker[80];
 static char g_fees[80];
 static char g_base_price[80];
 
-UX_STEP_NOCB(ux_opensea_1_step, pnn, { &C_icon_eye, "Review", "OpenSea message" });
-UX_STEP_NOCB(ux_opensea_2_step, nn, { "Maker:", g_maker });
-UX_STEP_NOCB(ux_opensea_3_step, nn, { "Taker:", g_taker });
-UX_STEP_NOCB(ux_opensea_4_step, nn, { "Fees:", g_fees });
-UX_STEP_NOCB(ux_opensea_5_step, nn, { "Base Price:", g_base_price });
-UX_STEP_CB(ux_opensea_6_step,
-           pbb,
-           eip712_validated = 1,
-           { &C_icon_validate_14, "Accept", "and sign" });
-UX_STEP_CB(ux_opensea_7_step, pb, eip712_validated = -1, { &C_icon_crossmark, "Reject" });
-
-UX_FLOW(ux_opensea_flow,
-        &ux_opensea_1_step,
-        &ux_opensea_2_step,
-        &ux_opensea_3_step,
-        &ux_opensea_4_step,
-        &ux_opensea_5_step,
-        &ux_opensea_6_step,
-        &ux_opensea_7_step);
+static struct ux_item_s ux_opensea[] = {
+    { &C_icon_eye, "Review", "OpenSea message", UX_ACTION_NONE },
+    { NULL, "Maker:", g_maker, UX_ACTION_NONE },
+    { NULL, "Taker:", g_taker, UX_ACTION_NONE },
+    { NULL, "Fees:", g_fees, UX_ACTION_NONE },
+    { NULL, "Base Price:", g_base_price, UX_ACTION_NONE },
+    { &C_icon_validate_14, "Accept", "and sign", UX_ACTION_VALIDATE },
+    { &C_icon_crossmark, "Reject", NULL, UX_ACTION_REJECT },
+};
 
 static bool validate_ui(void)
 {
@@ -134,7 +124,7 @@ static bool validate_ui(void)
     copy_address(g_fees, sizeof(g_fees), &order_members[7].address);
     copy_amount(chain_id, g_base_price, sizeof(g_base_price), &order_members[18].uint_n);
 
-    return ui_eip712((const ux_flow_step_t *const *)&ux_opensea_flow);
+    return ui_eip712(ux_opensea, ARRAY_SIZE(ux_opensea));
 }
 
 const hash_struct_t *eip712_opensea(const char *json_string, jsmntok_t *t, int token_count)

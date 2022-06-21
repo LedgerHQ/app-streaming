@@ -72,27 +72,16 @@ static char g_to_name[80];
 static char g_to_address[80];
 static char g_content[80];
 
-UX_STEP_NOCB(ux_example_mail_1_step, pnn, { &C_icon_eye, "Review", "mail" });
-UX_STEP_NOCB(ux_example_mail_2_step, nn, { "From name:", g_from_name });
-UX_STEP_NOCB(ux_example_mail_3_step, nn, { "From address:", g_from_address });
-UX_STEP_NOCB(ux_example_mail_4_step, nn, { "To name:", g_to_name });
-UX_STEP_NOCB(ux_example_mail_5_step, nn, { "To address:", g_to_address });
-UX_STEP_NOCB(ux_example_mail_6_step, nn, { "Content:", g_content });
-UX_STEP_CB(ux_example_mail_7_step,
-           pbb,
-           eip712_validated = 1,
-           { &C_icon_validate_14, "Accept", "and sign" });
-UX_STEP_CB(ux_example_mail_8_step, pb, eip712_validated = -1, { &C_icon_crossmark, "Reject" });
-
-UX_FLOW(ux_example_mail_flow,
-        &ux_example_mail_1_step,
-        &ux_example_mail_2_step,
-        &ux_example_mail_3_step,
-        &ux_example_mail_4_step,
-        &ux_example_mail_5_step,
-        &ux_example_mail_6_step,
-        &ux_example_mail_7_step,
-        &ux_example_mail_8_step);
+static struct ux_item_s ux_example_mail[] = {
+    { &C_icon_eye, "Review", "mail", UX_ACTION_NONE },
+    { NULL, "From name:", g_from_name, UX_ACTION_NONE },
+    { NULL, "From address:", g_from_address, UX_ACTION_NONE },
+    { NULL, "To name:", g_to_name, UX_ACTION_NONE },
+    { NULL, "To address:", g_to_address, UX_ACTION_NONE },
+    { NULL, "Content:", g_content, UX_ACTION_NONE },
+    { &C_icon_validate_14, "Accept", "and sign", UX_ACTION_VALIDATE },
+    { &C_icon_crossmark, "Reject", NULL, UX_ACTION_REJECT },
+};
 
 static bool validate_ui(void)
 {
@@ -104,7 +93,7 @@ static bool validate_ui(void)
     copy_address(g_to_address, sizeof(g_to_address), &to_members[1].address);
     copy_string(g_content, sizeof(g_content), &mail_members[2].string);
 
-    return ui_eip712((const ux_flow_step_t *const *)&ux_example_mail_flow);
+    return ui_eip712(ux_example_mail, ARRAY_SIZE(ux_example_mail));
 }
 
 const hash_struct_t *eip712_example_mail(const char *json_string, jsmntok_t *t, int token_count)
