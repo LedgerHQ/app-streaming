@@ -50,7 +50,7 @@ static bool apdu_parser(command_t *cmd, uint8_t *buf, size_t buf_len) {
     return true;
 }
 
-bool vm_running = false;
+bool app_running;
 
 static void app_main_(void)
 {
@@ -59,6 +59,7 @@ static void app_main_(void)
     int tx = 0;
 
     memset(&cmd, 0, sizeof(cmd));
+    app_running = false;
 
     while (1) {
         ret = io_exchange(CHANNEL_APDU, tx);
@@ -82,9 +83,9 @@ static void app_main_(void)
             continue;
         }
 
-        vm_running = true;
+        app_running = true;
         stream_run_app();
-        vm_running = false;
+        app_running = false;
 
         PRINTF("app exited\n");
         os_sched_exit(13);

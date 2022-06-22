@@ -62,3 +62,20 @@ static inline void ux_idle(void)
 {
     ecall_ux_idle();
 }
+
+struct bagl_component_s;
+
+void bagl_draw_with_context(const struct bagl_component_s *component,
+                            const void *context,
+                            unsigned short context_length,
+                            unsigned char context_encoding);
+
+void bagl_hal_draw_bitmap_within_rect(int x,
+                                      int y,
+                                      unsigned int width,
+                                      unsigned int height,
+                                      unsigned int color_count,
+                                      const unsigned int *colors,
+                                      unsigned int bit_per_pixel,
+                                      const unsigned char *bitmap,
+                                      unsigned int bitmap_length_bits);

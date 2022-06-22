@@ -7,13 +7,11 @@
 #include "apdu.h"
 #include "ecall.h"
 #include "error.h"
+#include "io.h"
 #include "loading.h"
 #include "rv_cpu.h"
 #include "stream.h"
 #include "ui.h"
-
-int saved_apdu_state;
-
 
 struct cmd_send_buffer_s {
     uint8_t data[249];
@@ -71,23 +69,7 @@ bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size)
 
         size_t received = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-#if false
-        if (eret->size == 0 && G_io_app.apdu_state == 0xff) {
-            // restore G_io_app
-            G_io_app.apdu_state = saved_apdu_state;
-            G_io_app.apdu_length = 0;
-            G_io_app.ms = 0;
-            err("ok button pressed\n");
-            /* button */
-            return 0xdeadbe00 | 2;
-        } else {
-            err("wtf\n");
-            return false;
-        }
-#endif
-
         /* 2. ensure that data received fits in the buffer */
-
         apdu = parse_apdu(received);
         if (apdu == NULL) {
             err("invalid APDU\n");

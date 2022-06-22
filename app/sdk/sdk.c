@@ -5,45 +5,9 @@
 #include "sdk.h"
 #include "ux/ux.h"
 
-#define BUTTON_MAGIC 0xdeadbe00
-
-static void button_helper(uint8_t magic)
-{
-    /*unsigned int button_mask;
-    unsigned int button_same_mask_counter = 0; // ignored
-
-    button_mask = magic | BUTTON_EVT_RELEASED;
-
-    if (G_ux.stack[0].button_push_callback != NULL) {
-        G_ux.stack[0].button_push_callback(button_mask, button_same_mask_counter);
-        }*/
-    switch (magic) {
-    case 1:
-        ux_flow_prev();
-        break;
-    case 2:
-        ux_flow_next();
-        break;
-    case 3:
-        ux_flow_validate();
-        break;
-    }
-}
-
 size_t xrecv(uint8_t *buffer, size_t size)
 {
-    bool is_magic_button;
-    size_t ret;
-
-    do {
-        ret = ecall_xrecv(buffer, size);
-        is_magic_button = ((ret & BUTTON_MAGIC) == BUTTON_MAGIC);
-        if (is_magic_button) {
-            button_helper(ret & 0xff);
-        }
-    } while (is_magic_button);
-
-    return ret;
+    return ecall_xrecv(buffer, size);
 }
 
 void xrecvall(uint8_t *buffer, size_t size)
