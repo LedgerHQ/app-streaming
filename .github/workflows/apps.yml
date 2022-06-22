@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.CI_BOT_PAT }}
 
       - name: Lint code
         run: |
