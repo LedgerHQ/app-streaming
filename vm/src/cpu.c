@@ -362,15 +362,15 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             break;
 
         case RV_OP_MULH:
-            cpu->regs[inst.rd] = (u64)((i64)cpu->regs[inst.rs1] * (i64)cpu->regs[inst.rs2]) & 0xffffffff;
+            cpu->regs[inst.rd] = (u64)((i64)cpu->regs[inst.rs1] * (i64)cpu->regs[inst.rs2]) >> 32;
             break;
 
         case RV_OP_MULHSU:
-            cpu->regs[inst.rd] = (u64)((i64)cpu->regs[inst.rs1] * (u64)cpu->regs[inst.rs2]) & 0xffffffff;
+            cpu->regs[inst.rd] = (u64)((i64)cpu->regs[inst.rs1] * (u64)cpu->regs[inst.rs2]) >> 32;
             break;
 
         case RV_OP_MULHU:
-            cpu->regs[inst.rd] = (u64)((u64)cpu->regs[inst.rs1] * (u64)cpu->regs[inst.rs2]) & 0xffffffff;
+            cpu->regs[inst.rd] = (u64)((u64)cpu->regs[inst.rs1] * (u64)cpu->regs[inst.rs2]) >> 32;
             break;
 
         case RV_OP_DIV:
