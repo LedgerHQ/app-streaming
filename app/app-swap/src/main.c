@@ -21,9 +21,9 @@ static const char *handle_get_version(const RequestGetVersion *req, ResponseGetV
 
 static void set_error(Response *response, const char *msg)
 {
-    response->which_message_oneof = Response_error_tag;
+    response->which_response = Response_error_tag;
 
-    ResponseError *error = &response->message_oneof.error;
+    ResponseError *error = &response->response.error;
     strncpy(error->error_msg, msg, sizeof(error->error_msg));
     error->error_msg[sizeof(error->error_msg) - 1] = '\x00';
 }
@@ -37,32 +37,32 @@ static void handle_req(const Request *req, Response *response, swap_ctx_t *ctx)
 {
     const char *error;
 
-    switch (req->which_message_oneof) {
+    switch (req->which_request) {
     case Request_get_version_tag:
-        response->which_message_oneof = Response_get_version_tag;
-        error = handle_get_version(&req->message_oneof.get_version,
-                                   &response->message_oneof.get_version);
+        response->which_response = Response_get_version_tag;
+        error = handle_get_version(&req->request.get_version,
+                                   &response->response.get_version);
         break;
     case Request_init_swap_tag:
         reset_ctx(ctx);
-        response->which_message_oneof = Response_init_swap_tag;
-        error = handle_init_swap(&req->message_oneof.init_swap, &response->message_oneof.init_swap,
+        response->which_response = Response_init_swap_tag;
+        error = handle_init_swap(&req->request.init_swap, &response->response.init_swap,
                                  ctx);
         break;
     case Request_init_sell_tag:
         reset_ctx(ctx);
-        response->which_message_oneof = Response_init_sell_tag;
-        error = handle_init_sell(&req->message_oneof.init_sell, &response->message_oneof.init_sell,
+        response->which_response = Response_init_sell_tag;
+        error = handle_init_sell(&req->request.init_sell, &response->response.init_sell,
                                  ctx);
         break;
     case Request_swap_tag:
-        response->which_message_oneof = Response_swap_tag;
-        error = handle_swap(&req->message_oneof.swap, &response->message_oneof.swap, ctx);
+        response->which_response = Response_swap_tag;
+        error = handle_swap(&req->request.swap, &response->response.swap, ctx);
         reset_ctx(ctx);
         break;
     case Request_sell_tag:
-        response->which_message_oneof = Response_sell_tag;
-        error = handle_sell(&req->message_oneof.sell, &response->message_oneof.sell, ctx);
+        response->which_response = Response_sell_tag;
+        error = handle_sell(&req->request.sell, &response->response.sell, ctx);
         reset_ctx(ctx);
         break;
     default:

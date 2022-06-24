@@ -86,7 +86,7 @@ typedef struct _RequestSwap {
 } RequestSwap;
 
 typedef struct _Response { 
-    pb_size_t which_message_oneof;
+    pb_size_t which_response;
     union {
         ResponseGetVersion get_version;
         ResponseInitSwap init_swap;
@@ -94,18 +94,18 @@ typedef struct _Response {
         ResponseSwap swap;
         ResponseSell sell;
         ResponseError error;
-    } message_oneof; 
+    } response; 
 } Response;
 
 typedef struct _Request { 
-    pb_size_t which_message_oneof;
+    pb_size_t which_request;
     union {
         RequestGetVersion get_version;
         RequestInitSwap init_swap;
         RequestInitSell init_sell;
         RequestSwap swap;
         RequestSell sell;
-    } message_oneof; 
+    } request; 
 } Request;
 
 
@@ -257,34 +257,34 @@ X(a, STATIC,   SINGULAR, STRING,   error_msg,         1)
 #define ResponseError_DEFAULT NULL
 
 #define Request_FIELDLIST(X, a) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_version,message_oneof.get_version),   1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,init_swap,message_oneof.init_swap),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,init_sell,message_oneof.init_sell),   3) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,swap,message_oneof.swap),   4) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sell,message_oneof.sell),   5)
+X(a, STATIC,   ONEOF,    MESSAGE,  (request,get_version,request.get_version),   1) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (request,init_swap,request.init_swap),   2) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (request,init_sell,request.init_sell),   3) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (request,swap,request.swap),   4) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (request,sell,request.sell),   5)
 #define Request_CALLBACK NULL
 #define Request_DEFAULT NULL
-#define Request_message_oneof_get_version_MSGTYPE RequestGetVersion
-#define Request_message_oneof_init_swap_MSGTYPE RequestInitSwap
-#define Request_message_oneof_init_sell_MSGTYPE RequestInitSell
-#define Request_message_oneof_swap_MSGTYPE RequestSwap
-#define Request_message_oneof_sell_MSGTYPE RequestSell
+#define Request_request_get_version_MSGTYPE RequestGetVersion
+#define Request_request_init_swap_MSGTYPE RequestInitSwap
+#define Request_request_init_sell_MSGTYPE RequestInitSell
+#define Request_request_swap_MSGTYPE RequestSwap
+#define Request_request_sell_MSGTYPE RequestSell
 
 #define Response_FIELDLIST(X, a) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,get_version,message_oneof.get_version),   1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,init_swap,message_oneof.init_swap),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,init_sell,message_oneof.init_sell),   3) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,swap,message_oneof.swap),   4) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,sell,message_oneof.sell),   5) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (message_oneof,error,message_oneof.error),   6)
+X(a, STATIC,   ONEOF,    MESSAGE,  (response,get_version,response.get_version),   1) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (response,init_swap,response.init_swap),   2) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (response,init_sell,response.init_sell),   3) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (response,swap,response.swap),   4) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (response,sell,response.sell),   5) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (response,error,response.error),   6)
 #define Response_CALLBACK NULL
 #define Response_DEFAULT NULL
-#define Response_message_oneof_get_version_MSGTYPE ResponseGetVersion
-#define Response_message_oneof_init_swap_MSGTYPE ResponseInitSwap
-#define Response_message_oneof_init_sell_MSGTYPE ResponseInitSell
-#define Response_message_oneof_swap_MSGTYPE ResponseSwap
-#define Response_message_oneof_sell_MSGTYPE ResponseSell
-#define Response_message_oneof_error_MSGTYPE ResponseError
+#define Response_response_get_version_MSGTYPE ResponseGetVersion
+#define Response_response_init_swap_MSGTYPE ResponseInitSwap
+#define Response_response_init_sell_MSGTYPE ResponseInitSell
+#define Response_response_swap_MSGTYPE ResponseSwap
+#define Response_response_sell_MSGTYPE ResponseSell
+#define Response_response_error_MSGTYPE ResponseError
 
 extern const pb_msgdesc_t RequestGetVersion_msg;
 extern const pb_msgdesc_t ResponseGetVersion_msg;

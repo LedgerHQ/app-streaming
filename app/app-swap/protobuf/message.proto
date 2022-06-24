@@ -68,22 +68,22 @@ message ResponseError {
 };
 
 message Request {
-  oneof message_oneof {
+  oneof request {
     RequestGetVersion get_version = 1;
     RequestInitSwap init_swap = 2;
     RequestInitSell init_sell = 3;
     RequestSwap swap = 4;
     RequestSell sell = 5;
-  };
+  }
 }
 
 message Response {
-  oneof message_oneof {
+  oneof response {
     ResponseGetVersion get_version = 1;
     ResponseInitSwap init_swap = 2;
     ResponseInitSell init_sell = 3;
     ResponseSwap swap = 4;
     ResponseSell sell = 5;
     ResponseError error = 6;
-  };
+  }
 }

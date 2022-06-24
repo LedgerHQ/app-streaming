@@ -71,7 +71,7 @@ class Swap:
     def init_swap_parse_response(self, data):
         response = message_pb2.Response()
         response.ParseFromString(data)
-        assert response.WhichOneof("message_oneof") == "init_swap"
+        assert response.WhichOneof("response") == "init_swap"
         print(f"device id: {response.init_swap.device_id}")
         self.device_id = response.init_swap.device_id
         return response
@@ -108,10 +108,10 @@ class Swap:
     def swap_parse_response(self, data):
         response = message_pb2.Response()
         response.ParseFromString(data)
-        if response.WhichOneof("message_oneof") == "error":
+        if response.WhichOneof("response") == "error":
             print(f"error: {response.error.error_msg}")
             sys.exit(1)
-        assert response.WhichOneof("message_oneof") == "swap"
+        assert response.WhichOneof("response") == "swap"
         print(f"response: {response.swap}")
         return response
 

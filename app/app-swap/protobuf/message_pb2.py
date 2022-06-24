@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rmessage.proto\"\x13\n\x11RequestGetVersion\"%\n\x12ResponseGetVersion\x12\x0f\n\x07version\x18\x01 \x01(\t\"\x11\n\x0fRequestInitSwap\"%\n\x10ResponseInitSwap\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\"\x11\n\x0fRequestInitSell\"%\n\x10ResponseInitSell\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\":\n\x07Partner\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\"\xb9\x01\n\x0bRequestSwap\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\r\n\x05pb_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\x12\x13\n\x0bpayout_path\x18\x05 \x03(\r\x12\x13\n\x0brefund_path\x18\x06 \x03(\r\x12\x1a\n\x12payout_addr_params\x18\x07 \x01(\x0c\x12\x1a\n\x12refund_addr_params\x18\x08 \x01(\x0c\",\n\x0cResponseSwap\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\n\n\x02tx\x18\x02 \x01(\x0c\"X\n\x0bRequestSell\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\x0e\n\x06\x62\x36\x34_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\"3\n\x0cResponseSell\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"\"\n\rResponseError\x12\x11\n\terror_msg\x18\x01 \x01(\t\"\xcf\x01\n\x07Request\x12)\n\x0bget_version\x18\x01 \x01(\x0b\x32\x12.RequestGetVersionH\x00\x12%\n\tinit_swap\x18\x02 \x01(\x0b\x32\x10.RequestInitSwapH\x00\x12%\n\tinit_sell\x18\x03 \x01(\x0b\x32\x10.RequestInitSellH\x00\x12\x1c\n\x04swap\x18\x04 \x01(\x0b\x32\x0c.RequestSwapH\x00\x12\x1c\n\x04sell\x18\x05 \x01(\x0b\x32\x0c.RequestSellH\x00\x42\x0f\n\rmessage_oneof\"\xf6\x01\n\x08Response\x12*\n\x0bget_version\x18\x01 \x01(\x0b\x32\x13.ResponseGetVersionH\x00\x12&\n\tinit_swap\x18\x02 \x01(\x0b\x32\x11.ResponseInitSwapH\x00\x12&\n\tinit_sell\x18\x03 \x01(\x0b\x32\x11.ResponseInitSellH\x00\x12\x1d\n\x04swap\x18\x04 \x01(\x0b\x32\r.ResponseSwapH\x00\x12\x1d\n\x04sell\x18\x05 \x01(\x0b\x32\r.ResponseSellH\x00\x12\x1f\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x0e.ResponseErrorH\x00\x42\x0f\n\rmessage_oneofb\x06proto3'
+  serialized_pb=b'\n\rmessage.proto\"\x13\n\x11RequestGetVersion\"%\n\x12ResponseGetVersion\x12\x0f\n\x07version\x18\x01 \x01(\t\"\x11\n\x0fRequestInitSwap\"%\n\x10ResponseInitSwap\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\"\x11\n\x0fRequestInitSell\"%\n\x10ResponseInitSell\x12\x11\n\tdevice_id\x18\x01 \x01(\x0c\":\n\x07Partner\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0e\n\x06pubkey\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\"\xb9\x01\n\x0bRequestSwap\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\r\n\x05pb_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\x12\x13\n\x0bpayout_path\x18\x05 \x03(\r\x12\x13\n\x0brefund_path\x18\x06 \x03(\r\x12\x1a\n\x12payout_addr_params\x18\x07 \x01(\x0c\x12\x1a\n\x12refund_addr_params\x18\x08 \x01(\x0c\",\n\x0cResponseSwap\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\n\n\x02tx\x18\x02 \x01(\x0c\"X\n\x0bRequestSell\x12\x19\n\x07partner\x18\x01 \x01(\x0b\x32\x08.Partner\x12\x0e\n\x06\x62\x36\x34_tx\x18\x02 \x01(\x0c\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x0b\n\x03\x66\x65\x65\x18\x04 \x01(\x0c\"3\n\x0cResponseSell\x12\x10\n\x08\x61pproved\x18\x01 \x01(\x08\x12\x11\n\tsignature\x18\x02 \x01(\x0c\"\"\n\rResponseError\x12\x11\n\terror_msg\x18\x01 \x01(\t\"\xc9\x01\n\x07Request\x12)\n\x0bget_version\x18\x01 \x01(\x0b\x32\x12.RequestGetVersionH\x00\x12%\n\tinit_swap\x18\x02 \x01(\x0b\x32\x10.RequestInitSwapH\x00\x12%\n\tinit_sell\x18\x03 \x01(\x0b\x32\x10.RequestInitSellH\x00\x12\x1c\n\x04swap\x18\x04 \x01(\x0b\x32\x0c.RequestSwapH\x00\x12\x1c\n\x04sell\x18\x05 \x01(\x0b\x32\x0c.RequestSellH\x00\x42\t\n\x07request\"\xf1\x01\n\x08Response\x12*\n\x0bget_version\x18\x01 \x01(\x0b\x32\x13.ResponseGetVersionH\x00\x12&\n\tinit_swap\x18\x02 \x01(\x0b\x32\x11.ResponseInitSwapH\x00\x12&\n\tinit_sell\x18\x03 \x01(\x0b\x32\x11.ResponseInitSellH\x00\x12\x1d\n\x04swap\x18\x04 \x01(\x0b\x32\r.ResponseSwapH\x00\x12\x1d\n\x04sell\x18\x05 \x01(\x0b\x32\r.ResponseSellH\x00\x12\x1f\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x0e.ResponseErrorH\x00\x42\n\n\x08responseb\x06proto3'
 )
 
 
@@ -541,13 +541,13 @@ _REQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
     _descriptor.OneofDescriptor(
-      name='message_oneof', full_name='Request.message_oneof',
+      name='request', full_name='Request.request',
       index=0, containing_type=None,
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
   serialized_start=667,
-  serialized_end=874,
+  serialized_end=868,
 )
 
 
@@ -613,13 +613,13 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
     _descriptor.OneofDescriptor(
-      name='message_oneof', full_name='Response.message_oneof',
+      name='response', full_name='Response.response',
       index=0, containing_type=None,
       create_key=_descriptor._internal_create_key,
     fields=[]),
   ],
-  serialized_start=877,
-  serialized_end=1123,
+  serialized_start=871,
+  serialized_end=1112,
 )
 
 _REQUESTSWAP.fields_by_name['partner'].message_type = _PARTNER
@@ -629,45 +629,45 @@ _REQUEST.fields_by_name['init_swap'].message_type = _REQUESTINITSWAP
 _REQUEST.fields_by_name['init_sell'].message_type = _REQUESTINITSELL
 _REQUEST.fields_by_name['swap'].message_type = _REQUESTSWAP
 _REQUEST.fields_by_name['sell'].message_type = _REQUESTSELL
-_REQUEST.oneofs_by_name['message_oneof'].fields.append(
+_REQUEST.oneofs_by_name['request'].fields.append(
   _REQUEST.fields_by_name['get_version'])
-_REQUEST.fields_by_name['get_version'].containing_oneof = _REQUEST.oneofs_by_name['message_oneof']
-_REQUEST.oneofs_by_name['message_oneof'].fields.append(
+_REQUEST.fields_by_name['get_version'].containing_oneof = _REQUEST.oneofs_by_name['request']
+_REQUEST.oneofs_by_name['request'].fields.append(
   _REQUEST.fields_by_name['init_swap'])
-_REQUEST.fields_by_name['init_swap'].containing_oneof = _REQUEST.oneofs_by_name['message_oneof']
-_REQUEST.oneofs_by_name['message_oneof'].fields.append(
+_REQUEST.fields_by_name['init_swap'].containing_oneof = _REQUEST.oneofs_by_name['request']
+_REQUEST.oneofs_by_name['request'].fields.append(
   _REQUEST.fields_by_name['init_sell'])
-_REQUEST.fields_by_name['init_sell'].containing_oneof = _REQUEST.oneofs_by_name['message_oneof']
-_REQUEST.oneofs_by_name['message_oneof'].fields.append(
+_REQUEST.fields_by_name['init_sell'].containing_oneof = _REQUEST.oneofs_by_name['request']
+_REQUEST.oneofs_by_name['request'].fields.append(
   _REQUEST.fields_by_name['swap'])
-_REQUEST.fields_by_name['swap'].containing_oneof = _REQUEST.oneofs_by_name['message_oneof']
-_REQUEST.oneofs_by_name['message_oneof'].fields.append(
+_REQUEST.fields_by_name['swap'].containing_oneof = _REQUEST.oneofs_by_name['request']
+_REQUEST.oneofs_by_name['request'].fields.append(
   _REQUEST.fields_by_name['sell'])
-_REQUEST.fields_by_name['sell'].containing_oneof = _REQUEST.oneofs_by_name['message_oneof']
+_REQUEST.fields_by_name['sell'].containing_oneof = _REQUEST.oneofs_by_name['request']
 _RESPONSE.fields_by_name['get_version'].message_type = _RESPONSEGETVERSION
 _RESPONSE.fields_by_name['init_swap'].message_type = _RESPONSEINITSWAP
 _RESPONSE.fields_by_name['init_sell'].message_type = _RESPONSEINITSELL
 _RESPONSE.fields_by_name['swap'].message_type = _RESPONSESWAP
 _RESPONSE.fields_by_name['sell'].message_type = _RESPONSESELL
 _RESPONSE.fields_by_name['error'].message_type = _RESPONSEERROR
-_RESPONSE.oneofs_by_name['message_oneof'].fields.append(
+_RESPONSE.oneofs_by_name['response'].fields.append(
   _RESPONSE.fields_by_name['get_version'])
-_RESPONSE.fields_by_name['get_version'].containing_oneof = _RESPONSE.oneofs_by_name['message_oneof']
-_RESPONSE.oneofs_by_name['message_oneof'].fields.append(
+_RESPONSE.fields_by_name['get_version'].containing_oneof = _RESPONSE.oneofs_by_name['response']
+_RESPONSE.oneofs_by_name['response'].fields.append(
   _RESPONSE.fields_by_name['init_swap'])
-_RESPONSE.fields_by_name['init_swap'].containing_oneof = _RESPONSE.oneofs_by_name['message_oneof']
-_RESPONSE.oneofs_by_name['message_oneof'].fields.append(
+_RESPONSE.fields_by_name['init_swap'].containing_oneof = _RESPONSE.oneofs_by_name['response']
+_RESPONSE.oneofs_by_name['response'].fields.append(
   _RESPONSE.fields_by_name['init_sell'])
-_RESPONSE.fields_by_name['init_sell'].containing_oneof = _RESPONSE.oneofs_by_name['message_oneof']
-_RESPONSE.oneofs_by_name['message_oneof'].fields.append(
+_RESPONSE.fields_by_name['init_sell'].containing_oneof = _RESPONSE.oneofs_by_name['response']
+_RESPONSE.oneofs_by_name['response'].fields.append(
   _RESPONSE.fields_by_name['swap'])
-_RESPONSE.fields_by_name['swap'].containing_oneof = _RESPONSE.oneofs_by_name['message_oneof']
-_RESPONSE.oneofs_by_name['message_oneof'].fields.append(
+_RESPONSE.fields_by_name['swap'].containing_oneof = _RESPONSE.oneofs_by_name['response']
+_RESPONSE.oneofs_by_name['response'].fields.append(
   _RESPONSE.fields_by_name['sell'])
-_RESPONSE.fields_by_name['sell'].containing_oneof = _RESPONSE.oneofs_by_name['message_oneof']
-_RESPONSE.oneofs_by_name['message_oneof'].fields.append(
+_RESPONSE.fields_by_name['sell'].containing_oneof = _RESPONSE.oneofs_by_name['response']
+_RESPONSE.oneofs_by_name['response'].fields.append(
   _RESPONSE.fields_by_name['error'])
-_RESPONSE.fields_by_name['error'].containing_oneof = _RESPONSE.oneofs_by_name['message_oneof']
+_RESPONSE.fields_by_name['error'].containing_oneof = _RESPONSE.oneofs_by_name['response']
 DESCRIPTOR.message_types_by_name['RequestGetVersion'] = _REQUESTGETVERSION
 DESCRIPTOR.message_types_by_name['ResponseGetVersion'] = _RESPONSEGETVERSION
 DESCRIPTOR.message_types_by_name['RequestInitSwap'] = _REQUESTINITSWAP
