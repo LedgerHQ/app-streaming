@@ -155,9 +155,11 @@ class DeviceStream:
         return self.client.exchange(0x02, data=proof)
 
     def handle_send_buffer(self, data: bytes) -> bool:
-        logger.info(f"got buffer {data!r}")
+        logger.debug(f"got buffer {data!r}")
 
         request = DeviceStream._parse_request(Struct("data" / Bytes(249), "size" / Int8ul, "counter" / Int32ul), data)
+
+        logger.debug(f"got buffer {request.data!r} (counter: {request.counter})")
 
         stop = (request.counter & 0x80000000) != 0
         assert self.send_buffer_counter == (request.counter & 0x7fffffff)
