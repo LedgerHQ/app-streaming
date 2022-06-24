@@ -40,20 +40,17 @@ static void handle_req(const Request *req, Response *response, swap_ctx_t *ctx)
     switch (req->which_request) {
     case Request_get_version_tag:
         response->which_response = Response_get_version_tag;
-        error = handle_get_version(&req->request.get_version,
-                                   &response->response.get_version);
+        error = handle_get_version(&req->request.get_version, &response->response.get_version);
         break;
     case Request_init_swap_tag:
         reset_ctx(ctx);
         response->which_response = Response_init_swap_tag;
-        error = handle_init_swap(&req->request.init_swap, &response->response.init_swap,
-                                 ctx);
+        error = handle_init_swap(&req->request.init_swap, &response->response.init_swap, ctx);
         break;
     case Request_init_sell_tag:
         reset_ctx(ctx);
         response->which_response = Response_init_sell_tag;
-        error = handle_init_sell(&req->request.init_sell, &response->response.init_sell,
-                                 ctx);
+        error = handle_init_sell(&req->request.init_sell, &response->response.init_sell, ctx);
         break;
     case Request_swap_tag:
         response->which_response = Response_swap_tag;
