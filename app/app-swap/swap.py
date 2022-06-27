@@ -115,17 +115,35 @@ class Swap:
         print(f"response: {response.swap}")
         return response
 
+    def version_prepare_request(self):
+        version = message_pb2.RequestGetVersion()
+        message = message_pb2.Request()
+        message.get_version.CopyFrom(version)
+        return message.SerializeToString()
+
+    def version_parse_response(self, data):
+        response = message_pb2.Response()
+        response.ParseFromString(data)
+        print(response)
+        assert response.WhichOneof("response") == "get_version"
+        print(f"version: {response.get_version.version}")
+        return response
+
 
 if __name__ == "__main__":
     parser = stream.get_stream_arg_parser()
-    parser.add_argument("--action", default="swap", choices=["swap"])
+    parser.add_argument("--action", default="swap", choices=["swap", "version"])
     args = parser.parse_args()
 
     with stream.get_streamer(args) as streamer:
         swap = Swap()
 
-        data = streamer.exchange(swap.init_swap_prepare_request())
-        swap.init_swap_parse_response(data)
+        if args.action == "swap":
+            data = streamer.exchange(swap.init_swap_prepare_request())
+            swap.init_swap_parse_response(data)
 
-        data = streamer.exchange(swap.swap_prepare_request())
-        swap.swap_parse_response(data)
+            data = streamer.exchange(swap.swap_prepare_request())
+            swap.swap_parse_response(data)
+        elif args.action == "version":
+            data = streamer.exchange(swap.version_prepare_request())
+            swap.version_parse_response(data)
