@@ -37,28 +37,13 @@ jobs:
         tag_with_sha: true
         tags: latest
 
-# TODO - Incomplete until cxlib is open-sourced.
-
-#jobs:
-#  build:
-#    name: Build and push app-streaming-native-builder image
-#    runs-on: ubuntu-latest
-#    permissions:
-#      packages: write
-#
-#    steps:
-#    - name: Clone
-#      uses: actions/checkout@v3
-#      with:
-#        token: ${{ secrets.PAT }}
-#
-#    - name: Build and push app-streaming-native-builder to GitHub Packages
-#      uses: docker/build-push-action@v1
-#      with:
-#        dockerfile: native.Dockerfile
-#        repository: ledgerhq/app-streaming-native-builder
-#        registry: ghcr.io
-#        username: ${{ github.actor }}
-#        password: ${{ secrets.GITHUB_TOKEN }}
-#        tag_with_sha: true
-#        tags: latest
+    - name: Build and push app-streaming-native-builder to GitHub Packages
+      uses: docker/build-push-action@v1
+      with:
+        dockerfile: native.Dockerfile
+        repository: ledgerhq/app-streaming-native-builder
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        tag_with_sha: true
+        tags: latest
