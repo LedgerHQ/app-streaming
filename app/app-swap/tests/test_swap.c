@@ -128,8 +128,8 @@ static void sign_tx(RequestSwap *req, cx_ecfp_private_key_t *partner_privkey)
 static void dump_req(RequestSwap *req)
 {
     Request r = Request_init_zero;
-    r.which_message_oneof = Request_swap_tag;
-    r.message_oneof.swap = *req;
+    r.which_request = Request_swap_tag;
+    r.request.swap = *req;
 
     uint8_t buf[4096];
 
