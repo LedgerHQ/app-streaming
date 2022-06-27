@@ -1,6 +1,6 @@
-# Build the RISC-V apps
+# Build the RISC-V and x64 apps
 
-name: RISC-V apps
+name: Build and test apps
 
 on:
   push:
@@ -9,16 +9,16 @@ on:
     branches: [ main ]
 
 jobs:
-
-  build:
-    name: Build apps
+  build-riscv:
+    name: Build RISC-V apps
     runs-on: ubuntu-latest
 
     container:
       image: ghcr.io/ledgerhq/app-streaming-builder:latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: recursive
@@ -35,3 +35,52 @@ jobs:
         run: |
            cmake -Bbuild -H.
            make -j -C build/
+
+  build-x64:
+    name: Build x64 apps
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/ledgerhq/app-streaming-native-builder:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.CI_BOT_PAT }}
+
+      - name: Checkout speculos
+        uses: actions/checkout@v3
+        with:
+          repository: LedgerHQ/speculos
+          fetch-depth: 0
+          token: ${{ secrets.CI_BOT_PAT }}
+          path: speculos/
+
+      - name: Checkout BOLOS SDK
+        uses: actions/checkout@v3
+        with:
+          repository: LedgerHQ/ledger-secure-sdk
+          fetch-depth: 0
+          token: ${{ secrets.CI_BOT_PAT }}
+          path: bolos_sdk/
+
+      - name: Move folders
+        run: |
+           mv speculos/ bolos_sdk/ /
+
+      - name: Build
+        env:
+          SPECULOS_DIR: /speculos/
+          BOLOS_SDK_DIR: /bolos_sdk/
+        working-directory: ./app
+        run: |
+           cmake -Bbuild/native -H. -DNATIVE=1
+           make -j -C build/native/
+
+      - name: Test
+        working-directory: ./app
+        run: |
+           make -C build/native/ test
