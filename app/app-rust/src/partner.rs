@@ -1,21 +1,25 @@
-use error::*;
+use error::Result;
 use message::message::*;
-use sdk;
+use sdk::crypto::{CtxSha256, CxCurve, EcfpPublicKey};
+
+static LEDGER_PUBKEY: &[u8; 65] = &[
+    0x04, 0x20, 0xDA, 0x62, 0x00, 0x3C, 0x0C, 0xE0, 0x97, 0xE3, 0x36, 0x44, 0xA1, 0x0F, 0xE4, 0xC3,
+    0x04, 0x54, 0x06, 0x9A, 0x44, 0x54, 0xF0, 0xFA, 0x9D, 0x4E, 0x84, 0xF4, 0x50, 0x91, 0x42, 0x9B,
+    0x52, 0x20, 0xAF, 0x9E, 0x35, 0xC0, 0xB2, 0xD9, 0x28, 0x93, 0x80, 0x13, 0x73, 0x07, 0xDE, 0x4D,
+    0xD1, 0xD4, 0x18, 0x42, 0x8C, 0xF2, 0x1A, 0x93, 0xB3, 0x35, 0x61, 0xBB, 0x09, 0xD8, 0x8F, 0xE5,
+    0x79,
+];
 
 pub fn verify_partner(partner: &Partner<'_>) -> Result<()> {
     let len = partner.name.len();
 
-    let mut ctx = sdk::sha256_new();
-    sdk::sha256_update(&mut ctx, &[len as u8; 1]);
-    sdk::sha256_update(&mut ctx, partner.name.as_bytes());
-    sdk::sha256_update(&mut ctx, &partner.pubkey);
-    let digest = sdk::sha256_final(&mut ctx);
-    digest.to_vec();
+    let digest = CtxSha256::new()
+        .update(&[len as u8; 1])
+        .update(partner.name.as_bytes())
+        .update(&partner.pubkey)
+        .r#final();
 
-    // XXX: ecdsa verify
-    if false {
-        return Err(AppError::new("invalid partner"));
-    }
-
+    let pubkey = EcfpPublicKey::new(CxCurve::Secp256k1, LEDGER_PUBKEY);
+    pubkey.verify(&digest, &partner.signature)?;
     Ok(())
 }

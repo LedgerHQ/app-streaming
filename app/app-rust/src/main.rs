@@ -2,18 +2,26 @@
 #![cfg_attr(target_arch = "riscv32", no_main, no_std)]
 
 extern crate alloc;
+extern crate bech32;
+extern crate byteorder;
+extern crate hex;
+extern crate hex_literal;
 extern crate quick_protobuf;
 extern crate serde;
 
 #[cfg(not(target_arch = "riscv32"))]
 extern crate core;
 
+mod btc;
+mod currency;
 mod error;
+mod eth;
 mod ledger_swap;
 mod message;
 mod partner;
 mod sdk;
 mod swap;
+mod ui;
 mod version;
 
 use alloc::borrow::Cow;
@@ -28,6 +36,9 @@ use message::message::mod_Response::OneOfresponse;
 use message::message::*;
 use swap::*;
 
+#[cfg(test)]
+use hex_literal::hex;
+
 fn handle_get_version<'a>() -> ResponseGetVersion<'a> {
     ResponseGetVersion {
         version: Cow::Borrowed("1.2.3"),
@@ -37,6 +48,14 @@ fn handle_get_version<'a>() -> ResponseGetVersion<'a> {
 fn set_error(msg: &'_ str) -> ResponseError {
     ResponseError {
         error_msg: Cow::Borrowed(msg),
+    }
+}
+
+impl From<&'static str> for ResponseError<'_> {
+    fn from(msg: &'static str) -> Self {
+        ResponseError {
+            error_msg: Cow::Borrowed(msg),
+        }
     }
 }
 
@@ -51,12 +70,10 @@ fn handle_req_(buffer: &[u8]) -> Result<Response> {
             OneOfrequest::init_swap(init_swap) => {
                 OneOfresponse::init_swap(handle_init_swap(&init_swap))
             }
-            OneOfrequest::init_sell(_init_sell) => {
-                OneOfresponse::error(set_error("todo: init_sell"))
-            }
+            OneOfrequest::init_sell(_init_sell) => OneOfresponse::error("todo: init_sell".into()),
             OneOfrequest::swap(swap) => OneOfresponse::swap(handle_swap(&swap)?),
-            OneOfrequest::sell(_sell) => OneOfresponse::error(set_error("todo: sell")),
-            OneOfrequest::None => OneOfresponse::error(set_error("request unset")),
+            OneOfrequest::sell(_sell) => OneOfresponse::error("todo: sell".into()),
+            OneOfrequest::None => OneOfresponse::error("request unset".into()),
         },
     };
 
@@ -85,20 +102,24 @@ fn handle_req(buffer: &[u8]) -> Vec<u8> {
 
 #[test]
 fn test_get_version() {
-    let request_pb = [b'\n', b'\x00'];
+    let request_pb = hex!("0a00");
     let response = handle_req(&request_pb);
-    assert_eq!(
-        response,
-        [b'\n', b'\x07', b'\n', b'\x05', b'1', b'.', b'2', b'.', b'3']
-    );
+    assert_eq!(response, hex!("0a070a05312e322e33"));
 }
 
 pub fn main() {
     version::setup_app();
 
     loop {
+        sdk::ux::ux_idle();
+
         let buffer = sdk::xrecv(512);
+
+        sdk::ux::app_loading_start("Handling request...\x00");
+
         let result = handle_req(&buffer);
         sdk::xsend(&result);
+
+        sdk::ux::app_loading_stop();
     }
 }

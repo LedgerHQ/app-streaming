@@ -1,5 +1,7 @@
-use alloc::fmt;
 use alloc::string::{String, ToString};
+use alloc::{fmt, format};
+
+use sdk::SdkError;
 
 #[derive(Debug)]
 pub struct AppError {
@@ -23,6 +25,12 @@ impl fmt::Display for AppError {
 impl From<quick_protobuf::Error> for AppError {
     fn from(err: quick_protobuf::Error) -> Self {
         AppError::new(&err.to_string())
+    }
+}
+
+impl From<SdkError> for AppError {
+    fn from(err: SdkError) -> Self {
+        AppError::new(&format!("sdk error: {}", err))
     }
 }
 
