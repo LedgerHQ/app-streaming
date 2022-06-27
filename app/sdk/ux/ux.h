@@ -16,8 +16,8 @@ enum ux_action_e {
 
 struct ux_item_s {
     const bagl_icon_details_t *icon;
-    uint8_t *line1;
-    uint8_t *line2;
+    char *line1;
+    char *line2;
     enum ux_action_e action;
 };
 
