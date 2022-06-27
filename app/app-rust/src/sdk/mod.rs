@@ -4,6 +4,8 @@ mod allocator;
 
 use alloc::vec;
 use alloc::vec::Vec;
+
+#[cfg(target_arch = "riscv32")]
 use main;
 
 #[global_allocator]
