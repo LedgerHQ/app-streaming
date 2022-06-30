@@ -129,4 +129,6 @@ void display_item(struct ux_item_s *item, bool first, bool last)
         ux_layout_bb_elements[1].text = item->line2;
         display_elements(ux_layout_bb_elements, ARRAY_SIZE(ux_layout_bb_elements));
     }
+
+    screen_update();
 }
