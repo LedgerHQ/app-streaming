@@ -3,7 +3,6 @@ use hex_literal::hex;
 
 use sdk::*;
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct CtxSha256 {
     initialized: bool,
@@ -13,7 +12,6 @@ pub struct CtxSha256 {
     acc: [u8; 8 * 4],
 }
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct CtxSha3 {
     initialized: bool,
@@ -23,7 +21,6 @@ pub struct CtxSha3 {
     acc: [u64; 25],
 }
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct CtxRipeMd160 {
     initialized: bool,
@@ -40,7 +37,6 @@ pub enum CxCurve {
     Secp256r1 = 0x22,
 }
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct EcfpPublicKey {
     curve: CxCurve,
@@ -48,7 +44,6 @@ pub struct EcfpPublicKey {
     w: [u8; 65],
 }
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 pub struct EcfpPrivateKey {
     curve: CxCurve,
@@ -56,12 +51,11 @@ pub struct EcfpPrivateKey {
     d: [u8; 32],
 }
 
-#[derive(Clone, Copy)]
 #[repr(C)]
 pub union CtxHashGuest {
-    ripemd160: CtxRipeMd160,
-    sha3: CtxSha3,
-    sha256: CtxSha256,
+    ripemd160: *mut CtxRipeMd160,
+    sha3: *mut CtxSha3,
+    sha256: *mut CtxSha256,
 }
 
 #[repr(C)]
@@ -82,30 +76,27 @@ impl CtxSha256 {
         }
     }
 
-    pub fn update(&mut self, buffer: &[u8]) -> Self {
-        let mut hash_ctx = CtxHashGuest { sha256: *self };
+    pub fn update(&mut self, buffer: &[u8]) -> &mut Self {
+        let hash_ctx = CtxHashGuest { sha256: &mut *self };
         if !unsafe {
             ecall_hash_update(
                 CxHashId::HashIdSha256,
-                &mut hash_ctx,
+                hash_ctx,
                 buffer.as_ptr(),
                 buffer.len(),
             )
         } {
             fatal("sha256_update");
         }
-        *self = unsafe { hash_ctx.sha256 };
-        *self
+        self
     }
 
     pub fn r#final(&mut self) -> [u8; 32] {
         let mut digest = [0u8; 32];
-        let mut hash_ctx = CtxHashGuest { sha256: *self };
-        if !unsafe { ecall_hash_final(CxHashId::HashIdSha256, &mut hash_ctx, digest.as_mut_ptr()) }
-        {
+        let hash_ctx = CtxHashGuest { sha256: &mut *self };
+        if !unsafe { ecall_hash_final(CxHashId::HashIdSha256, hash_ctx, digest.as_mut_ptr()) } {
             fatal("sha256_final");
         }
-        *self = unsafe { hash_ctx.sha256 };
 
         digest
     }
@@ -122,35 +113,31 @@ impl CtxRipeMd160 {
         }
     }
 
-    pub fn update(&mut self, buffer: &[u8]) -> Self {
-        let mut hash_ctx = CtxHashGuest { ripemd160: *self };
+    pub fn update(&mut self, buffer: &[u8]) -> &mut Self {
+        let hash_ctx = CtxHashGuest {
+            ripemd160: &mut *self,
+        };
         if !unsafe {
             ecall_hash_update(
                 CxHashId::HashIdRipeMd160,
-                &mut hash_ctx,
+                hash_ctx,
                 buffer.as_ptr(),
                 buffer.len(),
             )
         } {
             fatal("ripemd160_update");
         }
-        *self = unsafe { hash_ctx.ripemd160 };
-        *self
+        self
     }
 
     pub fn r#final(&mut self) -> [u8; 20] {
         let mut digest = [0u8; 20];
-        let mut hash_ctx = CtxHashGuest { ripemd160: *self };
-        if !unsafe {
-            ecall_hash_final(
-                CxHashId::HashIdRipeMd160,
-                &mut hash_ctx,
-                digest.as_mut_ptr(),
-            )
-        } {
+        let hash_ctx = CtxHashGuest {
+            ripemd160: &mut *self,
+        };
+        if !unsafe { ecall_hash_final(CxHashId::HashIdRipeMd160, hash_ctx, digest.as_mut_ptr()) } {
             fatal("ripemd160_final");
         }
-        *self = unsafe { hash_ctx.ripemd160 };
 
         digest
     }
@@ -167,31 +154,27 @@ impl CtxSha3 {
         }
     }
 
-    pub fn update(&mut self, buffer: &[u8]) -> Self {
-        let mut hash_ctx = CtxHashGuest { sha3: *self };
+    pub fn update(&mut self, buffer: &[u8]) -> &mut Self {
+        let hash_ctx = CtxHashGuest { sha3: &mut *self };
         if !unsafe {
             ecall_hash_update(
                 CxHashId::HashIdSha3_256,
-                &mut hash_ctx,
+                hash_ctx,
                 buffer.as_ptr(),
                 buffer.len(),
             )
         } {
             fatal("sha3_update");
         }
-        *self = unsafe { hash_ctx.sha3 };
-        *self
+        self
     }
 
     pub fn r#final(&mut self) -> [u8; 32] {
         let mut digest = [0u8; 32];
-        let mut hash_ctx = CtxHashGuest { sha3: *self };
-        if !unsafe {
-            ecall_hash_final(CxHashId::HashIdSha3_256, &mut hash_ctx, digest.as_mut_ptr())
-        } {
+        let hash_ctx = CtxHashGuest { sha3: &mut *self };
+        if !unsafe { ecall_hash_final(CxHashId::HashIdSha3_256, hash_ctx, digest.as_mut_ptr()) } {
             fatal("sha3_final");
         }
-        *self = unsafe { hash_ctx.sha3 };
 
         digest
     }
@@ -263,9 +246,7 @@ impl EcfpPublicKey {
     }
 
     pub fn from_path(curve: CxCurve, path: &[u32]) -> Result<EcfpPublicKey> {
-        let privkey_data = &mut [0u8; 32];
-        derive_node_bip32(curve, path, Some(privkey_data), None)?;
-        let mut privkey = EcfpPrivateKey::new(curve, privkey_data);
+        let mut privkey = EcfpPrivateKey::from_path(curve, path)?;
         let mut pubkey = EcfpPublicKey::new(curve, &[0u8; 65]);
         ecfp_generate_keypair(curve, &mut pubkey, &mut privkey, true)?;
         Ok(pubkey)
@@ -279,6 +260,12 @@ impl EcfpPrivateKey {
             d_len: 32,
             d: *bytes,
         }
+    }
+
+    pub fn from_path(curve: CxCurve, path: &[u32]) -> Result<EcfpPrivateKey> {
+        let mut privkey = Self::new(curve, &[0; 32]);
+        derive_node_bip32(curve, path, Some(&mut privkey.d), None)?;
+        Ok(privkey)
     }
 }
 

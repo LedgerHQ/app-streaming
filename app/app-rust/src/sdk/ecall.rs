@@ -49,9 +49,9 @@ extern "C" {
     pub fn ecall_get_random_bytes(buffer: *mut u8, size: usize);
     pub fn ecall_hash_update(
         hash_id: CxHashId,
-        ctx: &mut CtxHashGuest,
+        ctx: CtxHashGuest,
         buffer: *const u8,
         size: usize,
     ) -> bool;
-    pub fn ecall_hash_final(hash_id: CxHashId, ctx: &mut CtxHashGuest, buffer: *mut u8) -> bool;
+    pub fn ecall_hash_final(hash_id: CxHashId, ctx: CtxHashGuest, buffer: *mut u8) -> bool;
 }

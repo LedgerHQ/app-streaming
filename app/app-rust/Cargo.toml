@@ -20,7 +20,7 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
-strip = true
+#strip = true
 opt-level = "z"
 #codegen-units = 1
 lto = true
