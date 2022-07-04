@@ -21,5 +21,4 @@ Tests are ran on x64 thanks to `libspeculos.so`.
 
 ## Notes
 
-- Bug: LTO and codegen-units seems to be broken, that's why they're commented out in `Cargo.toml`. The generated code is invalid.
 - Find which functions take the most of space with `cargo install bloat && cargo bloat --release -n 10`
