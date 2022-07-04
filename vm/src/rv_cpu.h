@@ -175,4 +175,6 @@ bool rv_cpu_execute(struct rv_cpu *cpu, u32 inst);
 
 enum rv_op rv_cpu_decode(u32 inst);
 
+bool ecall(struct rv_cpu *cpu);
+
 #endif // RV_CPU_H

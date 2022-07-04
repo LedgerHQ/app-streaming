@@ -1,8 +1,8 @@
+#include <inttypes.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
 
-#include "ecall.h"
 #include "error.h"
 #include "rv_cpu.h"
 #include "stream.h"
@@ -374,11 +374,20 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             break;
 
         case RV_OP_DIV:
-            cpu->regs[inst.rd] = (int32_t)cpu->regs[inst.rs1] / (int32_t)cpu->regs[inst.rs2];
+            if ((cpu->regs[inst.rs2] != 0) &&
+                !((int32_t)cpu->regs[inst.rs1] == INT_MIN && cpu->regs[inst.rs2] == UINT_MAX)) {
+                cpu->regs[inst.rd] = (int32_t)cpu->regs[inst.rs1] / (int32_t)cpu->regs[inst.rs2];
+            } else {
+                cpu->regs[inst.rd] = 0xffffffff;
+            }
             break;
 
         case RV_OP_DIVU:
-            cpu->regs[inst.rd] = cpu->regs[inst.rs1] / cpu->regs[inst.rs2];
+            if (cpu->regs[inst.rs2] != 0) {
+                cpu->regs[inst.rd] = cpu->regs[inst.rs1] / cpu->regs[inst.rs2];
+            } else {
+                cpu->regs[inst.rd] = 0xffffffff;
+            }
             break;
 
             /*case RV_OP_REM:
@@ -386,7 +395,11 @@ bool rv_cpu_execute(struct rv_cpu *cpu, uint32_t instruction)
             break;*/
 
         case RV_OP_REMU:
-            cpu->regs[inst.rd] = cpu->regs[inst.rs1] % cpu->regs[inst.rs2];
+            if (cpu->regs[inst.rs2] != 0) {
+                cpu->regs[inst.rd] = cpu->regs[inst.rs1] % cpu->regs[inst.rs2];
+            } else {
+                cpu->regs[inst.rd] = cpu->regs[inst.rs1] = cpu->regs[inst.rs2];
+            }
             break;
 
         case RV_OP_FENCE:
