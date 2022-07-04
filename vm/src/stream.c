@@ -376,7 +376,15 @@ bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
     init_memory_addresses(manifest->bss, sp);
 
     app.cpu.pc = manifest->pc;
-    app.cpu.regs[RV_REG_SP] = sp - 4;
+
+    /*
+     * Align the stack pointer to 16-bytes. According to
+     * https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf:
+     *
+     *   In the standard RISC-V calling convention, the stack grows downward and
+     *   the stack pointer is always kept 16-byte aligned.
+     */
+    app.cpu.regs[RV_REG_SP] = (sp - 4) & 0xfffffff0;
 
     init_caches();
 
