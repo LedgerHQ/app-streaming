@@ -7,7 +7,9 @@
  * The tests from https://github.com/riscv-software-src/riscv-tests can be built
  * with the following command-line:
  *
- *   RISCV_PREFIX=riscv32-unknown-linux-gnu- RISCV_GCC_OPTS='-static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -I/usr/local/riscv32-unknown-linux-gnu/include/' XLEN=32 make -j -B
+ *   RISCV_PREFIX=riscv32-unknown-linux-gnu- RISCV_GCC_OPTS='-static -mcmodel=medany
+ *   -fvisibility=hidden -nostdlib -nostartfiles -I/usr/local/riscv32-unknown-linux-gnu/include/'
+ *   XLEN=32 make -j -B
  *
  * The patch env.diff should be applied against the git sub-module
  * https://github.com/riscv-software-src/riscv-tests first.
