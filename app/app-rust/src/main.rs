@@ -6,6 +6,7 @@ extern crate bech32;
 extern crate byteorder;
 extern crate hex;
 extern crate hex_literal;
+extern crate primitive_types;
 extern crate quick_protobuf;
 extern crate serde;
 
