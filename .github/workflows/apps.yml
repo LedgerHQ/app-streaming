@@ -36,6 +36,16 @@ jobs:
            cmake -Bbuild -H.
            make -j -C build/
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: lib-riscv
+          if-no-files-found: error
+          path: |
+            ./app/build/sdk/libsdk.a
+            ./app/build/sdk/ux/libux.a
+            /usr/local/riscv32-unknown-linux-gnu/lib/libc.a
+
   build-x64:
     name: Build x64 apps
     runs-on: ubuntu-latest
@@ -84,3 +94,71 @@ jobs:
         working-directory: ./app
         run: |
            make -C build/native/ test
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: lib-x64
+          if-no-files-found: error
+          path: |
+            ./app/build/native/sdk/libcxng.a
+            ./app/build/native/sdk/libsdk.a
+            ./app/build/native/sdk/libspeculos.a
+            ./app/build/native/sdk/ux/libux.a
+            /usr/local/lib/libcrypto.a
+
+  build-rust:
+    name: Build Rust apps
+    needs: [build-riscv, build-x64]
+    runs-on: ubuntu-latest
+
+    container:
+      image: rust:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.CI_BOT_PAT }}
+
+      - name: Install Rust
+        run: |
+           rustup default nightly
+           rustup target add --toolchain=nightly riscv32i-unknown-none-elf
+           rustup component add clippy
+           rustup component add rustfmt
+
+      - name: Download RISC-V artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: lib-riscv
+          path: /tmp/artifacts-risc-v/
+
+      - name: Download x64 artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: lib-x64
+          path: /tmp/artifacts-x64/
+
+      - name: Move artifacts to the lib/ directory
+        run: |
+           mkdir -p ./app/app-rust/lib/risc-v/ ./app/app-rust/lib/x64/
+           find /tmp/artifacts-risc-v/ -type f -name 'lib*.a' -exec mv '{}' ./app/app-rust/lib/risc-v/ ';'
+           find /tmp/artifacts-x64/ -type f -name 'lib*.a' -exec mv '{}' ./app/app-rust/lib/x64/ ';'
+
+      - name: Build
+        working-directory: ./app/app-rust/
+        run: |
+           cargo build --release
+
+      - name: Test
+        working-directory: ./app/app-rust/
+        run: |
+           cargo test --target x86_64-unknown-linux-gnu -- --test-threads=1
+
+      - name: Format
+        working-directory: ./app/app-rust/
+        run: |
+           cargo fmt
