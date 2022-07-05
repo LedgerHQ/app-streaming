@@ -148,38 +148,21 @@ bool sys_xsend(guest_pointer_t p_buf, size_t size)
     return true;
 }
 
-bool sys_fatal(guest_pointer_t p_msg)
+bool sys_fatal(guest_pointer_t p_msg, size_t size)
 {
     struct cmd_fatal_s *cmd = (struct cmd_fatal_s *)G_io_apdu_buffer;
 
     _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd) + 1, "invalid IO_APDU_BUFFER_SIZE");
 
-    /* copy error message, which might be on 2 contiguous pages */
-    size_t max_size = sizeof(cmd->msg);
-
-    uint8_t *p = cmd->msg;
-    size_t n = BUFFER_MAX_SIZE(p_msg.addr);
-    if (n > max_size) {
-        n = max_size;
+    if (size > sizeof(cmd->msg) - 1) {
+        size = sizeof(cmd->msg) - 1;
     }
-    if (!copy_guest_buffer(p_msg, p, n))  {
+
+    if (!copy_guest_buffer(p_msg, cmd->msg, size))  {
         return false;
     }
 
-    uint8_t *q = memchr(p, '\x00', n);
-    if (q == NULL) {
-        p_msg.addr += n;
-        p += n;
-        max_size -= n;
-        if (!copy_guest_buffer(p_msg, p, max_size)) {
-            return false;
-        }
-        q = memchr(p, '\x00', n);
-    }
-
-    if (q != NULL) {
-        memset(q, '\x00', sizeof(cmd->msg) - (q - p));
-    }
+    memset(cmd->msg + size, '\x00', sizeof(cmd->msg) - size);
 
     cmd->cmd = (CMD_FATAL >> 8) | ((CMD_FATAL & 0xff) << 8);
 

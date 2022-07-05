@@ -16,7 +16,7 @@ bool ecall(struct rv_cpu *cpu)
 
     switch (nr) {
     case ECALL_FATAL:
-        success = sys_fatal(GP(RV_REG_A0));
+        success = sys_fatal(GP(RV_REG_A0), cpu->regs[RV_REG_A1]);
         // stop execution
         success = false;
         break;
