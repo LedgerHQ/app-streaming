@@ -275,13 +275,14 @@ __attribute__((noreturn)) void ecall_exit(int status)
     while (1);
 }
 
-__attribute__((noreturn)) void ecall_fatal(char *msg)
+__attribute__((noreturn)) void ecall_fatal(uint8_t *msg, size_t size)
 {
     register uint32_t a0 asm ("a0") = (uint32_t)msg;
+    register uint32_t a1 asm ("a1") = size;
     asm volatile (
         "li t0, %0\n"
         "ecall\n"
-        :: "i"(ECALL_FATAL), "r"(a0) : "t0"
+        :: "i"(ECALL_FATAL), "r"(a0), "r"(a1) : "t0"
     );
 
     while (1);

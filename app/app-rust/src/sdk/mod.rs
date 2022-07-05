@@ -38,7 +38,7 @@ pub type Result<T> = core::result::Result<T, SdkError>;
 pub fn fatal(msg: &str) {
     let buf = msg.as_bytes().to_vec();
     unsafe {
-        ecall_fatal(buf.as_ptr());
+        ecall_fatal(buf.as_ptr(), msg.len());
     }
 }
 

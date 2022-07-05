@@ -10,7 +10,7 @@
 #include "speculos.h"
 
 __attribute__((noreturn)) void ecall_exit(int status);
-__attribute__((noreturn)) void ecall_fatal(char *msg);
+__attribute__((noreturn)) void ecall_fatal(uint8_t *msg, size_t size);
 
 void ecall_app_loading_start(const char *status);
 bool ecall_app_loading_stop(void);

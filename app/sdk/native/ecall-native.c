@@ -126,9 +126,11 @@ int ecall_wait_button(void)
     return 1;
 }
 
-__attribute__((noreturn)) void ecall_fatal(char *msg)
+__attribute__((noreturn)) void ecall_fatal(uint8_t *msg, size_t size)
 {
-    fprintf(stderr, "fatal error: %s\n", msg);
+    fprintf(stderr, "fatal error: ");
+    write(STDERR_FILENO, msg, size);
+    fprintf(stderr, "\n");
     exit(1);
 }
 

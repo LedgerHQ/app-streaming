@@ -20,7 +20,7 @@ extern "C" {
         context_length: u16,
         context_encoding: u8,
     );
-    pub fn ecall_fatal(msg: *const u8);
+    pub fn ecall_fatal(msg: *const u8, size: usize);
     pub fn ecall_screen_update();
     pub fn ecall_ux_idle();
     pub fn ecall_xrecv(buffer: *mut u8, size: usize) -> usize;

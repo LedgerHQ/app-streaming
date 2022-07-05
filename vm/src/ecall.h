@@ -35,7 +35,7 @@ uint8_t *get_buffer(const uintptr_t addr, const size_t size, const bool writeabl
 
 bool sys_xsend(guest_pointer_t p_buf, size_t size);
 bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size);
-bool sys_fatal(guest_pointer_t p_msg);
+bool sys_fatal(guest_pointer_t p_msg, size_t size);
 void sys_exit(unsigned int code);
 bool sys_app_loading_start(guest_pointer_t p_status);
 bool sys_app_loading_stop(void);

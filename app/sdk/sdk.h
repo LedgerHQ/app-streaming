@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "api/uint256.h"
 #include "ecall.h"
@@ -13,7 +14,7 @@ void xrecvall(uint8_t *buffer, size_t size);
 
 static inline __attribute__((noreturn)) void fatal(char *msg)
 {
-    ecall_fatal(msg);
+    ecall_fatal((uint8_t *)msg, strlen(msg));
 }
 
 static inline void *xmalloc(size_t size)
