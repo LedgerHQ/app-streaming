@@ -1,4 +1,4 @@
-## Build RISC-V app
+## Rust app for the RISC-V target
 
 ### Pre-requisites
 
