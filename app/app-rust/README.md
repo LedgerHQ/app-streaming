@@ -1,15 +1,27 @@
 ## Build RISC-V app
 
+### Pre-requisites
+
+Some libraries are required to build a Rust app:
+
+- `libc.a` to build the app for the RISC-V target
+- `libcrypto.a` to pass tests on the x64 target
+
+These libraries can be retrieved from Docker images thanks to the script `lib/create-lib.sh`:
+
+```console
+./lib/create-lib.sh
+```
+
+They are also generated as artifacts by the [GitHub CI](https://github.com/LedgerHQ/app-streaming/actions/workflows/apps.yml).
+
+### Build
+
 ```console
 cargo build --release
 ```
 
-```console
-$ file target/riscv32i-unknown-none-elf/release/demo
-target/riscv32i-unknown-none-elf/release/demo: ELF 32-bit LSB executable, UCB RISC-V, version 1 (SYSV), statically linked, stripped
-```
-
-## Tests
+### Tests
 
 ```console
 cargo test --target x86_64-unknown-linux-gnu -- --test-threads=1
@@ -18,6 +30,7 @@ cargo test --target x86_64-unknown-linux-gnu -- --test-threads=1
 Tests are ran on x64 thanks to `libspeculos.so`.
 
 `--test-threads=1` is required because `libspeculos.so` isn't thread safe.
+
 
 ## Notes
 
