@@ -1,3 +1,5 @@
 .mypy_cache/
 __pycache__/
+app/app-rust/lib/risc-v/
+app/app-rust/lib/x64/
 app/build/
