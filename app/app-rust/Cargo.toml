@@ -10,6 +10,7 @@ path = "src/main.rs"
 [dependencies]
 bech32 = { version = "0.9.0", default-features = false }
 byteorder = { version = "1.4.3", default-features = false }
+primitive-types = { version = "0.11.1", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 hex-literal = "0.3.4"
 quick-protobuf = { version = "0.8.0", default-features = false }

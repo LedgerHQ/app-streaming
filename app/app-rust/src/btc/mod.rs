@@ -89,10 +89,16 @@ fn test_bech32() {
 #[test]
 fn test_printable_amount() {
     let btc = Btc {};
-    assert_eq!(btc.get_printable_amount(&hex!("05f5e100")).unwrap(), "BTC 1");
+    assert_eq!(
+        btc.get_printable_amount(&hex!("05f5e100")).unwrap(),
+        "BTC 1"
+    );
     assert_eq!(
         btc.get_printable_amount(&hex!("04d2")).unwrap(),
         "BTC 0.00001234"
     );
-    assert_eq!(btc.get_printable_amount(&hex!("4c4b40")).unwrap(), "BTC 0.05");
+    assert_eq!(
+        btc.get_printable_amount(&hex!("4c4b40")).unwrap(),
+        "BTC 0.05"
+    );
 }
