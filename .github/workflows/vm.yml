@@ -14,7 +14,7 @@ defaults:
 
 jobs:
   build:
-    name: Clang Static Analyzer
+    name: VM build
     runs-on: ubuntu-latest
 
     container:
@@ -40,11 +40,13 @@ jobs:
         run: |
           make BOLOS_SDK=$NANOX_SDK
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: vm
+          if-no-files-found: error
+          path: ./vm/bin/app.elf
+
       - name: Build with Clang Static Analyzer
         run: |
           scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make BOLOS_SDK=$NANOX_SDK
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: scan-build
-          path: scan-build
