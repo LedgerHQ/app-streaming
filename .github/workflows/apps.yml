@@ -161,4 +161,4 @@ jobs:
       - name: Format
         working-directory: ./app/app-rust/
         run: |
-           cargo fmt
+           cargo fmt -- --check
