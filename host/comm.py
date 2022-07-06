@@ -5,6 +5,7 @@ import time
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from enum import IntEnum
 from typing import Optional, Union
 
 from ledgerwallet.client import LedgerClient
@@ -15,6 +16,21 @@ from ledgerwallet.utils import serialize
 Apdu = namedtuple("Apdu", "status data")
 logger = logging.getLogger("comm")
 CLA = 0x12
+
+
+class ApduCmd(IntEnum):
+    REQUEST_PAGE = 0x6101
+    REQUEST_HMAC = 0x6102
+    REQUEST_PROOF = 0x6103
+    COMMIT_PAGE = 0x6201
+    COMMIT_HMAC = 0x6202
+    SEND_BUFFER = 0x6301
+    RECV_BUFFER = 0x6401
+    EXIT = 0x6501
+    FATAL = 0x6601
+    REQUEST_MANIFEST = 0x6701
+    REQUEST_APP_PAGE = 0x6801
+    REQUEST_APP_HMAC = 0x6802
 
 
 class CommClient(ABC):

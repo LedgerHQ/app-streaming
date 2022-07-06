@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 from typing import cast, List, Optional, Type
 from zipfile import ZipFile
 
-from comm import get_client, CommClient
+from comm import ApduCmd, get_client, CommClient
 from elf import Segment
 from manifest import Manifest
 
@@ -109,7 +109,7 @@ def device_sign_app(client: CommClient, app: App) -> None:
     data = app.manifest + signature.ljust(72, b"\x00") + len(signature).to_bytes(1, "little")
 
     apdu = client.exchange(ins=0x11, data=data, cla=0x34)
-    assert apdu.status == 0x6801
+    assert apdu.status == ApduCmd.REQUEST_APP_PAGE
 
     code_macs: List[bytes] = []
     data_macs: List[bytes] = []
@@ -117,10 +117,10 @@ def device_sign_app(client: CommClient, app: App) -> None:
     for pages in [app.code_pages, app.data_pages]:
         macs = enc_macs.pop(0)
         for page in pages:
-            assert apdu.status == 0x6801
+            assert apdu.status == ApduCmd.REQUEST_APP_PAGE
 
             apdu = client.exchange(0x01, data=page[1:], p2=page[0], cla=0x34)
-            assert apdu.status == 0x6802
+            assert apdu.status == ApduCmd.REQUEST_APP_HMAC
             print(hex(apdu.status), apdu.data.hex())
             mac = apdu.data
             macs.append(mac)

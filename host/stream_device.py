@@ -4,7 +4,7 @@ import zipfile
 from construct import Bytes, Int8ul, Int16ul, Int32ul, Struct
 from typing import Any, Dict, Optional
 
-from comm import Apdu, CommClient, get_client
+from comm import Apdu, ApduCmd, CommClient, get_client
 from app import App, device_get_pubkey, device_sign_app
 from hsm import hsm_sign_app
 from manifest import Manifest
@@ -88,7 +88,7 @@ class DeviceStream:
         assert not self.initialized
 
         apdu = self.client.exchange(ins=0x00, data=self.signature)
-        assert apdu.status == 0x6701
+        assert apdu.status == ApduCmd.REQUEST_MANIFEST
         # pad with 3 bytes because of alignment
         data = b"\x00" * 3 + self.manifest
 
@@ -105,7 +105,7 @@ class DeviceStream:
         page = self._get_page(request.addr)
         assert len(page.data) == DeviceStream.PAGE_SIZE
         apdu = self.client.exchange(0x01, data=page.data[1:], p2=page.data[0])
-        assert apdu.status == 0x6102
+        assert apdu.status == ApduCmd.REQUEST_HMAC
 
         # 4. send iv and mac
         data = Struct("iv" / Int32ul, "mac" / Bytes(32)).build(dict(iv=page.iv, mac=page.mac))
@@ -113,7 +113,7 @@ class DeviceStream:
 
         # 5. send merkle proof
         if not page.read_only:
-            assert apdu.status == 0x6103
+            assert apdu.status == ApduCmd.REQUEST_PROOF
             entry, proof = self.merkletree.get_proof(request.addr)
             assert entry.addr == request.addr
             assert entry.counter == page.iv
@@ -131,7 +131,7 @@ class DeviceStream:
 
         # 2. receive addr, iv and mac
         apdu = self.client.exchange(0x01)
-        assert apdu.status == 0x6202
+        assert apdu.status == ApduCmd.COMMIT_HMAC
 
         request = DeviceStream._parse_request(Struct("addr" / Int32ul, "iv" / Int32ul, "mac" / Bytes(32)), apdu.data)
         assert (request.addr & DeviceStream.PAGE_MASK_INVERT) == 0
@@ -215,11 +215,11 @@ class DeviceStream:
         buffer_received = False
         while True:
             logger.debug(f"[<] {apdu.status:#06x} {apdu.data[:8].hex()}...")
-            if apdu.status == 0x6101:
+            if apdu.status == ApduCmd.REQUEST_PAGE:
                 apdu = self.handle_read_access(apdu.data)
-            elif apdu.status == 0x6201:
+            elif apdu.status == ApduCmd.COMMIT_PAGE:
                 apdu = self.handle_write_access(apdu.data)
-            elif apdu.status == 0x6301:
+            elif apdu.status == ApduCmd.SEND_BUFFER:
                 stop = self.handle_send_buffer(apdu.data)
                 if stop:
                     logger.info(f"received buffer: {self.send_buffer!r} (len: {len(self.send_buffer)})")
@@ -229,7 +229,7 @@ class DeviceStream:
                     return data
                 else:
                     apdu = self.client.exchange(0x00, data=b"")
-            elif apdu.status == 0x6401:
+            elif apdu.status == ApduCmd.RECV_BUFFER:
                 if exit_app:
                     logger.info("exiting app")
                     self.client.exchange(0x00, p1=0x02, data=b"")
@@ -241,10 +241,10 @@ class DeviceStream:
                     self.recv_buffer = recv_buffer
                     buffer_received = True
                 apdu = self.handle_recv_buffer(apdu.data)
-            elif apdu.status == 0x6501:
+            elif apdu.status == ApduCmd.EXIT:
                 self.handle_exit(apdu.data)
                 break
-            elif apdu.status == 0x6601:
+            elif apdu.status == ApduCmd.FATAL:
                 self.handle_fatal(apdu.data)
                 break
             else:
