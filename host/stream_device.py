@@ -205,7 +205,7 @@ class DeviceStream:
         message = request.message.rstrip(b"\x00")
         logger.warn(f"app encountered a fatal error: {message}")
 
-    def exchange(self, recv_buffer: bytes) -> Optional[bytes]:
+    def exchange(self, recv_buffer: bytes, exit_app=False) -> Optional[bytes]:
         if not self.initialized:
             apdu = self.init_app()
         else:
@@ -230,6 +230,10 @@ class DeviceStream:
                 else:
                     apdu = self.client.exchange(0x00, data=b"")
             elif apdu.status == 0x6401:
+                if exit_app:
+                    logger.info("exiting app")
+                    self.client.exchange(0x00, p1=0x02, data=b"")
+                    return None
                 if len(self.recv_buffer) == 0:
                     # The app mustn't call recv() twice without having called
                     # send() after the first call.
@@ -248,6 +252,9 @@ class DeviceStream:
                 assert False
 
         return None
+
+    def exit_app(self):
+        self.exchange(b"", exit_app=True)
 
 
 class DeviceStreamer(StreamerABC):
@@ -287,6 +294,7 @@ class DeviceStreamer(StreamerABC):
         return self
 
     def __exit__(self, type, value, traceback):
+        self.stream.exit_app()
         self.client.__exit__(type, value, traceback)
         self.client = None
 

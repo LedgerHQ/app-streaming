@@ -75,6 +75,12 @@ bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size)
             err("invalid APDU\n");
             return false;
         }
+
+        if (apdu->p1 == '\x02') {
+            /* exit the app */
+            return false;
+        }
+
         bool stop = (apdu->p1 == '\x01');
 
         if ((apdu->lc + 1) > n || ((apdu->lc + 1) != n && !stop)) {

@@ -87,8 +87,9 @@ static void app_main_(void)
         stream_run_app();
         app_running = false;
 
-        PRINTF("app exited\n");
-        os_sched_exit(13);
+        G_io_apdu_buffer[0] = 0x90;
+        G_io_apdu_buffer[1] = 0x00;
+        tx = 2;
 
         ui_menu_main();
     }
