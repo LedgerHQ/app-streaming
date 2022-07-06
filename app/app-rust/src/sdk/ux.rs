@@ -7,6 +7,7 @@ use sdk::{
 pub const BAGL_NOFILL: u8 = 0;
 pub const BAGL_FILL: u8 = 1;
 
+#[repr(u8)]
 pub enum BaglComponentType {
     None = 0,
     Button = 1,
@@ -40,8 +41,7 @@ mod font {
 
 #[repr(C, packed)]
 pub struct BaglComponent {
-    //pub kind: BaglComponentType,
-    pub kind: u8,
+    pub kind: BaglComponentType,
     pub userid: u8,
     pub x: i16,
     pub y: i16,
@@ -108,7 +108,7 @@ pub struct UxItem<'a> {
 }
 
 static LAYOUT_BB_LINE1: BaglComponent = BaglComponent {
-    kind: BaglComponentType::Labeline as u8,
+    kind: BaglComponentType::Labeline,
     userid: 0x10,
     x: 6,
     y: 29,
@@ -124,7 +124,7 @@ static LAYOUT_BB_LINE1: BaglComponent = BaglComponent {
 };
 
 static LAYOUT_BB_LINE2: BaglComponent = BaglComponent {
-    kind: BaglComponentType::Labeline as u8,
+    kind: BaglComponentType::Labeline,
     userid: 0x11,
     x: 6,
     y: 43,
@@ -140,7 +140,7 @@ static LAYOUT_BB_LINE2: BaglComponent = BaglComponent {
 };
 
 static LAYOUT_PN_LINE: BaglComponent = BaglComponent {
-    kind: BaglComponentType::Labeline as u8,
+    kind: BaglComponentType::Labeline,
     userid: 0x11,
     x: 0,
     y: 44,
@@ -156,7 +156,7 @@ static LAYOUT_PN_LINE: BaglComponent = BaglComponent {
 };
 
 static LAYOUT_PBB_LINE1: BaglComponent = BaglComponent {
-    kind: BaglComponentType::Labeline as u8,
+    kind: BaglComponentType::Labeline,
     userid: 0x10,
     x: 6,
     y: 37,
@@ -172,7 +172,7 @@ static LAYOUT_PBB_LINE1: BaglComponent = BaglComponent {
 };
 
 static LAYOUT_PBB_LINE2: BaglComponent = BaglComponent {
-    kind: BaglComponentType::Labeline as u8,
+    kind: BaglComponentType::Labeline,
     userid: 0x11,
     x: 6,
     y: 51,
@@ -189,7 +189,7 @@ static LAYOUT_PBB_LINE2: BaglComponent = BaglComponent {
 
 static LAYOUT_ERASE: BaglRectangle = BaglRectangle {
     component: &BaglComponent {
-        kind: BaglComponentType::Rectangle as u8,
+        kind: BaglComponentType::Rectangle,
         userid: 0x00,
         x: 0,
         y: 0,
