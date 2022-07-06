@@ -6,6 +6,8 @@
 
 #include "memory.h"
 
+#include "cx.h"
+
 struct manifest_s {
     uint32_t manifest_version; /* not used for now */
     char name[32];
@@ -18,7 +20,7 @@ struct manifest_s {
 
     uint8_t merkle_tree_root_hash[32];
     uint32_t merkle_tree_size;
-    uint8_t last_entry_init[8];
+    uint8_t last_entry_digest_init[CX_SHA256_SIZE];
 } __attribute__((packed));
 
 bool stream_init_app(const uint8_t *buffer, const size_t size);

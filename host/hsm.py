@@ -66,7 +66,8 @@ class HsmApp:
         self.code_pages = HsmApp.data_to_pages(self.code)
         self.data_pages = HsmApp.data_to_pages(self.data)
 
-        self.merkletree = HsmApp.compute_merkle_tree(self.data_start, self.data_end)
+        self.merkletree = HsmApp.compute_merkle_tree(self.data_start, self.data_end, self.data_pages,
+                self.code_start, self.code_end, self.code_pages)
 
     def compute_app_hash(self) -> bytes:
         m = hashlib.sha256()
@@ -79,12 +80,18 @@ class HsmApp:
         return m.digest()
 
     @staticmethod
-    def compute_merkle_tree(data_start: int, data_end: int) -> MerkleTree:
+    def compute_merkle_tree(data_start: int, data_end: int, data_pages: List[bytes],
+            code_start: int, code_end: int, code_pages: List[bytes]
+            ) -> MerkleTree:
+
         merkletree = MerkleTree()
         iv = 0
 
-        for addr in range(data_start, data_end, Segment.PAGE_SIZE):
-            merkletree.insert(Entry.from_values(addr, iv))
+        for i, addr in enumerate(range(data_start, data_end, Segment.PAGE_SIZE)):
+            merkletree.insert(Entry.from_values(addr, data_pages[i], iv))
+
+        for i, addr in enumerate(range(code_start, code_end, Segment.PAGE_SIZE)):
+            merkletree.insert(Entry.from_values(addr, code_pages[i], iv))
 
         return merkletree
 
@@ -118,7 +125,7 @@ class HsmApp:
             "data_end": self.data_end + Elf.HEAP_SIZE,
             "mt_root_hash": self.merkletree.root_hash(),
             "mt_size": len(self.merkletree.entries),
-            "mt_last_entry": self.merkletree.entries[-1],
+            "mt_last_entry_digest": MerkleTree.mth([self.merkletree.entries[-1]]),
         }))
 
         return Manifest(data)

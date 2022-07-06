@@ -174,7 +174,7 @@ static bool create_empty_pages(uint32_t from, uint32_t to, struct page_s *page)
         memset(page->data, '\x00', sizeof(page->data));
         page->addr = addr;
         /* During the first commit, the IV will be incremented to 1 and the
-         * dynamic keys will be used for decryption and HMAC. */
+         * dynamic keys will be used for decryption. */
         page->iv = 0;
         if (!stream_commit_page(page, true)) {
             return false;

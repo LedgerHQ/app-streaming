@@ -33,11 +33,6 @@ size_t handle_general_apdu(uint8_t ins, uint8_t *data, size_t size)
             success = handle_get_device_pubkey((const uint8_t *)data, G_io_apdu_buffer, &tx);
         }
         break;
-    case INS_SIGN_APP:
-        if (size == sizeof(struct cmd_response_app_s)) {
-            success = handle_sign_app((struct cmd_response_app_s *)data, &tx);
-        }
-        break;
     default:
         break;
     }

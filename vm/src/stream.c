@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 
 #include "cx.h"
 #include "os_io_seproxyhal.h"
@@ -16,16 +17,9 @@
 #include "stream.h"
 #include "ui.h"
 
-struct key_s {
-    cx_aes_key_t aes;
-    uint8_t hmac[32];
-};
-
 struct app_s {
     struct rv_cpu cpu;
-
-    uint8_t hmac_static_key[32];
-    struct key_s dynamic_key;
+    cx_aes_key_t aes_key;
 };
 
 struct cmd_request_page_s {
@@ -37,21 +31,15 @@ struct cmd_request_manifest_s {
     uint16_t cmd;
 } __attribute__((packed));
 
+struct cmd_commit_init_s {
+    uint32_t addr;
+    uint32_t iv;
+    uint16_t cmd;
+} __attribute__((packed));
+
 struct cmd_commit_page_s {
     uint8_t data[PAGE_SIZE];
     uint16_t cmd;
-} __attribute__((packed));
-
-struct cmd_commit_hmac_s {
-    uint32_t addr;
-    uint32_t iv;
-    uint8_t mac[32];
-    uint16_t cmd;
-} __attribute__((packed));
-
-struct response_hmac_s {
-    uint32_t iv;
-    uint8_t mac[32];
 } __attribute__((packed));
 
 static struct app_s app;
@@ -75,8 +63,8 @@ static void encrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
 
     /* Code pages are never commited since they're read-only. Hence, the AES key
      * is always the dynamic one for encryption. */
-    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out,
-                       &size);
+    cx_aes_iv_no_throw(&app.aes_key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out,
+            &size);
 }
 
 static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv32)
@@ -86,23 +74,8 @@ static void decrypt_page(const void *data, void *out, uint32_t addr, uint32_t iv
     uint8_t iv[CX_AES_BLOCK_SIZE];
 
     compute_iv(iv, addr, iv32);
-    cx_aes_iv_no_throw(&app.dynamic_key.aes, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out,
+    cx_aes_iv_no_throw(&app.aes_key, flag, iv, CX_AES_BLOCK_SIZE, data, PAGE_SIZE, out,
                        &size);
-}
-
-static void init_hmac_ctx(cx_hmac_sha256_t *hmac_sha256_ctx, uint32_t iv)
-{
-    /*
-     * The IV of pages encrypted by the host (read-only and writeable pages) is
-     * always 0. The IV of pages encrypted by the VM is always greater than 0.
-     */
-    if (iv == 0) {
-        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.hmac_static_key,
-                                     sizeof(app.hmac_static_key));
-    } else {
-        cx_hmac_sha256_init_no_throw(hmac_sha256_ctx, app.dynamic_key.hmac,
-                                     sizeof(app.dynamic_key.hmac));
-    }
 }
 
 bool stream_request_page(struct page_s *page, const uint32_t addr, const bool read_only)
@@ -112,99 +85,50 @@ bool stream_request_page(struct page_s *page, const uint32_t addr, const bool re
 
     app_loading_update_ui(true);
 
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd), "invalid IO_APDU_BUFFER_SIZE");
+    _Static_assert(IO_APDU_BUFFER_SIZE >= PAGE_SIZE + 4, "invalid IO_APDU_BUFFER_SIZE");
+
     /* 1. retrieve page data */
 
     cmd->addr = addr;
     cmd->cmd = (CMD_REQUEST_PAGE >> 8) | ((CMD_REQUEST_PAGE & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct apdu_s *apdu = parse_apdu(size);
-    if (apdu == NULL) {
-        err("invalid APDU\n");
+    if (size != PAGE_SIZE + 4) {
         return false;
     }
 
-    if (apdu->lc != PAGE_SIZE - 1) {
-        err("invalid apdu size\n");
-        return false;
-    }
-
-    /* the first byte of the page is in p2 */
     page->addr = addr;
-    page->data[0] = apdu->p2;
-    memcpy(&page->data[1], apdu->data, PAGE_SIZE - 1);
+    page->iv = ((uint32_t *)G_io_apdu_buffer)[0];
+    memcpy(page->data, &G_io_apdu_buffer[4], PAGE_SIZE);
 
-    /* 2. retrieve and verify hmac */
+    /* 2. integrity check using merkle tree */
 
-    cmd->cmd = (CMD_REQUEST_HMAC >> 8) | ((CMD_REQUEST_HMAC & 0xff) << 8);
-    size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
-
-    apdu = parse_apdu(size);
-    if (apdu == NULL) {
-        err("invalid APDU\n");
-        return false;
-    }
-
-    if (apdu->lc != sizeof(struct response_hmac_s)) {
-        err("invalid apdu size\n");
-        return false;
-    }
-
-    struct response_hmac_s *r = (struct response_hmac_s *)&apdu->data;
-
-    cx_hmac_sha256_t hmac_sha256_ctx;
-    struct entry_s entry;
-    uint8_t mac[32];
-
-    entry.addr = page->addr;
-    entry.iv = r->iv;
-
-    /* TODO: ideally, the IV should be verified before */
-    init_hmac_ctx(&hmac_sha256_ctx, entry.iv);
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, page->data, sizeof(page->data), NULL, 0);
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data), mac,
-                     sizeof(mac));
-
-    if (memcmp(mac, r->mac, sizeof(mac)) != 0) {
-        err("invalid hmac\n");
-        return false;
-    }
-
-    /* 3. decrypt page */
-    /* TODO: ideally, decryption should happen before IV verification */
-
-    page->iv = r->iv;
-    if (page->iv != 0) {
-        decrypt_page(page->data, page->data, page->addr, page->iv);
-    }
-
-    /* 4. verify iv thanks to the merkle tree if the page is writeable */
-    if (read_only) {
-        if (page->iv != 0) {
-            err("invalid id for read-only page\n");
-            return false;
-        }
-        return true;
-    }
-
+    cmd->addr = addr;
     cmd->cmd = (CMD_REQUEST_PROOF >> 8) | ((CMD_REQUEST_PROOF & 0xff) << 8);
     size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    apdu = parse_apdu(size);
-    if (apdu == NULL) {
-        err("invalid APDU\n");
-        return false;
-    }
-
-    if ((apdu->lc % sizeof(struct proof_s)) != 0) {
+    if ((size % sizeof(struct proof_s)) != 0) {
         err("invalid proof size\n");
         return false;
     }
 
-    size_t count = apdu->lc / sizeof(struct proof_s);
-    if (!merkle_verify_proof(&entry, (struct proof_s *)&apdu->data, count)) {
-        err("invalid iv (merkle proof)\n");
+    /* TODO, critical: Find a way to increase the limit caused by merkle proof on the
+     *  number of pages stored on the host.
+
+     *  For now, only 2**7 = 128 pages can be stored on the host because each
+     *  proof is 33 bytes long and the IO buffer is 260 bytes long.
+     *  */
+    size_t count = size / sizeof(struct proof_s);
+    if (!merkle_verify_proof((struct entry_s *)page, (struct proof_s *)G_io_apdu_buffer, count)) {
+        err("invalid merkle proof\n");
         return false;
+    }
+
+    /* 3. decrypt page content if needed*/
+
+    if (!read_only && page->iv != 0) {
+        decrypt_page(page->data, page->data, page->addr, page->iv);
     }
 
     return true;
@@ -215,83 +139,67 @@ bool stream_request_page(struct page_s *page, const uint32_t addr, const bool re
  */
 bool stream_commit_page(struct page_s *page, bool insert)
 {
-    struct cmd_commit_page_s *cmd1 = (struct cmd_commit_page_s *)G_io_apdu_buffer;
-    cx_hmac_sha256_t hmac_sha256_ctx;
+    struct cmd_commit_init_s *cmd_commit_init = (struct cmd_commit_init_s *)G_io_apdu_buffer;
+    struct cmd_commit_page_s *cmd_commit_page = (struct cmd_commit_page_s *)G_io_apdu_buffer;
+    struct cmd_request_page_s *cmd_request = (struct cmd_request_page_s *)G_io_apdu_buffer;
     size_t size;
+    uint8_t proof_buffer[IO_APDU_BUFFER_SIZE];
 
     app_loading_update_ui(true);
 
-    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd1), "invalid IO_APDU_BUFFER_SIZE");
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd_commit_init), "invalid IO_APDU_BUFFER_SIZE");
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd_commit_page), "invalid IO_APDU_BUFFER_SIZE");
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd_request), "invalid IO_APDU_BUFFER_SIZE");
+    _Static_assert(IO_APDU_BUFFER_SIZE >= PAGE_SIZE + 4, "invalid IO_APDU_BUFFER_SIZE");
 
-    /* 1. encryption */
-    if (page->iv == 0xffffffff) {
+    if (page->iv == ULONG_MAX) {
         err("iv reuse\n");
         return false;
     }
     page->iv++;
-    encrypt_page(page->data, cmd1->data, page->addr, page->iv);
 
-    /* initialize hmac here since cmd1->data may be overwritten later */
-    init_hmac_ctx(&hmac_sha256_ctx, page->iv);
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, 0, cmd1->data, sizeof(cmd1->data), NULL, 0);
+    /* 1. send target address and receive proof (to update merkle root) */
+    cmd_commit_init->addr = page->addr;
+    cmd_commit_init->iv = page->iv;
+    cmd_commit_init->cmd = (CMD_COMMIT_INIT >> 8) | ((CMD_COMMIT_INIT & 0xff) << 8);
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd_commit_init));
 
-    cmd1->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
-    size = io_exchange(CHANNEL_APDU, sizeof(*cmd1));
-
-    struct apdu_s *apdu = parse_apdu(size);
-    if (apdu == NULL) {
-        err("invalid APDU\n");
-        return false;
-    }
-
-    if (apdu->lc != 0) {
-        err("invalid apdu size\n");
-        return false;
-    }
-
-    /* 2. hmac(data || addr || iv) */
-
-    struct cmd_commit_hmac_s *cmd2 = (struct cmd_commit_hmac_s *)G_io_apdu_buffer;
-    struct entry_s entry;
-
-    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd2), "invalid IO_APDU_BUFFER_SIZE");
-
-    entry.addr = page->addr;
-    entry.iv = page->iv;
-
-    cx_hmac_no_throw((cx_hmac_t *)&hmac_sha256_ctx, CX_LAST, entry.data, sizeof(entry.data),
-                     cmd2->mac, sizeof(cmd2->mac));
-
-    cmd2->addr = page->addr;
-    cmd2->iv = page->iv;
-    cmd2->cmd = (CMD_COMMIT_HMAC >> 8) | ((CMD_COMMIT_HMAC & 0xff) << 8);
-
-    size = io_exchange(CHANNEL_APDU, sizeof(*cmd2));
-
-    apdu = parse_apdu(size);
-    if (apdu == NULL) {
-        err("invalid APDU\n");
-        return false;
-    }
-
-    if ((apdu->lc % sizeof(struct proof_s)) != 0) {
+    if ((size % sizeof(struct proof_s)) != 0) {
         err("invalid proof size\n");
         return false;
     }
+    size_t count = size / sizeof(struct proof_s);
+    memcpy(proof_buffer, G_io_apdu_buffer, IO_APDU_BUFFER_SIZE);
 
-    /* 3. update merkle tree */
-    size_t count = apdu->lc / sizeof(struct proof_s);
+    /* 2. encrypt and send the new page (code pages are never committed */
+    encrypt_page(page->data, page->data, page->addr, page->iv);
+    memcpy(cmd_commit_page->data, page->data, PAGE_SIZE);
 
+    cmd_commit_page->cmd = (CMD_COMMIT_PAGE >> 8) | ((CMD_COMMIT_PAGE & 0xff) << 8);
+    size = io_exchange(CHANNEL_APDU, sizeof(*cmd_commit_page));
+
+    /* 3. get previous page (only when updating) and update merkle root */
     if (insert) {
-        if (!merkle_insert(&entry, (struct proof_s *)&apdu->data, count)) {
+        if (!merkle_insert((struct entry_s *)page, (struct proof_s *)proof_buffer, count)) {
             err("merkle insert failed\n");
             return false;
         }
     } else {
-        struct entry_s old_entry;
-        old_entry.addr = page->addr;
-        old_entry.iv = page->iv - 1;
-        if (!merkle_update(&old_entry, &entry, (struct proof_s *)&apdu->data, count)) {
+        if (size != PAGE_SIZE + 4) {
+            err("invalid page size\n");
+            return false;
+        }
+
+        struct page_s old_page;
+        /* Very important: this ensures that we are replacing the right leaf
+         * in the merkle tree */
+        old_page.addr = page->addr;
+        old_page.iv = ((uint32_t *)G_io_apdu_buffer)[0];
+        memcpy(old_page.data, &G_io_apdu_buffer[4], PAGE_SIZE);
+
+        if (!merkle_update(
+                    (struct entry_s *)&old_page, (struct entry_s *)page,
+                    (struct proof_s *)proof_buffer, count)) {
             err("merkle update failed\n");
             return false;
         }
@@ -300,29 +208,24 @@ bool stream_commit_page(struct page_s *page, bool insert)
     return true;
 }
 
-static void init_static_key(struct hmac_key_s *key)
+static void init_encryption_key(void)
 {
-    memcpy(app.hmac_static_key, key->bytes, sizeof(app.hmac_static_key));
-}
-
-static void init_dynamic_keys(void)
-{
-    cx_get_random_bytes(app.dynamic_key.hmac, sizeof(app.dynamic_key.hmac));
-
     uint8_t encryption_key[32];
     cx_get_random_bytes(encryption_key, sizeof(encryption_key));
-    cx_aes_init_key_no_throw(encryption_key, sizeof(encryption_key), &app.dynamic_key.aes);
+    cx_aes_init_key_no_throw(encryption_key, sizeof(encryption_key), &app.aes_key);
 
     explicit_bzero(encryption_key, sizeof(encryption_key));
 }
 
 bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
 {
+    _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(struct manifest_s), "invalid IO_APDU_BUFFER_SIZE");
+
     /* 1. store the manifest signature */
     uint8_t signature[72];
 
     if (signature_size > sizeof(signature)) {
-        err("invalid signature\n");
+        err("invalid signature size\n");
         return false;
     }
 
@@ -334,35 +237,23 @@ bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
 
     size_t size = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
-    struct apdu_s *apdu = parse_apdu(size);
-    if (apdu == NULL) {
-        err("invalid APDU\n");
+    if (size != sizeof(struct manifest_s)) {
+        err("invalid manifest size\n");
         return false;
     }
 
-    const size_t alignment_offset = 3;
-    if (apdu->lc != alignment_offset + sizeof(struct manifest_s)) {
-        err("invalid manifest APDU\n");
-        return false;
-    }
-
-    struct manifest_s *manifest = (struct manifest_s *)(apdu->data + alignment_offset);
+    struct manifest_s *manifest = (struct manifest_s *)G_io_apdu_buffer;
 
     /* 3. verify manifest signature */
-    if (!verify_manifest_device_signature(manifest, signature, signature_size)) {
+    if (!verify_manifest_hsm_signature(manifest, signature, signature_size)) {
         err("invalid manifest signature\n");
         return false;
     }
 
     memset(&app, '\x00', sizeof(app));
 
-    /* 4. derive and init keys depending on the app hash */
-    struct hmac_key_s hmac_key;
-    derive_hmac_key(manifest->app_hash, &hmac_key);
-    init_static_key(&hmac_key);
-    explicit_bzero(&hmac_key, sizeof(hmac_key));
-
-    init_dynamic_keys();
+    /* 4. init encryption key */
+    init_encryption_key();
 
     /* 5. initialize app characteristics from the manifest */
     init_memory_sections(manifest->sections);
@@ -389,7 +280,7 @@ bool stream_init_app(const uint8_t *buffer, const size_t signature_size)
     init_caches();
 
     init_merkle_tree(manifest->merkle_tree_root_hash, manifest->merkle_tree_size,
-                     (struct entry_s *)manifest->last_entry_init);
+                     manifest->last_entry_digest_init);
 
     sys_app_loading_stop();
     set_app_name(manifest->name);
@@ -462,7 +353,7 @@ bool mem_read(const uint32_t addr, const size_t size, uint32_t *value)
 
     page = get_page(addr, PAGE_PROT_RO);
     if (page == NULL) {
-        err("get_page failed\n");
+        err("get_page (mem_read) failed\n");
         return false;
     }
     offset = addr - PAGE_START(addr);
@@ -497,7 +388,7 @@ bool mem_write(const uint32_t addr, const size_t size, const uint32_t value)
 
     page = get_page(addr, PAGE_PROT_RW);
     if (page == NULL) {
-        err("get_page failed\n");
+        err("get_page (mem_write) failed\n");
         return false;
     }
     offset = addr - PAGE_START(addr);
@@ -540,7 +431,7 @@ uint8_t *get_buffer(const uintptr_t addr, const size_t size, const bool writeabl
 
     struct page_s *page = get_page(addr, writeable ? PAGE_PROT_RW : PAGE_PROT_RO);
     if (page == NULL) {
-        err("get_page failed\n");
+        err("get_page (get_buffer) failed\n");
         return NULL;
     }
 

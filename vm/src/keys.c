@@ -14,7 +14,6 @@
 
 typedef struct internalStorage_t {
     uint8_t ecdsa_seed[32];
-    uint8_t hmac_seed[32];
     uint8_t initialized;
 } internalStorage_t;
 
@@ -47,12 +46,10 @@ void nv_app_state_init(void)
 
     if (!running_on_speculos()) {
         cx_get_random_bytes(storage.ecdsa_seed, sizeof(storage.ecdsa_seed));
-        cx_get_random_bytes(storage.hmac_seed, sizeof(storage.hmac_seed));
     } else {
         /* XXX - The NVM storage isn't persistent on speculos. Use fixed seeds
          * until this feature is implemented. */
         memset(storage.ecdsa_seed, 'a', sizeof(storage.ecdsa_seed));
-        memset(storage.hmac_seed, 'b', sizeof(storage.hmac_seed));
     }
 
     storage.initialized = 0x01;
@@ -70,11 +67,6 @@ static void derive_secret(const uint8_t *app_hash, const uint8_t *seed, uint8_t 
     cx_hash_sha256(secret, sizeof(secret), output, CX_SHA256_SIZE);
 
     explicit_bzero(secret, sizeof(secret));
-}
-
-void derive_hmac_key(const uint8_t *app_hash, struct hmac_key_s *key)
-{
-    derive_secret(app_hash, N_storage.hmac_seed, key->bytes);
 }
 
 static bool get_privkey(const uint8_t *app_hash, cx_ecfp_private_key_t *privkey)

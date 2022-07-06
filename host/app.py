@@ -15,20 +15,15 @@ from manifest import Manifest
 class App:
     def __init__(self, manifest: bytes, hsm_signature: bytes, code_pages: bytes, data_pages: bytes,
                  device_signature: Optional[bytes] = None, device_pubkey: Optional[bytes] = None,
-                 code_macs: Optional[bytes] = None, data_macs: Optional[bytes] = None) -> None:
+                 ) -> None:
         self.code_pages = App._pages_to_list(code_pages)
         self.data_pages = App._pages_to_list(data_pages)
 
-        if code_macs:
-            self.code_macs = App._macs_to_list(code_macs)
-        if data_macs:
-            self.data_macs = App._macs_to_list(data_macs)
         if device_pubkey:
             self.device_pubkey = device_pubkey
 
         self.manifest = manifest
         self.manifest_hsm_signature = hsm_signature
-        self.manifest_device_signature = device_signature
 
     @staticmethod
     def _pages_to_list(data: bytes) -> List[bytes]:
@@ -42,18 +37,6 @@ class App:
 
         return pages
 
-    @staticmethod
-    def _macs_to_list(data: bytes) -> List[bytes]:
-        macs = []
-
-        assert len(data) % 32 == 0
-
-        for offset in range(0, len(data), 32):
-            mac = data[offset:offset+32]
-            macs.append(mac)
-
-        return macs
-
     @classmethod
     def from_zip(cls: Type[object], zip_path: str) -> "App":
         app = cast(App, cls.__new__(cls))
@@ -63,14 +46,6 @@ class App:
             app.code_pages = App._pages_to_list(zf.read("code.bin"))
             app.data_pages = App._pages_to_list(zf.read("data.bin"))
 
-            if "device/manifest.device.sig" in zf.namelist():
-                app.manifest_device_signature = zf.read("device/manifest.device.sig")
-                app.code_macs = App._macs_to_list(zf.read("device/code.mac.bin"))
-                app.data_macs = App._macs_to_list(zf.read("device/data.mac.bin"))
-                app.device_pubkey = zf.read("device/device.pubkey")
-            else:
-                app.manifest_device_signature = None
-
         return app
 
     def export_zip(self, zip_path: str) -> None:
@@ -79,67 +54,6 @@ class App:
             zf.writestr("manifest.hsm.sig", self.manifest_hsm_signature)
             zf.writestr("code.bin", b"".join(self.code_pages))
             zf.writestr("data.bin", b"".join(self.data_pages))
-
-            if self.manifest_device_signature:
-                zf.writestr("device/manifest.device.sig", self.manifest_device_signature)
-                zf.writestr("device/code.mac.bin", b"".join(self.code_macs))
-                zf.writestr("device/data.mac.bin", b"".join(self.data_macs))
-                zf.writestr("device/device.pubkey", self.device_pubkey)
-
-
-def decrypt_hmac(enc_macs, aes):
-    result = []
-    for enc_mac in enc_macs:
-        mac = aes.decrypt(enc_mac)
-        result.append(mac)
-    return result
-
-
-def device_get_pubkey(client: CommClient, app: App) -> bytes:
-    app_hash = Manifest(app.manifest).app_hash
-    apdu = client.exchange(0x10, data=app_hash, cla=0x34)
-    assert apdu.status == 0x9000
-    return apdu.data
-
-
-def device_sign_app(client: CommClient, app: App) -> None:
-    device_pubkey = device_get_pubkey(client, app)
-
-    signature = app.manifest_hsm_signature
-    data = app.manifest + signature.ljust(72, b"\x00") + len(signature).to_bytes(1, "little")
-
-    apdu = client.exchange(ins=0x11, data=data, cla=0x34)
-    assert apdu.status == ApduCmd.REQUEST_APP_PAGE
-
-    code_macs: List[bytes] = []
-    data_macs: List[bytes] = []
-    enc_macs = [code_macs, data_macs]
-    for pages in [app.code_pages, app.data_pages]:
-        macs = enc_macs.pop(0)
-        for page in pages:
-            assert apdu.status == ApduCmd.REQUEST_APP_PAGE
-
-            apdu = client.exchange(0x01, data=page[1:], p2=page[0], cla=0x34)
-            assert apdu.status == ApduCmd.REQUEST_APP_HMAC
-            print(hex(apdu.status), apdu.data.hex())
-            mac = apdu.data
-            macs.append(mac)
-
-            apdu = client.exchange(0x01, data=b"")
-
-    assert apdu.status == 0x9000
-
-    struct = Struct("aes_key" / Bytes(32), "signature" / Bytes(72), "sig_size" / Int8ul)
-    assert len(apdu.data) == struct.sizeof()
-    s = struct.parse(apdu.data)
-
-    iv = b"\x00" * 16
-    aes = AES.new(s.aes_key, AES.MODE_CBC, iv)
-    app.code_macs = decrypt_hmac(code_macs, aes)
-    app.data_macs = decrypt_hmac(data_macs, aes)
-    app.manifest_device_signature = s.signature[:s.sig_size]
-    app.device_pubkey = device_pubkey
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s.%(msecs)03d:%(name)s: %(message)s', datefmt='%H:%M:%S')
@@ -164,10 +78,3 @@ if __name__ == "__main__":
         manifest = Manifest(app.manifest)
         print(manifest)
         sys.exit(1)
-
-    with get_client(args.transport, args.speculos) as client:
-        device_sign_app(client, app)
-    app.export_zip(args.app_path)
-
-    # ensure that the generated file is valid
-    app = App.from_zip(args.app_path)

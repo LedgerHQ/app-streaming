@@ -14,7 +14,7 @@
 #include "ui.h"
 
 struct cmd_send_buffer_s {
-    uint8_t data[249];
+    uint8_t data[253];
     uint8_t size;
     uint32_t counter;
     uint16_t cmd;
@@ -24,6 +24,11 @@ struct cmd_recv_buffer_s {
     uint32_t counter;
     uint16_t maxsize;
     uint16_t cmd;
+} __attribute__((packed));
+
+struct received_buffer_s {
+    uint8_t stop;
+    uint8_t data[259];
 } __attribute__((packed));
 
 struct cmd_exit_s {
@@ -47,12 +52,11 @@ bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size)
 
     eret->size = 0;
     while (size > 0) {
-        struct apdu_s *apdu = (struct apdu_s *)G_io_apdu_buffer;
-        /* an additional byte is stored in p2 to allow entire pages to be
-         * transmitted, hence + 1 */
-        _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(apdu->data) + 1, "invalid IO_APDU_BUFFER_SIZE");
+        struct received_buffer_s *received_buffer = (struct received_buffer_s *)G_io_apdu_buffer;
+        _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*received_buffer), "invalid IO_APDU_BUFFER_SIZE");
 
         size_t n = BUFFER_MIN_SIZE(p_buf.addr, size);
+        n = MIN(sizeof(received_buffer->data), n);
 
         /* 0. retrieve buffer pointer now since it can modify G_io_apdu_buffer */
         uint8_t *buffer = get_buffer(p_buf.addr, n, true);
@@ -62,6 +66,7 @@ bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size)
 
         /* 1. send "recv" request */
         struct cmd_recv_buffer_s *cmd = (struct cmd_recv_buffer_s *)G_io_apdu_buffer;
+        _Static_assert(IO_APDU_BUFFER_SIZE >= sizeof(*cmd), "invalid IO_APDU_BUFFER_SIZE");
 
         cmd->counter = counter;
         cmd->maxsize = n;
@@ -70,29 +75,17 @@ bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size)
         size_t received = io_exchange(CHANNEL_APDU, sizeof(*cmd));
 
         /* 2. ensure that data received fits in the buffer */
-        apdu = parse_apdu(received);
-        if (apdu == NULL) {
-            err("invalid APDU\n");
+        bool stop = (received_buffer->stop != '\0');
+
+        if ((received - 1) > n || ((received - 1) != n && !stop)) {
+            err("invalid data size\n");
             return false;
         }
 
-        if (apdu->p1 == '\x02') {
-            /* exit the app */
-            return false;
-        }
+        n = received - 1;
 
-        bool stop = (apdu->p1 == '\x01');
-
-        if ((apdu->lc + 1) > n || ((apdu->lc + 1) != n && !stop)) {
-            err("invalid apdu size\n");
-            return false;
-        }
-
-        n = apdu->lc + 1;
-
-        /* 3. copies data to the app buffer (the first byte is in p2) */
-        buffer[0] = apdu->p2;
-        memcpy(buffer + 1, apdu->data, n - 1);
+        /* 3. copies data to the app buffer */
+        memcpy(buffer, received_buffer->data, n);
 
         p_buf.addr += n;
         size -= n;
@@ -104,7 +97,7 @@ bool sys_xrecv(eret_t *eret, guest_pointer_t p_buf, size_t size)
         }
 
         if (size == 0 && !stop) {
-            err("invalid p1\n");
+            err("missing stop byte\n");
             return false;
         }
     }

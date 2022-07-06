@@ -26,13 +26,13 @@ static void hash_nodes(const uint8_t *left, const uint8_t *right, uint8_t *hash)
     cx_hash_no_throw((cx_hash_t *)&hash_ctx, CX_LAST, right, CX_SHA256_SIZE, hash, CX_SHA256_SIZE);
 }
 
-static void proof_hash(const struct entry_s *entry,
+static void proof_hash(const uint8_t *entry_digest,
                        const struct proof_s *proof,
                        size_t count,
                        uint8_t *digest)
 {
-    if (entry != NULL) {
-        hash_entry(entry, digest);
+    if (entry_digest != NULL) {
+        memcpy(digest, entry_digest, CX_SHA256_SIZE);
     }
 
     for (size_t i = 0; i < count; i++) {
@@ -67,8 +67,8 @@ static size_t bit_count(uint32_t x)
 bool merkle_insert(const struct entry_s *entry, const struct proof_s *proof, size_t count)
 {
     if (ctx.n == 0) {
-        hash_entry(entry, ctx.root_hash);
-        memcpy(&ctx.last_entry, entry, sizeof(*entry));
+        hash_entry(entry, ctx.root_digest);
+        memcpy(ctx.last_entry_digest, ctx.root_digest, CX_SHA256_SIZE);
         ctx.n++;
         return true;
     } else if (ctx.n == ULONG_MAX) {
@@ -84,19 +84,21 @@ bool merkle_insert(const struct entry_s *entry, const struct proof_s *proof, siz
         return false;
     }
 
-    proof_hash(&ctx.last_entry, proof, count, tmp_proof.digest);
-    if (memcmp(tmp_proof.digest, ctx.root_hash, sizeof(ctx.root_hash)) != 0) {
+    proof_hash(ctx.last_entry_digest, proof, count, tmp_proof.digest);
+    if (memcmp(tmp_proof.digest, ctx.root_digest, CX_SHA256_SIZE) != 0) {
         return false;
     }
 
     tmp_proof.op = 'L';
-    proof_hash(&ctx.last_entry, proof, tree_level, tmp_proof.digest);
+    proof_hash(ctx.last_entry_digest, proof, tree_level, tmp_proof.digest);
 
     /* compute new root hash */
-    proof_hash(entry, &tmp_proof, 1, ctx.root_hash);
-    proof_hash(NULL, proof + tree_level, count - tree_level, ctx.root_hash);
+    uint8_t entry_digest[CX_SHA256_SIZE];
+    hash_entry(entry, entry_digest);
+    proof_hash(entry_digest, &tmp_proof, 1, ctx.root_digest);
+    proof_hash(NULL, proof + tree_level, count - tree_level, ctx.root_digest);
 
-    memcpy(&ctx.last_entry, entry, sizeof(*entry));
+    memcpy(ctx.last_entry_digest, entry_digest, CX_SHA256_SIZE);
     ctx.n++;
 
     return true;
@@ -111,11 +113,17 @@ bool merkle_update(const struct entry_s *old_entry,
         return false;
     }
 
-    proof_hash(entry, proof, count, ctx.root_hash);
+    uint8_t entry_digest[CX_SHA256_SIZE];
+    uint8_t old_entry_digest[CX_SHA256_SIZE];
+    hash_entry(entry, entry_digest);
+    hash_entry(old_entry, old_entry_digest);
+
+    /* update root hash with new entry */
+    proof_hash(entry_digest, proof, count, ctx.root_digest);
 
     /* update last entry if required */
-    if (memcmp(&ctx.last_entry, old_entry, sizeof(ctx.last_entry)) == 0) {
-        memcpy(&ctx.last_entry, entry, sizeof(ctx.last_entry));
+    if (memcmp(ctx.last_entry_digest, old_entry_digest, CX_SHA256_SIZE) == 0) {
+        memcpy(ctx.last_entry_digest, entry_digest, CX_SHA256_SIZE);
     }
 
     return true;
@@ -124,17 +132,19 @@ bool merkle_update(const struct entry_s *old_entry,
 bool merkle_verify_proof(const struct entry_s *entry, const struct proof_s *proof, size_t count)
 {
     uint8_t digest[CX_SHA256_SIZE];
+    uint8_t entry_digest[CX_SHA256_SIZE];
 
-    proof_hash(entry, proof, count, digest);
+    hash_entry(entry, entry_digest);
+    proof_hash(entry_digest, proof, count, digest);
 
-    return memcmp(digest, ctx.root_hash, sizeof(ctx.root_hash)) == 0;
+    return memcmp(digest, ctx.root_digest, CX_SHA256_SIZE) == 0;
 }
 
-void init_merkle_tree(const uint8_t *root_hash_init,
+void init_merkle_tree(const uint8_t *root_digest_init,
                       size_t merkle_tree_size,
-                      const struct entry_s *last_entry_init)
+                      const uint8_t *last_entry_digest_init)
 {
-    memcpy(ctx.root_hash, root_hash_init, sizeof(ctx.root_hash));
-    memcpy(&ctx.last_entry, last_entry_init, sizeof(ctx.last_entry));
+    memcpy(ctx.root_digest, root_digest_init, CX_SHA256_SIZE);
+    memcpy(ctx.last_entry_digest, last_entry_digest_init, CX_SHA256_SIZE);
     ctx.n = merkle_tree_size;
 }

@@ -11,28 +11,29 @@ def hash(data: bytes) -> bytes:
 
 class Entry:
     """
-    key: addr (4 bytes) || counter (4 bytes)
+    key: addr (4 bytes) || page data (page_size bytes) || counter (4 bytes)
     """
 
     @staticmethod
-    def from_values(addr: int, counter=0) -> "Entry":
-        return Entry(int(addr).to_bytes(4, "little") + int(counter).to_bytes(4, "little"))
+    def from_values(addr: int,  page_data: bytes, counter: int = 0) -> "Entry":
+        return Entry(addr.to_bytes(4, "little") + page_data + counter.to_bytes(4, "little"))
 
     def __init__(self, data: bytes) -> None:
-        assert len(data) == 8
+        assert len(data) >= 8
         self.data = data
         self.addr = int.from_bytes(data[:4], "little")
-        self.counter = int.from_bytes(data[4:], "little")
+        self.page_data = data[4:-4]
+        self.counter = int.from_bytes(data[-4:], "little")
 
     def update_counter(self, counter: int) -> None:
         self.counter = counter
-        self.data = self.data[:4] + counter.to_bytes(4, "little")
+        self.data = self.data[:-4] + counter.to_bytes(4, "little")
 
     def __bytes__(self) -> bytes:
         return self.data
 
     def __repr__(self):
-        return f"<addr:{self.addr:#x}, counter:{self.counter:#x}>"
+        return f"<addr:{self.addr:#x}, page_data:{self.page_data.hex()}, counter:{self.counter:#x}>"
 
 
 def largest_power_of_two(n) -> int:
@@ -131,15 +132,15 @@ if __name__ == "__main__":
     m = MerkleTree()
 
     for i in range(0, 7):
-        e = Entry.from_values(i)
+        e = Entry.from_values(i, i.to_bytes(3, "little"))
         m.insert(e)
 
     for i in range(7, 70):
-        e = Entry.from_values(i)
+        e = Entry.from_values(i, i.to_bytes(3, "little"))
         m.insert(e)
 
-    e1 = Entry.from_values(0x1234, 1)
-    e2 = Entry.from_values(0x1234, 2)
+    e1 = Entry.from_values(0x1234, b"foo", 1)
+    e2 = Entry.from_values(0x1234, b"bar", 2)
     m.insert(e1)
     m.update(e2)
 

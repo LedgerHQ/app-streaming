@@ -22,7 +22,7 @@ class Manifest:
         "data_end" / Hex(Int32ul),
         "mt_root_hash" / Hex(Bytes(32)),
         "mt_size" / Int32ul,
-        "mt_last_entry" / Hex(Bytes(8)),
+        "mt_last_entry_digest" / Hex(Bytes(32)),
     )
 
     def __init__(self, data: bytes) -> None:
@@ -43,7 +43,7 @@ class Manifest:
         self.data_end = m.data_end
         self.mt_root_hash = m.mt_root_hash
         self.mt_size = m.mt_size
-        self.mt_last_entry = m.mt_last_entry
+        self.mt_last_entry_digest = m.mt_last_entry_digest
 
     def export_binary(self) -> bytes:
         data = Manifest.MANIFEST_STRUCT.build(dict({
@@ -61,7 +61,7 @@ class Manifest:
             "data_end": self.data_end,
             "mt_root_hash": self.mt_root_hash,
             "mt_size": self.mt_size,
-            "mt_last_entry": self.mt_last_entry,
+            "mt_last_entry_digest": self.mt_last_entry_digest,
         }))
 
         return data

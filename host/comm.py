@@ -18,22 +18,22 @@ logger = logging.getLogger("comm")
 CLA = 0x12
 
 
-class ApduCmd(IntEnum):
+class Cmd(IntEnum):
     REQUEST_PAGE = 0x6101
-    REQUEST_HMAC = 0x6102
-    REQUEST_PROOF = 0x6103
-    COMMIT_PAGE = 0x6201
-    COMMIT_HMAC = 0x6202
+    REQUEST_PROOF = 0x6102
+    COMMIT_INIT = 0x6201
+    COMMIT_PAGE = 0x6202
     SEND_BUFFER = 0x6301
     RECV_BUFFER = 0x6401
     EXIT = 0x6501
     FATAL = 0x6601
     REQUEST_MANIFEST = 0x6701
-    REQUEST_APP_PAGE = 0x6801
-    REQUEST_APP_HMAC = 0x6802
 
 
 class CommClient(ABC):
+    def raw_exchange(self, data: bytes):
+        return self._exchange(data)
+
     def exchange(self, ins: int, data=b"", p1=0, p2=0, cla=CLA) -> Apdu:
         apdu = bytes([cla, ins, p1, p2])
         apdu += serialize(data)
