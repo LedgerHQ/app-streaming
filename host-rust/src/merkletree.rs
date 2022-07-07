@@ -14,7 +14,7 @@ struct Entry {
 
 impl Entry {
     pub fn to_bytes(self) -> [u8; 8] {
-        let n: u64 = ((self.counter as u64) << 32) | (self.addr as u64);
+        let n = ((self.counter as u64) << 32) | (self.addr as u64);
         n.to_le_bytes()
     }
 
@@ -36,14 +36,15 @@ fn hash(data: &[u8]) -> Digest {
 }
 
 pub fn largest_power_of_two(n: usize) -> usize {
-    // TODO
-    0
+    assert!(n > 0);
+    let binary = format!("{:b}", n);
+    1 << (binary.len() - 1)
 }
 
 impl MerkleTree {
     pub fn new() -> Self {
         MerkleTree {
-            entries: Vec::new()
+            entries: Vec::new(),
         }
     }
 
@@ -52,7 +53,9 @@ impl MerkleTree {
     }
 
     pub fn update(&mut self, entry: Entry) {
-        let n = self.find_index_by_addr(entry.addr).expect("can't update non-existing entry");
+        let n = self
+            .find_index_by_addr(entry.addr)
+            .expect("can't update non-existing entry");
         self.entries[n].update_counter(entry.counter);
     }
 
@@ -98,18 +101,45 @@ impl MerkleTree {
                 path
             } else {
                 let mut path = MerkleTree::path(m - k, &entries[k..]);
-                path.push(b'R');
+                path.push(b'L');
                 path.extend(&MerkleTree::mth(&entries[..k]));
                 path
             }
         }
     }
 
-    //pub fn get_proof(self, addr: u32) -> (Entry, &[u8])
+    pub fn get_proof(&self, addr: u32) -> (Entry, Vec<u8>) {
+        let m = self.find_index_by_addr(addr).expect("can't find entry");
+        let proof = MerkleTree::path(m, &self.entries);
+        (self.entries[m], proof)
+    }
+
+    pub fn get_proof_of_last_entry(&self) -> (Entry, Vec<u8>) {
+        assert!(!self.entries.is_empty());
+
+        let m = self.entries.len() - 1;
+        let proof = MerkleTree::path(m, &self.entries);
+        (self.entries[m], proof)
+    }
+
+    pub fn has_addr(self, addr: u32) -> bool {
+        self.find_index_by_addr(addr).is_some()
+    }
 }
 
 #[test]
 pub fn test_entry_to_bytes() {
-    let entry = Entry { addr: 0x12345678, counter: 0xdead };
+    let entry = Entry {
+        addr: 0x12345678,
+        counter: 0xdead,
+    };
     assert_eq!(entry.to_bytes(), hex!("78563412adde0000"));
+}
+
+#[test]
+pub fn test_largest_power_of_two() {
+    assert_eq!(largest_power_of_two(1), 1);
+    assert_eq!(largest_power_of_two(3), 2);
+    assert_eq!(largest_power_of_two(0xdeadbeef), 0x80000000);
+    assert_eq!(largest_power_of_two(0xffffffff), 0x80000000);
 }

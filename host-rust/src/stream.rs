@@ -5,5 +5,4 @@ extern crate hex_literal;
 
 mod merkletree;
 
-pub fn main() {
-}
+pub fn main() {}
