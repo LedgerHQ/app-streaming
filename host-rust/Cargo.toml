@@ -8,5 +8,6 @@ name = "stream"
 path = "src/stream.rs"
 
 [dependencies]
+hex = "0.4.3"
 hex-literal = "0.3.4"
 rust-crypto = "0.2.36"

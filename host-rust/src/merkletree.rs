@@ -21,6 +21,10 @@ impl Entry {
     pub fn update_counter(&mut self, counter: u32) {
         self.counter = counter;
     }
+
+    pub fn from_addr(addr: u32) -> Entry {
+        Entry { addr, counter: 0 }
+    }
 }
 
 struct MerkleTree {
@@ -60,8 +64,12 @@ impl MerkleTree {
     }
 
     pub fn insert(&mut self, entry: Entry) {
-        assert!(self.find_index_by_addr(entry.addr).is_some());
+        assert!(self.find_index_by_addr(entry.addr).is_none());
         self.entries.push(entry)
+    }
+
+    pub fn root_hash(&self) -> Digest {
+        MerkleTree::mth(&self.entries)
     }
 
     pub fn mth(entries: &[Entry]) -> Digest {
@@ -69,7 +77,7 @@ impl MerkleTree {
         if n == 0 {
             hash(&[0u8; 0])
         } else if n == 1 {
-            let mut data = [0u8; 33];
+            let mut data = [0u8; 9];
             data[0] = b'\x00';
             data[1..].copy_from_slice(&entries[0].to_bytes());
             hash(&data)
@@ -77,12 +85,12 @@ impl MerkleTree {
             let k = largest_power_of_two(n - 1);
             assert!(k < n && n <= 2 * k);
             let left = MerkleTree::mth(&entries[..k]);
-            let right = MerkleTree::mth(&entries[..k]);
+            let right = MerkleTree::mth(&entries[k..]);
             let mut data = [0u8; 65];
             data[0] = b'\x01';
-            data[1..32].copy_from_slice(&left);
+            data[1..33].copy_from_slice(&left);
             data[33..].copy_from_slice(&right);
-            hash(&[0u8; 0])
+            hash(&data)
         }
     }
 
@@ -142,4 +150,33 @@ pub fn test_largest_power_of_two() {
     assert_eq!(largest_power_of_two(3), 2);
     assert_eq!(largest_power_of_two(0xdeadbeef), 0x80000000);
     assert_eq!(largest_power_of_two(0xffffffff), 0x80000000);
+}
+
+#[test]
+pub fn test_merkle_tree() {
+    let mut m = MerkleTree::new();
+
+    for addr in 0..7 {
+        let entry = Entry::from_addr(addr);
+        m.insert(entry);
+    }
+
+    for addr in 7..70 {
+        let entry = Entry::from_addr(addr);
+        m.insert(entry);
+    }
+
+    let mut e1 = Entry::from_addr(0x1234);
+    e1.update_counter(1);
+    let mut e2 = Entry::from_addr(0x1234);
+    e2.update_counter(2);
+
+    m.insert(e1);
+    m.update(e2);
+
+    assert_eq!(m.entries.len(), 71);
+    let x = hex::decode("4c369973ccbccafee455e8d01e4ae34c3dc209d6a0a7ee9fa8b27474707f6413654c640e5b6c705201a76ac8f35c52c3a79247f6aa9037867c2ea98df0cc365a9d2b4c51f8b2cde23ffe681e074dd4b44f2dbb3e96fd37fd48ab58460b8d79515b5390").unwrap();
+    let (entry, proof) = m.get_proof(0x1234);
+    assert!(entry.addr == e2.addr && entry.counter == e2.counter);
+    assert_eq!(proof, x);
 }
