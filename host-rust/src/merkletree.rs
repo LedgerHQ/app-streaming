@@ -22,6 +22,7 @@ impl Entry {
         self.counter = counter;
     }
 
+    #[cfg(test)]
     pub fn from_addr(addr: u32) -> Entry {
         Entry { addr, counter: 0 }
     }
