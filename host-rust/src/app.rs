@@ -18,8 +18,8 @@ struct App {
     device_pubkey: Option<Vec<u8>>,
 
     manifest: Vec<u8>,
-    manifest_hsm_signature: Vec<u8>,
-    manifest_device_signature: Vec<u8>,
+    manifest_hsm_signature: Option<Vec<u8>>,
+    manifest_device_signature: Option<Vec<u8>>,
 }
 
 fn zip_readfile<'a, R>(archive: &'a mut zip::ZipArchive<R>, name: &str) -> Option<Vec<u8>>
@@ -45,6 +45,12 @@ impl App {
             .collect()
     }
 
+    fn macs_to_list(data: &[u8]) -> Vec<[u8; 32]> {
+        assert!(data.len() % 32 == 0);
+
+        data.chunks(32).map(|x| x.try_into().unwrap()).collect()
+    }
+
     pub fn from_zip(path: &str) -> App {
         let fname = std::path::Path::new(path);
         let file = fs::File::open(&fname).unwrap();
@@ -53,8 +59,19 @@ impl App {
         let mut app = App::default();
 
         app.manifest = zip_readfile(&mut archive, "manifest.bin").unwrap();
-        app.manifest_hsm_signature = zip_readfile(&mut archive, "manifest.hsm.sig").unwrap();
+        app.manifest_hsm_signature = zip_readfile(&mut archive, "manifest.hsm.sig");
         app.code_pages = App::pages_to_list(&zip_readfile(&mut archive, "code.bin").unwrap());
+
+        app.manifest_device_signature = zip_readfile(&mut archive, "device/manifest.device.sig");
+        if app.manifest_device_signature.is_some() {
+            app.device_pubkey = zip_readfile(&mut archive, "device/device.pubkey");
+            app.code_macs = Some(App::macs_to_list(
+                &zip_readfile(&mut archive, "device/code.mac.bin").unwrap(),
+            ));
+            app.data_macs = Some(App::macs_to_list(
+                &zip_readfile(&mut archive, "device/data.mac.bin").unwrap(),
+            ));
+        }
 
         app
     }
