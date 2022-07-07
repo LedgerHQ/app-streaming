@@ -1,0 +1,12 @@
+[package]
+name = "app-streaming"
+version = "0.1.0"
+authors = ["greenknot"]
+
+[[bin]]
+name = "stream"
+path = "src/stream.rs"
+
+[dependencies]
+hex-literal = "0.3.4"
+rust-crypto = "0.2.36"
