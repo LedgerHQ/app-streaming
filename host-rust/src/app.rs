@@ -1,21 +1,19 @@
+use std::convert::TryInto;
 use std::fs;
-use std::io;
-use std::io::{Bytes, Read, Seek};
-use std::iter::zip;
-use zip::read::ZipFile;
-use zip::result::ZipResult;
+use std::io::{Read, Seek};
 
 const PAGE_SIZE: usize = 256;
 
 type Page = [u8; PAGE_SIZE];
 type Mac = [u8; 32];
 
+#[derive(Default)]
 struct App {
     code_pages: Vec<Page>,
     data_pages: Vec<Page>,
 
-    code_macs: Option<Mac>,
-    data_macs: Option<Mac>,
+    code_macs: Option<Vec<Mac>>,
+    data_macs: Option<Vec<Mac>>,
 
     device_pubkey: Option<Vec<u8>>,
 
@@ -24,35 +22,40 @@ struct App {
     manifest_device_signature: Vec<u8>,
 }
 
-fn zip_readfile<'a, R>(
-    archive: &'a mut zip::ZipArchive<R>,
-    name: &str,
-) -> Option<Bytes<ZipFile<'a>>>
+fn zip_readfile<'a, R>(archive: &'a mut zip::ZipArchive<R>, name: &str) -> Option<Vec<u8>>
 where
     R: Seek,
     R: std::io::Read,
 {
+    let mut buffer = Vec::new();
     if let Ok(mut file) = archive.by_name(name) {
-        Some(file.bytes())
+        file.read_to_end(&mut buffer).unwrap();
+        Some(buffer)
     } else {
         None
     }
 }
 
 impl App {
-    pub fn from_zip(path: &str) /*-> App*/
-    {
+    fn pages_to_list(data: &[u8]) -> Vec<Page> {
+        assert!(data.len() % PAGE_SIZE == 0);
+
+        data.chunks(PAGE_SIZE)
+            .map(|x| x.try_into().unwrap())
+            .collect()
+    }
+
+    pub fn from_zip(path: &str) -> App {
         let fname = std::path::Path::new(path);
         let file = fs::File::open(&fname).unwrap();
         let mut archive = zip::ZipArchive::new(file).unwrap();
 
-        let manifest: Vec<u8> = zip_readfile(&mut archive, "manifest.bin").unwrap();
-        //let manifest_hsm_signature = 
+        let mut app = App::default();
 
-        /*for i in 0..archive.len() {
-            let mut file = archive.by_index(i).unwrap();
-            println!("Filename: {}", file.name());
-            let first_byte = file.bytes().next().unwrap();
-        }*/
+        app.manifest = zip_readfile(&mut archive, "manifest.bin").unwrap();
+        app.manifest_hsm_signature = zip_readfile(&mut archive, "manifest.hsm.sig").unwrap();
+        app.code_pages = App::pages_to_list(&zip_readfile(&mut archive, "code.bin").unwrap());
+
+        app
     }
 }
