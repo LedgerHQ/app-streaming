@@ -27,13 +27,16 @@ struct App {
 fn zip_readfile<'a, R>(
     archive: &'a mut zip::ZipArchive<R>,
     name: &str,
-) -> ZipResult<Bytes<ZipFile<'a>>>
+) -> Option<Bytes<ZipFile<'a>>>
 where
     R: Seek,
     R: std::io::Read,
 {
-    let mut file = archive.by_name(name)?;
-    Ok(file.bytes())
+    if let Ok(mut file) = archive.by_name(name) {
+        Some(file.bytes())
+    } else {
+        None
+    }
 }
 
 impl App {
@@ -43,7 +46,8 @@ impl App {
         let file = fs::File::open(&fname).unwrap();
         let mut archive = zip::ZipArchive::new(file).unwrap();
 
-        let manifest = zip_readfile(&mut archive, "manifest.bin").unwrap();
+        let manifest: Vec<u8> = zip_readfile(&mut archive, "manifest.bin").unwrap();
+        //let manifest_hsm_signature = 
 
         /*for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
