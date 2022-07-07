@@ -175,8 +175,8 @@ pub fn test_merkle_tree() {
     m.update(e2);
 
     assert_eq!(m.entries.len(), 71);
-    let x = hex::decode("4c369973ccbccafee455e8d01e4ae34c3dc209d6a0a7ee9fa8b27474707f6413654c640e5b6c705201a76ac8f35c52c3a79247f6aa9037867c2ea98df0cc365a9d2b4c51f8b2cde23ffe681e074dd4b44f2dbb3e96fd37fd48ab58460b8d79515b5390").unwrap();
     let (entry, proof) = m.get_proof(0x1234);
     assert!(entry.addr == e2.addr && entry.counter == e2.counter);
-    assert_eq!(proof, x);
+    assert_eq!(proof,
+               hex::decode("4c369973ccbccafee455e8d01e4ae34c3dc209d6a0a7ee9fa8b27474707f6413654c640e5b6c705201a76ac8f35c52c3a79247f6aa9037867c2ea98df0cc365a9d2b4c51f8b2cde23ffe681e074dd4b44f2dbb3e96fd37fd48ab58460b8d79515b5390").unwrap());
 }
