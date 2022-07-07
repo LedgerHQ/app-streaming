@@ -57,9 +57,7 @@ impl MerkleTree {
     }
 
     pub fn insert(&mut self, entry: Entry) {
-        if self.find_index_by_addr(entry.addr).is_some() {
-            panic!("insert");
-        }
+        assert!(self.find_index_by_addr(entry.addr).is_some());
         self.entries.push(entry)
     }
 
@@ -74,8 +72,9 @@ impl MerkleTree {
             hash(&data)
         } else {
             let k = largest_power_of_two(n - 1);
-            let left = MerkleTree::mth(&entries[..k].to_vec());
-            let right = MerkleTree::mth(&entries[..k].to_vec());
+            assert!(k < n && n <= 2 * k);
+            let left = MerkleTree::mth(&entries[..k]);
+            let right = MerkleTree::mth(&entries[..k]);
             let mut data = [0u8; 65];
             data[0] = b'\x01';
             data[1..32].copy_from_slice(&left);
@@ -83,6 +82,30 @@ impl MerkleTree {
             hash(&[0u8; 0])
         }
     }
+
+    fn path(m: usize, entries: &[Entry]) -> Vec<u8> {
+        assert!(!entries.is_empty());
+
+        let n = entries.len();
+        if n == 1 {
+            vec![]
+        } else {
+            let k = largest_power_of_two(n - 1);
+            if m < k {
+                let mut path = MerkleTree::path(m, &entries[..k]);
+                path.push(b'R');
+                path.extend(&MerkleTree::mth(&entries[k..]));
+                path
+            } else {
+                let mut path = MerkleTree::path(m - k, &entries[k..]);
+                path.push(b'R');
+                path.extend(&MerkleTree::mth(&entries[..k]));
+                path
+            }
+        }
+    }
+
+    //pub fn get_proof(self, addr: u32) -> (Entry, &[u8])
 }
 
 #[test]
