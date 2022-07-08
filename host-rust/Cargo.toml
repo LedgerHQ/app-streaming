@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["greenknot"]
 
 [[bin]]
-name = "stream"
-path = "src/stream.rs"
+name = "app"
+path = "src/app.rs"
 
 [dependencies]
 hex = "0.4.3"

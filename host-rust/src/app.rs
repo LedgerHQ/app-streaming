@@ -1,6 +1,18 @@
+#![feature(proc_macro_hygiene)]
+
+extern crate crypto;
+extern crate hex;
+extern crate hex_literal;
+extern crate zip;
+
+mod merkletree;
+mod manifest;
+
 use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek};
+
+use manifest::Manifest;
 
 const PAGE_SIZE: usize = 256;
 
@@ -76,4 +88,10 @@ impl App {
 
         app
     }
+}
+
+pub fn main() {
+    let app = App::from_zip("/tmp/app.zip");
+    let manifest = Manifest::from_bytes(&app.manifest);
+    println!("{:?}", manifest);
 }

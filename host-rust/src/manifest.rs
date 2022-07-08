@@ -2,12 +2,13 @@ use std::mem;
 
 const MANIFEST_VERSION: u32 = 1;
 
+#[derive(Debug)]
 #[repr(C)]
-struct Manifest {
+pub struct Manifest {
     manifest_version: u32,
     name: [u8; 32],
     version: [u8; 32],
-    app_hash: [u8; 32],
+    app_hash: [u8; 16],
     entrypoint: u32,
     bss: u32,
     code_start: u32,
