@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use std::time::Duration;
 
-#[derive(Default)]
-pub struct Apdu<'a> {
+struct Apdu<'a> {
     cla: u8,
     ins: u8,
     p1: u8,
