@@ -101,18 +101,28 @@ fn get_pubkey(app: &App) -> [u8; 65] {
     data.try_into().unwrap()
 }
 
-fn get_encrypted_macs(pages: &[Page]) -> Vec<Mac> {
-    pages
+fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
+    let mut apdu_data = Vec::new();
+    let macs = pages
         .iter()
         .map(|&page| {
             let (status, data) = exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
             assert_eq!(status, 0x6802); // REQUEST_APP_HMAC
+            println!("{:x} {}", status, hex::encode(&data));
             let mac: Mac = data.try_into().unwrap();
-            let (_status, _) = exchange(0x01, &[0u8; 0], None, None, None);
-            // TODO: check status
+
+            let (status, data) = exchange(0x01, &[0u8; 0], None, None, None);
+            if last {
+                apdu_data = data;
+                assert_eq!(status, 0x9000);
+            } else {
+                assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
+            }
             mac
         })
-        .collect()
+        .collect();
+
+    (macs, apdu_data)
 }
 
 fn device_sign_app(app: &mut App) {
@@ -128,8 +138,8 @@ fn device_sign_app(app: &mut App) {
     let (status, _) = exchange(0x11, &data, None, None, Some(0x34));
     assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
 
-    let code_macs = get_encrypted_macs(&app.code_pages);
-    let data_macs = get_encrypted_macs(&app.data_pages);
+    let (code_macs, _) = get_encrypted_macs(&app.code_pages, false);
+    let (data_macs, apdu_data) = get_encrypted_macs(&app.data_pages, true);
 }
 
 pub fn main() {

@@ -78,5 +78,5 @@ pub fn exchange(
     let data = exchange_(&apdu.to_bytes());
     assert!(data.len() >= 2);
     let status = u16::from_be_bytes(data[data.len() - 2..].try_into().unwrap());
-    (status, data[2..].to_vec())
+    (status, data[..data.len() - 2].to_vec())
 }
