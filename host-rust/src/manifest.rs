@@ -22,16 +22,14 @@ pub struct Manifest {
     pub mt_last_entry: [u8; 8],
 }
 
-const MANIFEST_SIZE: usize = mem::size_of::<Manifest>();
+pub const MANIFEST_SIZE: usize = mem::size_of::<Manifest>();
 
 unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
     ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
 }
 
 impl Manifest {
-    pub fn from_bytes(data: &Vec<u8>) -> Self {
-        assert_eq!(data.len(), MANIFEST_SIZE);
-        let data = data.as_ptr() as *const [u8; MANIFEST_SIZE];
+    pub fn from_bytes(data: &[u8; MANIFEST_SIZE]) -> Self {
         unsafe { std::mem::transmute(*data) }
     }
 

@@ -15,7 +15,7 @@ use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek};
 
-use manifest::Manifest;
+use manifest::{Manifest, MANIFEST_SIZE};
 use speculos::exchange;
 
 const PAGE_SIZE: usize = 256;
@@ -23,7 +23,6 @@ const PAGE_SIZE: usize = 256;
 type Page = [u8; PAGE_SIZE];
 type Mac = [u8; 32];
 
-#[derive(Default)]
 struct App {
     code_pages: Vec<Page>,
     data_pages: Vec<Page>,
@@ -33,7 +32,7 @@ struct App {
 
     device_pubkey: Option<Vec<u8>>,
 
-    manifest: Vec<u8>,
+    manifest: [u8; MANIFEST_SIZE],
     manifest_hsm_signature: Vec<u8>,
     manifest_device_signature: Option<Vec<u8>>,
 }
@@ -45,7 +44,8 @@ where
 {
     let mut buffer = Vec::new();
     if let Ok(mut file) = archive.by_name(name) {
-        file.read_to_end(&mut buffer).expect("failed to read zip entry");
+        file.read_to_end(&mut buffer)
+            .expect("failed to read zip entry");
         Some(buffer)
     } else {
         None
@@ -64,7 +64,9 @@ impl App {
     fn macs_to_list(data: &[u8]) -> Vec<[u8; 32]> {
         assert_eq!(data.len() % 32, 0);
 
-        data.chunks(32).map(|x| x.try_into().expect("invalid MAC")).collect()
+        data.chunks(32)
+            .map(|x| x.try_into().expect("invalid MAC"))
+            .collect()
     }
 
     pub fn from_zip(path: &str) -> App {
@@ -73,13 +75,18 @@ impl App {
         let mut archive = zip::ZipArchive::new(file).expect("invalid zip file");
 
         let mut app = App {
-            manifest: zip_readfile(&mut archive, "manifest.bin").unwrap(),
             manifest_hsm_signature: zip_readfile(&mut archive, "manifest.hsm.sig").unwrap(),
             code_pages: App::pages_to_list(&zip_readfile(&mut archive, "code.bin").unwrap()),
+            data_pages: App::pages_to_list(&zip_readfile(&mut archive, "data.bin").unwrap()),
             manifest_device_signature: zip_readfile(&mut archive, "device/manifest.device.sig"),
-            ..Default::default()
+            code_macs: None,
+            data_macs: None,
+            device_pubkey: None,
+            manifest: [0u8; MANIFEST_SIZE],
         };
 
+        app.manifest
+            .copy_from_slice(&zip_readfile(&mut archive, "manifest.bin").unwrap());
         if app.manifest_device_signature.is_some() {
             app.device_pubkey = Some(zip_readfile(&mut archive, "device/device.pubkey").unwrap());
             app.code_macs = Some(App::macs_to_list(
