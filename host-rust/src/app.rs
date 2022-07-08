@@ -14,6 +14,7 @@ mod speculos;
 use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek};
+use std::mem;
 
 use manifest::{Manifest, MANIFEST_SIZE};
 use speculos::exchange;
@@ -132,21 +133,58 @@ fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
     (macs, apdu_data)
 }
 
+unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
+    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
+}
+
+#[repr(C)]
+struct SignatureReq<'a> {
+    manifest: &'a [u8; MANIFEST_SIZE],
+    signature: &'a [u8; 72],
+    size: u8,
+}
+
+impl<'a> SignatureReq<'a> {
+    pub fn to_vec(&self) -> Vec<u8> {
+        unsafe { any_as_u8_slice(&self).to_vec() }
+    }
+}
+
+struct SignatureRes<'a> {
+    aes_key: &'a [u8; 32],
+    signature: &'a [u8; 72],
+    size: u8,
+}
+
+const SIGNATURE_RES_SIZE: usize = mem::size_of::<SignatureRes>();
+
+impl<'a> SignatureRes<'a> {
+    pub fn from_bytes(data: &[u8; SIGNATURE_RES_SIZE]) -> Self {
+        unsafe { std::mem::transmute(*data) }
+    }
+}
+
 fn device_sign_app(app: &mut App) {
     let device_pubkey = get_pubkey(app);
-    let signature = &app.manifest_hsm_signature;
+    let mut signature = [0u8; 72];
+    let size = app.manifest_hsm_signature.len();
+    signature[..size].copy_from_slice(&app.manifest_hsm_signature);
 
-    let size = app.manifest.len();
-    let mut data = vec![0; size + 72 + 1];
-    data[..size].copy_from_slice(&app.manifest);
-    data[size..size + signature.len()].copy_from_slice(signature);
-    data[size + 72] = signature.len().try_into().unwrap();
+    let req = SignatureReq {
+        manifest: &app.manifest,
+        signature: &signature,
+        size: size.try_into().unwrap(),
+    };
 
-    let (status, _) = exchange(0x11, &data, None, None, Some(0x34));
+    let (status, _) = exchange(0x11, &req.to_vec(), None, None, Some(0x34));
     assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
 
     let (code_macs, _) = get_encrypted_macs(&app.code_pages, false);
     let (data_macs, apdu_data) = get_encrypted_macs(&app.data_pages, true);
+
+    let mut buffer = [0u8; SIGNATURE_RES_SIZE];
+    buffer.copy_from_slice(&apdu_data);
+    let res = SignatureRes::from_bytes(&buffer);
 }
 
 pub fn main() {

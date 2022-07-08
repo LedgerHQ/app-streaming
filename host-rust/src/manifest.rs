@@ -33,7 +33,7 @@ impl Manifest {
         unsafe { std::mem::transmute(*data) }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_vec(&self) -> Vec<u8> {
         unsafe { any_as_u8_slice(&self).to_vec() }
     }
 }
