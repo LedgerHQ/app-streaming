@@ -138,15 +138,15 @@ unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
 }
 
 #[repr(C)]
-struct SignatureReq<'a> {
-    manifest: &'a [u8; MANIFEST_SIZE],
-    signature: &'a [u8; 72],
+struct SignatureReq {
+    manifest: [u8; MANIFEST_SIZE],
+    signature: [u8; 72],
     size: u8,
 }
 
-impl<'a> SignatureReq<'a> {
+impl SignatureReq {
     pub fn to_vec(&self) -> Vec<u8> {
-        unsafe { any_as_u8_slice(&self).to_vec() }
+        unsafe { any_as_u8_slice(self).to_vec() }
     }
 }
 
@@ -159,8 +159,10 @@ struct SignatureRes<'a> {
 const SIGNATURE_RES_SIZE: usize = mem::size_of::<SignatureRes>();
 
 impl<'a> SignatureRes<'a> {
-    pub fn from_bytes(data: &[u8; SIGNATURE_RES_SIZE]) -> Self {
-        unsafe { std::mem::transmute(*data) }
+    pub fn from_bytes(data: &[u8]) -> Self {
+        let mut buffer = [0u8; mem::size_of::<Self>()];
+        buffer.copy_from_slice(data);
+        unsafe { std::mem::transmute(buffer) }
     }
 }
 
@@ -171,8 +173,8 @@ fn device_sign_app(app: &mut App) {
     signature[..size].copy_from_slice(&app.manifest_hsm_signature);
 
     let req = SignatureReq {
-        manifest: &app.manifest,
-        signature: &signature,
+        manifest: app.manifest,
+        signature: signature,
         size: size.try_into().unwrap(),
     };
 
@@ -182,9 +184,7 @@ fn device_sign_app(app: &mut App) {
     let (code_macs, _) = get_encrypted_macs(&app.code_pages, false);
     let (data_macs, apdu_data) = get_encrypted_macs(&app.data_pages, true);
 
-    let mut buffer = [0u8; SIGNATURE_RES_SIZE];
-    buffer.copy_from_slice(&apdu_data);
-    let res = SignatureRes::from_bytes(&buffer);
+    let res = SignatureRes::from_bytes(&apdu_data);
 }
 
 pub fn main() {
