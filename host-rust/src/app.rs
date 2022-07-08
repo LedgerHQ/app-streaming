@@ -22,7 +22,7 @@ struct App {
     manifest_device_signature: Option<Vec<u8>>,
 }
 
-fn zip_readfile<'a, R>(archive: &'a mut zip::ZipArchive<R>, name: &str) -> Option<Vec<u8>>
+fn zip_readfile<R>(archive: &mut zip::ZipArchive<R>, name: &str) -> Option<Vec<u8>>
 where
     R: Seek,
     R: std::io::Read,
@@ -56,15 +56,16 @@ impl App {
         let file = fs::File::open(&fname).unwrap();
         let mut archive = zip::ZipArchive::new(file).unwrap();
 
-        let mut app = App::default();
+        let mut app = App {
+            manifest: zip_readfile(&mut archive, "manifest.bin").unwrap(),
+            manifest_hsm_signature: zip_readfile(&mut archive, "manifest.hsm.sig"),
+            code_pages: App::pages_to_list(&zip_readfile(&mut archive, "code.bin").unwrap()),
+            manifest_device_signature: zip_readfile(&mut archive, "device/manifest.device.sig"),
+            ..Default::default()
+        };
 
-        app.manifest = zip_readfile(&mut archive, "manifest.bin").unwrap();
-        app.manifest_hsm_signature = zip_readfile(&mut archive, "manifest.hsm.sig");
-        app.code_pages = App::pages_to_list(&zip_readfile(&mut archive, "code.bin").unwrap());
-
-        app.manifest_device_signature = zip_readfile(&mut archive, "device/manifest.device.sig");
         if app.manifest_device_signature.is_some() {
-            app.device_pubkey = zip_readfile(&mut archive, "device/device.pubkey");
+            app.device_pubkey = Some(zip_readfile(&mut archive, "device/device.pubkey").unwrap());
             app.code_macs = Some(App::macs_to_list(
                 &zip_readfile(&mut archive, "device/code.mac.bin").unwrap(),
             ));
