@@ -6,6 +6,7 @@ extern crate hex_literal;
 extern crate zip;
 
 mod app;
+mod manifest;
 mod merkletree;
 
 pub fn main() {}
