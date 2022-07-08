@@ -3,16 +3,20 @@
 extern crate crypto;
 extern crate hex;
 extern crate hex_literal;
+extern crate reqwest;
+extern crate serde;
 extern crate zip;
 
-mod merkletree;
 mod manifest;
+mod merkletree;
+mod speculos;
 
 use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek};
 
 use manifest::Manifest;
+use speculos::exchange;
 
 const PAGE_SIZE: usize = 256;
 
@@ -50,7 +54,7 @@ where
 
 impl App {
     fn pages_to_list(data: &[u8]) -> Vec<Page> {
-        assert!(data.len() % PAGE_SIZE == 0);
+        assert_eq!(data.len() % PAGE_SIZE, 0);
 
         data.chunks(PAGE_SIZE)
             .map(|x| x.try_into().unwrap())
@@ -58,7 +62,7 @@ impl App {
     }
 
     fn macs_to_list(data: &[u8]) -> Vec<[u8; 32]> {
-        assert!(data.len() % 32 == 0);
+        assert_eq!(data.len() % 32, 0);
 
         data.chunks(32).map(|x| x.try_into().unwrap()).collect()
     }
@@ -94,4 +98,7 @@ pub fn main() {
     let app = App::from_zip("/tmp/app.zip");
     let manifest = Manifest::from_bytes(&app.manifest);
     println!("{:?}", manifest);
+
+    let data = exchange(&[0u8; 5]);
+    println!("{:?}", data);
 }
