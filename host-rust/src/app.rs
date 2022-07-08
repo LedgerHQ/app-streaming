@@ -16,7 +16,7 @@ use std::fs;
 use std::io::{Read, Seek};
 
 use manifest::Manifest;
-use speculos::exchange;
+use speculos::{exchange, Apdu};
 
 const PAGE_SIZE: usize = 256;
 
@@ -94,11 +94,18 @@ impl App {
     }
 }
 
+fn get_pubkey(app: &App) -> [u8; 65] {
+    let app_hash = &Manifest::from_bytes(&app.manifest).app_hash;
+    let (status, data) = exchange(0x10, app_hash, None, None, Some(0x34));
+    assert_eq!(status, 0x9000);
+    data.try_into().unwrap()
+}
+
 pub fn main() {
     let app = App::from_zip("/tmp/app.zip");
     let manifest = Manifest::from_bytes(&app.manifest);
     println!("{:?}", manifest);
 
-    let data = exchange(&[0u8; 5]);
-    println!("{:?}", data);
+    let pubkey = get_pubkey(&app);
+    println!("{:?}", pubkey);
 }

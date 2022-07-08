@@ -5,21 +5,21 @@ const MANIFEST_VERSION: u32 = 1;
 #[derive(Debug)]
 #[repr(C)]
 pub struct Manifest {
-    manifest_version: u32,
-    name: [u8; 32],
-    version: [u8; 32],
-    app_hash: [u8; 16],
-    entrypoint: u32,
-    bss: u32,
-    code_start: u32,
-    code_end: u32,
-    stack_start: u32,
-    stack_end: u32,
-    data_start: u32,
-    data_end: u32,
-    mt_root_hash: [u8; 32],
-    mt_size: u32,
-    mt_last_entry: [u8; 8],
+    pub manifest_version: u32,
+    pub name: [u8; 32],
+    pub version: [u8; 16],
+    pub app_hash: [u8; 32],
+    pub entrypoint: u32,
+    pub bss: u32,
+    pub code_start: u32,
+    pub code_end: u32,
+    pub stack_start: u32,
+    pub stack_end: u32,
+    pub data_start: u32,
+    pub data_end: u32,
+    pub mt_root_hash: [u8; 32],
+    pub mt_size: u32,
+    pub mt_last_entry: [u8; 8],
 }
 
 const MANIFEST_SIZE: usize = mem::size_of::<Manifest>();
