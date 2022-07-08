@@ -45,7 +45,7 @@ where
 {
     let mut buffer = Vec::new();
     if let Ok(mut file) = archive.by_name(name) {
-        file.read_to_end(&mut buffer).unwrap();
+        file.read_to_end(&mut buffer).expect("failed to read zip entry");
         Some(buffer)
     } else {
         None
@@ -57,20 +57,20 @@ impl App {
         assert_eq!(data.len() % PAGE_SIZE, 0);
 
         data.chunks(PAGE_SIZE)
-            .map(|x| x.try_into().unwrap())
+            .map(|x| x.try_into().expect("invalid page"))
             .collect()
     }
 
     fn macs_to_list(data: &[u8]) -> Vec<[u8; 32]> {
         assert_eq!(data.len() % 32, 0);
 
-        data.chunks(32).map(|x| x.try_into().unwrap()).collect()
+        data.chunks(32).map(|x| x.try_into().expect("invalid MAC")).collect()
     }
 
     pub fn from_zip(path: &str) -> App {
         let fname = std::path::Path::new(path);
-        let file = fs::File::open(&fname).unwrap();
-        let mut archive = zip::ZipArchive::new(file).unwrap();
+        let file = fs::File::open(&fname).expect("failed to open zip file");
+        let mut archive = zip::ZipArchive::new(file).expect("invalid zip file");
 
         let mut app = App {
             manifest: zip_readfile(&mut archive, "manifest.bin").unwrap(),
@@ -98,7 +98,7 @@ fn get_pubkey(app: &App) -> [u8; 65] {
     let app_hash = &Manifest::from_bytes(&app.manifest).app_hash;
     let (status, data) = exchange(0x10, app_hash, None, None, Some(0x34));
     assert_eq!(status, 0x9000);
-    data.try_into().unwrap()
+    data.try_into().expect("invalid public key size")
 }
 
 fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
@@ -109,7 +109,7 @@ fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
             let (status, data) = exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
             assert_eq!(status, 0x6802); // REQUEST_APP_HMAC
             println!("{:x} {}", status, hex::encode(&data));
-            let mac: Mac = data.try_into().unwrap();
+            let mac: Mac = data.try_into().expect("invalid MAC size");
 
             let (status, data) = exchange(0x01, &[0u8; 0], None, None, None);
             if last {
