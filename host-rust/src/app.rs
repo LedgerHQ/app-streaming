@@ -111,21 +111,23 @@ fn get_pubkey(app: &App) -> [u8; 65] {
 
 fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
     let mut apdu_data = Vec::new();
+    let mut i = 0;
     let macs = pages
         .iter()
         .map(|&page| {
             let (status, data) = exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
             assert_eq!(status, 0x6802); // REQUEST_APP_HMAC
-            println!("{:x} {}", status, hex::encode(&data));
+            println!("{} {:x} {}", i, status, hex::encode(&data));
             let mac: Mac = data.try_into().expect("invalid MAC size");
 
             let (status, data) = exchange(0x01, &[0u8; 0], None, None, None);
-            if last {
+            if last && i == pages.len() - 1{
                 apdu_data = data;
                 assert_eq!(status, 0x9000);
             } else {
                 assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
             }
+            i = i + 1;
             mac
         })
         .collect();
@@ -150,15 +152,15 @@ impl SignatureReq {
     }
 }
 
-struct SignatureRes<'a> {
-    aes_key: &'a [u8; 32],
-    signature: &'a [u8; 72],
+struct SignatureRes {
+    aes_key: [u8; 32],
+    signature: [u8; 72],
     size: u8,
 }
 
 const SIGNATURE_RES_SIZE: usize = mem::size_of::<SignatureRes>();
 
-impl<'a> SignatureRes<'a> {
+impl SignatureRes {
     pub fn from_bytes(data: &[u8]) -> Self {
         let mut buffer = [0u8; mem::size_of::<Self>()];
         buffer.copy_from_slice(data);
