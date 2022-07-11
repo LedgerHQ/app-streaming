@@ -9,6 +9,7 @@ extern crate zip;
 
 mod manifest;
 mod merkletree;
+mod serialization;
 mod speculos;
 
 use std::convert::TryInto;
@@ -17,6 +18,7 @@ use std::io::{Read, Seek};
 use std::mem;
 
 use manifest::{Manifest, MANIFEST_SIZE};
+use serialization::{Deserialize, Serialize};
 use speculos::exchange;
 
 const PAGE_SIZE: usize = 256;
@@ -121,13 +123,13 @@ fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
             let mac: Mac = data.try_into().expect("invalid MAC size");
 
             let (status, data) = exchange(0x01, &[0u8; 0], None, None, None);
-            if last && i == pages.len() - 1{
+            if last && i == pages.len() - 1 {
                 apdu_data = data;
                 assert_eq!(status, 0x9000);
             } else {
                 assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
             }
-            i = i + 1;
+            i += 1;
             mac
         })
         .collect();
@@ -135,23 +137,16 @@ fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
     (macs, apdu_data)
 }
 
-unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
-}
-
-#[repr(C)]
+#[repr(C, packed)]
 struct SignatureReq {
     manifest: [u8; MANIFEST_SIZE],
     signature: [u8; 72],
     size: u8,
 }
 
-impl SignatureReq {
-    pub fn to_vec(&self) -> Vec<u8> {
-        unsafe { any_as_u8_slice(self).to_vec() }
-    }
-}
+impl Serialize for SignatureReq {}
 
+#[repr(C, packed)]
 struct SignatureRes {
     aes_key: [u8; 32],
     signature: [u8; 72],
@@ -160,13 +155,7 @@ struct SignatureRes {
 
 const SIGNATURE_RES_SIZE: usize = mem::size_of::<SignatureRes>();
 
-impl SignatureRes {
-    pub fn from_bytes(data: &[u8]) -> Self {
-        let mut buffer = [0u8; mem::size_of::<Self>()];
-        buffer.copy_from_slice(data);
-        unsafe { std::mem::transmute(buffer) }
-    }
-}
+impl Deserialize for SignatureRes {}
 
 fn device_sign_app(app: &mut App) {
     let device_pubkey = get_pubkey(app);

@@ -1,5 +1,7 @@
 use std::mem;
 
+use serialization::{Deserialize, Serialize};
+
 const MANIFEST_VERSION: u32 = 1;
 
 #[derive(Debug)]
@@ -24,16 +26,5 @@ pub struct Manifest {
 
 pub const MANIFEST_SIZE: usize = mem::size_of::<Manifest>();
 
-unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
-}
-
-impl Manifest {
-    pub fn from_bytes(data: &[u8; MANIFEST_SIZE]) -> Self {
-        unsafe { std::mem::transmute(*data) }
-    }
-
-    pub fn to_vec(&self) -> Vec<u8> {
-        unsafe { any_as_u8_slice(self).to_vec() }
-    }
-}
+impl Deserialize for Manifest {}
+impl Serialize for Manifest {}
