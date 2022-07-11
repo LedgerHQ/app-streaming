@@ -12,6 +12,11 @@ mod merkletree;
 mod serialization;
 mod speculos;
 
+use crypto::aes::cbc_decryptor;
+use crypto::aes::KeySize::KeySize128;
+use crypto::blockmodes::NoPadding;
+use crypto::buffer::{RefReadBuffer, RefWriteBuffer};
+use crypto::symmetriccipher::Decryptor;
 use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek};
@@ -157,6 +162,19 @@ const SIGNATURE_RES_SIZE: usize = mem::size_of::<SignatureRes>();
 
 impl Deserialize for SignatureRes {}
 
+fn decrypt_macs(aes: &mut Box<dyn Decryptor>, enc_macs: &[Mac]) -> Vec<Mac> {
+    enc_macs
+        .iter()
+        .map(|mac| {
+            let mut buffer = [0u8; 32];
+            let mut read_buffer = RefReadBuffer::new(&mac[..]);
+            let mut write_buffer = RefWriteBuffer::new(&mut buffer);
+            aes.decrypt(&mut read_buffer, &mut write_buffer, false).unwrap();
+            buffer
+        })
+        .collect()
+}
+
 fn device_sign_app(app: &mut App) {
     let device_pubkey = get_pubkey(app);
     let mut signature = [0u8; 72];
@@ -176,6 +194,12 @@ fn device_sign_app(app: &mut App) {
     let (data_macs, apdu_data) = get_encrypted_macs(&app.data_pages, true);
 
     let res = SignatureRes::from_bytes(&apdu_data);
+
+    let iv: [u8; 16] = [0; 16];
+    let mut aes = cbc_decryptor(KeySize128, &res.aes_key, &iv, NoPadding);
+
+    let code_macs = decrypt_macs(&mut aes, &code_macs);
+    let data_macs = decrypt_macs(&mut aes, &data_macs);
 }
 
 pub fn main() {
