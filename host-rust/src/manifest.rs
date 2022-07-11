@@ -2,7 +2,7 @@ use std::mem;
 
 use serialization::{Deserialize, Serialize};
 
-const MANIFEST_VERSION: u32 = 1;
+//const MANIFEST_VERSION: u32 = 1;
 
 #[derive(Debug)]
 #[repr(C)]

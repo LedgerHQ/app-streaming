@@ -8,7 +8,6 @@ extern crate serde;
 extern crate zip;
 
 mod manifest;
-mod merkletree;
 mod serialization;
 mod speculos;
 
@@ -20,7 +19,6 @@ use crypto::symmetriccipher::Decryptor;
 use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek, Write};
-use std::mem;
 
 use manifest::{Manifest, MANIFEST_SIZE};
 use serialization::{Deserialize, Serialize};
@@ -211,8 +209,6 @@ struct SignatureRes {
     signature: [u8; 72],
     size: u8,
 }
-
-const SIGNATURE_RES_SIZE: usize = mem::size_of::<SignatureRes>();
 
 impl Deserialize for SignatureRes {}
 

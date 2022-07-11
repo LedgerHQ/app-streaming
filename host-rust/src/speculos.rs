@@ -34,7 +34,7 @@ struct HttpRequest<'a> {
 #[derive(Deserialize, Debug)]
 struct HttpResponse {
     data: String,
-    error: Option<String>,
+    //error: Option<String>,
 }
 
 const APDU_URL: &str = "http://127.0.0.1:5000/apdu";

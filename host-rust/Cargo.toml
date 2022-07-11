@@ -7,6 +7,10 @@ authors = ["greenknot"]
 name = "app"
 path = "src/app.rs"
 
+[[bin]]
+name = "stream"
+path = "src/stream.rs"
+
 [dependencies]
 hex = "0.4.3"
 hex-literal = "0.3.4"
