@@ -19,7 +19,7 @@ use crypto::buffer::{RefReadBuffer, RefWriteBuffer};
 use crypto::symmetriccipher::Decryptor;
 use std::convert::TryInto;
 use std::fs;
-use std::io::{Read, Seek};
+use std::io::{Read, Seek, Write};
 use std::mem;
 
 use manifest::{Manifest, MANIFEST_SIZE};
@@ -60,23 +60,36 @@ where
     }
 }
 
+fn zip_writefile<S, W>(archive: &mut zip::ZipWriter<W>, name: S, content: &[u8])
+where
+    W: Seek + std::io::Write,
+    S: Into<String>,
+{
+    archive
+        .start_file(name, Default::default())
+        .expect("failed to create zip entry");
+    archive.write_all(content).expect("failed to write zip");
+}
+
+fn pages_to_u8(pages: &[Page]) -> Vec<u8> {
+    pages.iter().flat_map(|&page| page).collect()
+}
+
+fn pages_to_vec(data: &[u8]) -> Vec<Page> {
+    assert_eq!(data.len() % PAGE_SIZE, 0);
+    data.chunks(PAGE_SIZE)
+        .map(|x| x.try_into().expect("invalid page"))
+        .collect()
+}
+
+fn macs_to_vec(data: &[u8]) -> Vec<[u8; 32]> {
+    assert_eq!(data.len() % 32, 0);
+    data.chunks(32)
+        .map(|x| x.try_into().expect("invalid MAC"))
+        .collect()
+}
+
 impl App {
-    fn pages_to_list(data: &[u8]) -> Vec<Page> {
-        assert_eq!(data.len() % PAGE_SIZE, 0);
-
-        data.chunks(PAGE_SIZE)
-            .map(|x| x.try_into().expect("invalid page"))
-            .collect()
-    }
-
-    fn macs_to_list(data: &[u8]) -> Vec<[u8; 32]> {
-        assert_eq!(data.len() % 32, 0);
-
-        data.chunks(32)
-            .map(|x| x.try_into().expect("invalid MAC"))
-            .collect()
-    }
-
     pub fn from_zip(path: &str) -> App {
         let fname = std::path::Path::new(path);
         let file = fs::File::open(&fname).expect("failed to open zip file");
@@ -84,8 +97,8 @@ impl App {
 
         let mut app = App {
             manifest_hsm_signature: zip_readfile(&mut archive, "manifest.hsm.sig").unwrap(),
-            code_pages: App::pages_to_list(&zip_readfile(&mut archive, "code.bin").unwrap()),
-            data_pages: App::pages_to_list(&zip_readfile(&mut archive, "data.bin").unwrap()),
+            code_pages: pages_to_vec(&zip_readfile(&mut archive, "code.bin").unwrap()),
+            data_pages: pages_to_vec(&zip_readfile(&mut archive, "data.bin").unwrap()),
             manifest_device_signature: zip_readfile(&mut archive, "device/manifest.device.sig"),
             code_macs: None,
             data_macs: None,
@@ -97,15 +110,29 @@ impl App {
             .copy_from_slice(&zip_readfile(&mut archive, "manifest.bin").unwrap());
         if app.manifest_device_signature.is_some() {
             app.device_pubkey = Some(zip_readfile(&mut archive, "device/device.pubkey").unwrap());
-            app.code_macs = Some(App::macs_to_list(
+            app.code_macs = Some(macs_to_vec(
                 &zip_readfile(&mut archive, "device/code.mac.bin").unwrap(),
             ));
-            app.data_macs = Some(App::macs_to_list(
+            app.data_macs = Some(macs_to_vec(
                 &zip_readfile(&mut archive, "device/data.mac.bin").unwrap(),
             ));
         }
 
         app
+    }
+
+    pub fn to_zip(&self, path: &str) {
+        let fname = std::path::Path::new(path);
+        let file = fs::File::create(&fname).expect("failed to create zip file");
+        let mut archive = zip::ZipWriter::new(file);
+        zip_writefile(&mut archive, "manifest.bin", &self.manifest);
+        zip_writefile(
+            &mut archive,
+            "manifest.hsm.sig",
+            &self.manifest_hsm_signature,
+        );
+        zip_writefile(&mut archive, "code.bin", &pages_to_u8(&self.code_pages));
+        zip_writefile(&mut archive, "data.bin", &pages_to_u8(&self.data_pages));
     }
 }
 
@@ -169,7 +196,8 @@ fn decrypt_macs(aes: &mut Box<dyn Decryptor>, enc_macs: &[Mac]) -> Vec<Mac> {
             let mut buffer = [0u8; 32];
             let mut read_buffer = RefReadBuffer::new(&mac[..]);
             let mut write_buffer = RefWriteBuffer::new(&mut buffer);
-            aes.decrypt(&mut read_buffer, &mut write_buffer, false).unwrap();
+            aes.decrypt(&mut read_buffer, &mut write_buffer, false)
+                .unwrap();
             buffer
         })
         .collect()
