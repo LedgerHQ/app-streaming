@@ -77,14 +77,14 @@ fn macs_to_u8(macs: &[Mac]) -> Vec<u8> {
     macs.iter().flat_map(|&mac| mac).collect()
 }
 
-fn pages_to_vec(data: &[u8]) -> Vec<Page> {
+fn pages_from_u8(data: &[u8]) -> Vec<Page> {
     assert_eq!(data.len() % PAGE_SIZE, 0);
     data.chunks(PAGE_SIZE)
         .map(|x| x.try_into().expect("invalid page"))
         .collect()
 }
 
-fn macs_to_vec(data: &[u8]) -> Vec<[u8; 32]> {
+fn macs_from_u8(data: &[u8]) -> Vec<[u8; 32]> {
     assert_eq!(data.len() % 32, 0);
     data.chunks(32)
         .map(|x| x.try_into().expect("invalid MAC"))
@@ -99,8 +99,8 @@ impl App {
 
         let mut app = App {
             manifest_hsm_signature: zip_readfile(&mut archive, "manifest.hsm.sig").unwrap(),
-            code_pages: pages_to_vec(&zip_readfile(&mut archive, "code.bin").unwrap()),
-            data_pages: pages_to_vec(&zip_readfile(&mut archive, "data.bin").unwrap()),
+            code_pages: pages_from_u8(&zip_readfile(&mut archive, "code.bin").unwrap()),
+            data_pages: pages_from_u8(&zip_readfile(&mut archive, "data.bin").unwrap()),
             manifest_device_signature: zip_readfile(&mut archive, "device/manifest.device.sig"),
             code_macs: None,
             data_macs: None,
@@ -112,10 +112,10 @@ impl App {
             .copy_from_slice(&zip_readfile(&mut archive, "manifest.bin").unwrap());
         if app.manifest_device_signature.is_some() {
             app.device_pubkey = Some(zip_readfile(&mut archive, "device/device.pubkey").unwrap());
-            app.code_macs = Some(macs_to_vec(
+            app.code_macs = Some(macs_from_u8(
                 &zip_readfile(&mut archive, "device/code.mac.bin").unwrap(),
             ));
-            app.data_macs = Some(macs_to_vec(
+            app.data_macs = Some(macs_from_u8(
                 &zip_readfile(&mut archive, "device/data.mac.bin").unwrap(),
             ));
         }
@@ -173,10 +173,10 @@ fn get_pubkey(app: &App) -> [u8; 65] {
 
 fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
     let mut apdu_data = Vec::new();
-    let mut i = 0;
     let macs = pages
         .iter()
-        .map(|&page| {
+        .enumerate()
+        .map(|(i, &page)| {
             let (status, data) = exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
             assert_eq!(status, 0x6802); // REQUEST_APP_HMAC
             println!("{} {:x} {}", i, status, hex::encode(&data));
@@ -189,7 +189,6 @@ fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
             } else {
                 assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
             }
-            i += 1;
             mac
         })
         .collect();
