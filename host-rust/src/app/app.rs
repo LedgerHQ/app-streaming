@@ -7,9 +7,7 @@ extern crate reqwest;
 extern crate serde;
 extern crate zip;
 
-mod manifest;
-mod serialization;
-mod speculos;
+extern crate streaming;
 
 use crypto::aes::cbc_decryptor;
 use crypto::aes::KeySize::KeySize128;
@@ -20,9 +18,9 @@ use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek, Write};
 
-use manifest::{Manifest, MANIFEST_SIZE};
-use serialization::{Deserialize, Serialize};
-use speculos::exchange;
+use streaming::manifest::{Manifest, MANIFEST_SIZE};
+use streaming::serialization::{Deserialize, Serialize};
+use streaming::speculos::exchange;
 
 const PAGE_SIZE: usize = 256;
 
@@ -234,7 +232,7 @@ fn device_sign_app(app: &mut App) {
 
     let req = SignatureReq {
         manifest: app.manifest,
-        signature: signature,
+        signature,
         size: size.try_into().unwrap(),
     };
 

@@ -3,13 +3,17 @@ name = "app-streaming"
 version = "0.1.0"
 authors = ["greenknot"]
 
+[lib]
+name = "streaming"
+path = "src/lib/lib.rs"
+
 [[bin]]
 name = "app"
-path = "src/app.rs"
+path = "src/app/app.rs"
 
 [[bin]]
 name = "stream"
-path = "src/stream.rs"
+path = "src/stream/stream.rs"
 
 [dependencies]
 hex = "0.4.3"
