@@ -47,8 +47,7 @@ struct App {
 
 fn zip_readfile<R>(archive: &mut zip::ZipArchive<R>, name: &str) -> Option<Vec<u8>>
 where
-    R: Seek,
-    R: std::io::Read,
+    R: Seek + std::io::Read,
 {
     let mut buffer = Vec::new();
     if let Ok(mut file) = archive.by_name(name) {
@@ -60,10 +59,9 @@ where
     }
 }
 
-fn zip_writefile<S, W>(archive: &mut zip::ZipWriter<W>, name: S, content: &[u8])
+fn zip_writefile<W>(archive: &mut zip::ZipWriter<W>, name: &str, content: &[u8])
 where
     W: Seek + std::io::Write,
-    S: Into<String>,
 {
     archive
         .start_file(name, Default::default())
@@ -73,6 +71,10 @@ where
 
 fn pages_to_u8(pages: &[Page]) -> Vec<u8> {
     pages.iter().flat_map(|&page| page).collect()
+}
+
+fn macs_to_u8(macs: &[Mac]) -> Vec<u8> {
+    macs.iter().flat_map(|&mac| mac).collect()
 }
 
 fn pages_to_vec(data: &[u8]) -> Vec<Page> {
@@ -133,6 +135,32 @@ impl App {
         );
         zip_writefile(&mut archive, "code.bin", &pages_to_u8(&self.code_pages));
         zip_writefile(&mut archive, "data.bin", &pages_to_u8(&self.data_pages));
+
+        if self.manifest_device_signature.is_some() {
+            archive
+                .add_directory("device/", Default::default())
+                .expect("failed to create zip directory");
+            zip_writefile(
+                &mut archive,
+                "device/manifest.device.sig",
+                self.manifest_device_signature.as_ref().unwrap(),
+            );
+            zip_writefile(
+                &mut archive,
+                "device/code.mac.bin",
+                &macs_to_u8(self.code_macs.as_ref().unwrap()),
+            );
+            zip_writefile(
+                &mut archive,
+                "device/data.mac.bin",
+                &macs_to_u8(self.data_macs.as_ref().unwrap()),
+            );
+            zip_writefile(
+                &mut archive,
+                "device/device.pubkey",
+                self.device_pubkey.as_ref().unwrap(),
+            );
+        }
     }
 }
 
@@ -226,8 +254,12 @@ fn device_sign_app(app: &mut App) {
     let iv: [u8; 16] = [0; 16];
     let mut aes = cbc_decryptor(KeySize128, &res.aes_key, &iv, NoPadding);
 
-    let code_macs = decrypt_macs(&mut aes, &code_macs);
-    let data_macs = decrypt_macs(&mut aes, &data_macs);
+    app.code_macs = Some(decrypt_macs(&mut aes, &code_macs));
+    app.data_macs = Some(decrypt_macs(&mut aes, &data_macs));
+    app.manifest_device_signature = Some(res.signature[..res.size as usize].to_vec());
+    app.device_pubkey = Some(device_pubkey.to_vec());
+
+    app.to_zip("/tmp/app.signed.zip");
 }
 
 pub fn main() {
