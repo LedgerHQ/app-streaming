@@ -6,6 +6,7 @@ authors = ["greenknot"]
 [lib]
 name = "streaming"
 path = "src/lib/lib.rs"
+crate-type = ["cdylib", "lib"]
 
 [[bin]]
 name = "app"
@@ -16,6 +17,7 @@ name = "stream"
 path = "src/stream/stream.rs"
 
 [dependencies]
+cpython = "0.7.0"
 hex = "0.4.3"
 hex-literal = "0.3.4"
 reqwest = { version = "0.11.11", features = [ "blocking", "json" ] }
