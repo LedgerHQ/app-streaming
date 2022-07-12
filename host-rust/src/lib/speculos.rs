@@ -60,6 +60,23 @@ fn exchange_(data: &[u8]) -> Vec<u8> {
     hex::decode(body.data).unwrap()
 }
 
+pub fn build_apdu(ins: u8,
+    data: &[u8],
+    p1: Option<u8>,
+    p2: Option<u8>,
+    cla: Option<u8>,
+) -> Vec<u8> {
+    let apdu = Apdu {
+        cla: cla.unwrap_or(0x12),
+        ins,
+        p1: p1.unwrap_or(0x00),
+        p2: p2.unwrap_or(0x00),
+        lc: data.len().try_into().unwrap(),
+        data,
+    };
+    apdu.to_bytes()
+}
+
 pub fn exchange(
     ins: u8,
     data: &[u8],

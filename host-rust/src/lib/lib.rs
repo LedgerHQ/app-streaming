@@ -13,7 +13,8 @@ pub mod manifest;
 pub mod serialization;
 pub mod speculos;
 
-use cpython::{py_fn, py_module_initializer, PyResult, Python};
+use cpython::{py_fn, py_module_initializer, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
+use std::convert::TryInto;
 
 // PYTHONPATH=$(pwd)/target/debug/ python3
 
@@ -25,6 +26,11 @@ py_module_initializer!(libstreaming, |py, m| {
         py,
         "sum_as_string",
         py_fn!(py, sum_as_string_py(a: i64, b: i64)),
+    )?;
+    m.add(
+        py,
+        "get_pubkey",
+        py_fn!(py, get_pubkey_py(path: &str, comm: &PyObject)),
     )?;
     Ok(())
 });
@@ -41,4 +47,12 @@ fn sum_as_string(a: i64, b: i64) -> String {
 fn sum_as_string_py(_: Python, a: i64, b: i64) -> PyResult<String> {
     let out = sum_as_string(a, b);
     Ok(out)
+}
+
+fn get_pubkey_py(py: Python, path: &str, comm: &PyObject) -> PyResult<PyBytes> {
+    let app_hash = [0x61u8; 32];
+    let apdu = speculos::build_apdu(0x10, &app_hash, None, None, Some(0x34));
+    let apdu = PyBytes::new(py, &apdu);
+    let result: PyBytes = comm.call_method(py, "_exchange", (&apdu,), None).unwrap().extract(py).unwrap();
+    Ok(result)
 }
