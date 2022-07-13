@@ -4,27 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use std::time::Duration;
 
-struct Apdu<'a> {
-    cla: u8,
-    ins: u8,
-    p1: u8,
-    p2: u8,
-    lc: u8,
-    data: &'a [u8],
-}
-
-impl Apdu<'_> {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = vec![0; 5 + self.data.len()];
-        bytes[0] = self.cla;
-        bytes[1] = self.ins;
-        bytes[2] = self.p1;
-        bytes[3] = self.p2;
-        bytes[4] = self.lc;
-        bytes[5..].copy_from_slice(self.data);
-        bytes
-    }
-}
+use comm::Apdu;
 
 #[derive(Debug, Serialize)]
 struct HttpRequest<'a> {
@@ -58,24 +38,6 @@ fn exchange_(data: &[u8]) -> Vec<u8> {
 
     let body: HttpResponse = response.json().unwrap();
     hex::decode(body.data).unwrap()
-}
-
-pub fn build_apdu(
-    ins: u8,
-    data: &[u8],
-    p1: Option<u8>,
-    p2: Option<u8>,
-    cla: Option<u8>,
-) -> Vec<u8> {
-    let apdu = Apdu {
-        cla: cla.unwrap_or(0x12),
-        ins,
-        p1: p1.unwrap_or(0x00),
-        p2: p2.unwrap_or(0x00),
-        lc: data.len().try_into().unwrap(),
-        data,
-    };
-    apdu.to_bytes()
 }
 
 pub fn exchange(

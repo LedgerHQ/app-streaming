@@ -1,3 +1,4 @@
+#![allow(dead_code)] // XXX
 #![feature(proc_macro_hygiene)]
 
 extern crate crypto;
