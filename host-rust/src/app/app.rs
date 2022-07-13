@@ -1,6 +1,6 @@
 extern crate streaming;
 
-use streaming::app::App;
+//use streaming::app::App;
 
 pub fn main() {
     /*let mut app = App::from_zip("/tmp/app.zip");

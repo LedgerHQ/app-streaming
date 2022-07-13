@@ -40,6 +40,7 @@ impl Page {
 
 struct Stream<'a> {
     pages: HashMap<Addr, Page>,
+    app: App,
     manifest: manifest::Manifest,
     initialized: bool,
     comm: Comm<'a>,
@@ -62,34 +63,45 @@ impl<'a> Stream<'a> {
         let mut merkletree = MerkleTree::new();
 
         let mut addr = manifest.code_start;
-        zip(app.code_pages, app.code_macs.unwrap()).for_each(|(data, mac)| {
-            let page = Page::new(&data, &mac, true);
-            // Since this pages are read-only, don't call _write_page() to avoid
-            // inserting them in the merkle tree.
-            pages.insert(addr, page);
-            addr += PAGE_SIZE as u32;
-        });
+        zip::<&Vec<PageData>, &Vec<Mac>>(app.code_pages.as_ref(), app.code_macs.as_ref().unwrap())
+            .for_each(|(data, mac)| {
+                let page = Page::new(data, mac, true);
+                // Since this pages are read-only, don't call _write_page() to avoid
+                // inserting them in the merkle tree.
+                pages.insert(addr, page);
+                addr += PAGE_SIZE as u32;
+            });
 
         let mut addr = manifest.data_start;
-        zip(app.data_pages, app.data_macs.unwrap()).for_each(|(data, mac)| {
-            (&data, &mac, true);
-            // The IV is set to 0. It allows the VM to tell which key should be
-            // used for decryption and HMAC verification.
-            let page = Page::new(&data, &mac, false);
-            merkletree.insert(addr, 0);
-            addr += PAGE_SIZE as u32;
-        });
+        zip::<&Vec<PageData>, &Vec<Mac>>(app.data_pages.as_ref(), app.data_macs.as_ref().unwrap())
+            .for_each(|(data, mac)| {
+                (data, mac, true);
+                // The IV is set to 0. It allows the VM to tell which key should be
+                // used for decryption and HMAC verification.
+                let page = Page::new(data, mac, false);
+                merkletree.insert(addr, 0);
+                addr += PAGE_SIZE as u32;
+            });
 
         Self {
             pages,
+            app,
             manifest,
             initialized: false,
             comm,
         }
     }
 
-    pub fn init_app(&mut self) {
+    pub fn init_app(&mut self) /*-> (u16, Vec<u8>)*/ {
         assert!(!self.initialized);
+
+        let signature = self
+            .app
+            .manifest_device_signature
+            .as_ref()
+            .expect("app isn't signed");
+        let (status, data) = self.comm.exchange(0x00, signature, None, None, None);
+        assert_eq!(status, 0x6701); // REQUEST_MANIFEST
 
         self.initialized = true;
     }
