@@ -247,7 +247,11 @@ impl EcfpPublicKey {
 
     pub fn from_path(curve: CxCurve, path: &[u32]) -> Result<EcfpPublicKey> {
         let mut privkey = EcfpPrivateKey::from_path(curve, path)?;
-        let mut pubkey = EcfpPublicKey::new(curve, &[0u8; 65]);
+        let mut pubkey = EcfpPublicKey {
+            curve,
+            w_len: 65,
+            w: [0u8; 65],
+        };
         ecfp_generate_keypair(curve, &mut pubkey, &mut privkey, true)?;
         Ok(pubkey)
     }
