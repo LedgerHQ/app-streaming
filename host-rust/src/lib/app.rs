@@ -76,6 +76,63 @@ fn macs_from_u8(data: &[u8]) -> Vec<[u8; 32]> {
         .collect()
 }
 
+fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
+    let mut apdu_data = Vec::new();
+    let macs = pages
+        .iter()
+        .enumerate()
+        .map(|(i, &page)| {
+            let (status, data) = exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
+            assert_eq!(status, 0x6802); // REQUEST_APP_HMAC
+            println!("{} {:x} {}", i, status, hex::encode(&data));
+            let mac: Mac = data.try_into().expect("invalid MAC size");
+
+            let (status, data) = exchange(0x01, &[0u8; 0], None, None, None);
+            if last && i == pages.len() - 1 {
+                apdu_data = data;
+                assert_eq!(status, 0x9000);
+            } else {
+                assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
+            }
+            mac
+        })
+        .collect();
+
+    (macs, apdu_data)
+}
+
+#[repr(C, packed)]
+struct SignatureReq {
+    manifest: [u8; MANIFEST_SIZE],
+    signature: [u8; 72],
+    size: u8,
+}
+
+impl Serialize for SignatureReq {}
+
+#[repr(C, packed)]
+struct SignatureRes {
+    aes_key: [u8; 32],
+    signature: [u8; 72],
+    size: u8,
+}
+
+impl Deserialize for SignatureRes {}
+
+fn decrypt_macs(aes: &mut Box<dyn Decryptor>, enc_macs: &[Mac]) -> Vec<Mac> {
+    enc_macs
+        .iter()
+        .map(|mac| {
+            let mut buffer = [0u8; 32];
+            let mut read_buffer = RefReadBuffer::new(&mac[..]);
+            let mut write_buffer = RefWriteBuffer::new(&mut buffer);
+            aes.decrypt(&mut read_buffer, &mut write_buffer, false)
+                .unwrap();
+            buffer
+        })
+        .collect()
+}
+
 impl App {
     pub fn from_zip(path: &str) -> App {
         let fname = std::path::Path::new(path);
@@ -147,99 +204,42 @@ impl App {
             );
         }
     }
-}
 
-pub fn get_pubkey(app: &App) -> [u8; 65] {
-    let app_hash = &Manifest::from_bytes(&app.manifest).app_hash;
-    let (status, data) = exchange(0x10, app_hash, None, None, Some(0x34));
-    assert_eq!(status, 0x9000);
-    data.try_into().expect("invalid public key size")
-}
+    pub fn get_pubkey(&self) -> [u8; 65] {
+        let app_hash = &Manifest::from_bytes(&self.manifest).app_hash;
+        let (status, data) = exchange(0x10, app_hash, None, None, Some(0x34));
+        assert_eq!(status, 0x9000);
+        data.try_into().expect("invalid public key size")
+    }
 
-fn get_encrypted_macs(pages: &[Page], last: bool) -> (Vec<Mac>, Vec<u8>) {
-    let mut apdu_data = Vec::new();
-    let macs = pages
-        .iter()
-        .enumerate()
-        .map(|(i, &page)| {
-            let (status, data) = exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
-            assert_eq!(status, 0x6802); // REQUEST_APP_HMAC
-            println!("{} {:x} {}", i, status, hex::encode(&data));
-            let mac: Mac = data.try_into().expect("invalid MAC size");
+    pub fn device_sign_app(&mut self) {
+        let device_pubkey = self.get_pubkey();
+        let mut signature = [0u8; 72];
+        let size = self.manifest_hsm_signature.len();
+        signature[..size].copy_from_slice(&self.manifest_hsm_signature);
 
-            let (status, data) = exchange(0x01, &[0u8; 0], None, None, None);
-            if last && i == pages.len() - 1 {
-                apdu_data = data;
-                assert_eq!(status, 0x9000);
-            } else {
-                assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
-            }
-            mac
-        })
-        .collect();
+        let req = SignatureReq {
+            manifest: self.manifest,
+            signature,
+            size: size.try_into().unwrap(),
+        };
 
-    (macs, apdu_data)
-}
+        let (status, _) = exchange(0x11, &req.to_vec(), None, None, Some(0x34));
+        assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
 
-#[repr(C, packed)]
-struct SignatureReq {
-    manifest: [u8; MANIFEST_SIZE],
-    signature: [u8; 72],
-    size: u8,
-}
+        let (code_macs, _) = get_encrypted_macs(&self.code_pages, false);
+        let (data_macs, apdu_data) = get_encrypted_macs(&self.data_pages, true);
 
-impl Serialize for SignatureReq {}
+        let res = SignatureRes::from_bytes(&apdu_data);
 
-#[repr(C, packed)]
-struct SignatureRes {
-    aes_key: [u8; 32],
-    signature: [u8; 72],
-    size: u8,
-}
+        let iv: [u8; 16] = [0; 16];
+        let mut aes = cbc_decryptor(KeySize128, &res.aes_key, &iv, NoPadding);
 
-impl Deserialize for SignatureRes {}
+        self.code_macs = Some(decrypt_macs(&mut aes, &code_macs));
+        self.data_macs = Some(decrypt_macs(&mut aes, &data_macs));
+        self.manifest_device_signature = Some(res.signature[..res.size as usize].to_vec());
+        self.device_pubkey = Some(device_pubkey.to_vec());
 
-fn decrypt_macs(aes: &mut Box<dyn Decryptor>, enc_macs: &[Mac]) -> Vec<Mac> {
-    enc_macs
-        .iter()
-        .map(|mac| {
-            let mut buffer = [0u8; 32];
-            let mut read_buffer = RefReadBuffer::new(&mac[..]);
-            let mut write_buffer = RefWriteBuffer::new(&mut buffer);
-            aes.decrypt(&mut read_buffer, &mut write_buffer, false)
-                .unwrap();
-            buffer
-        })
-        .collect()
-}
-
-pub fn device_sign_app(app: &mut App) {
-    let device_pubkey = get_pubkey(app);
-    let mut signature = [0u8; 72];
-    let size = app.manifest_hsm_signature.len();
-    signature[..size].copy_from_slice(&app.manifest_hsm_signature);
-
-    let req = SignatureReq {
-        manifest: app.manifest,
-        signature,
-        size: size.try_into().unwrap(),
-    };
-
-    let (status, _) = exchange(0x11, &req.to_vec(), None, None, Some(0x34));
-    assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
-
-    let (code_macs, _) = get_encrypted_macs(&app.code_pages, false);
-    let (data_macs, apdu_data) = get_encrypted_macs(&app.data_pages, true);
-
-    let res = SignatureRes::from_bytes(&apdu_data);
-
-    let iv: [u8; 16] = [0; 16];
-    let mut aes = cbc_decryptor(KeySize128, &res.aes_key, &iv, NoPadding);
-
-    app.code_macs = Some(decrypt_macs(&mut aes, &code_macs));
-    app.data_macs = Some(decrypt_macs(&mut aes, &data_macs));
-    app.manifest_device_signature = Some(res.signature[..res.size as usize].to_vec());
-    app.device_pubkey = Some(device_pubkey.to_vec());
-
-    app.to_zip("/tmp/app.signed.zip");
+        self.to_zip("/tmp/app.signed.zip");
+    }
 }

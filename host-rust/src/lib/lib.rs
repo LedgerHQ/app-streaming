@@ -9,12 +9,12 @@ extern crate serde;
 extern crate zip;
 
 pub mod app;
+pub mod comm;
 pub mod manifest;
 pub mod serialization;
 pub mod speculos;
 
 use cpython::{py_fn, py_module_initializer, ObjectProtocol, PyBytes, PyObject, PyResult, Python};
-use std::convert::TryInto;
 
 // PYTHONPATH=$(pwd)/target/debug/ python3
 
@@ -53,6 +53,10 @@ fn get_pubkey_py(py: Python, path: &str, comm: &PyObject) -> PyResult<PyBytes> {
     let app_hash = [0x61u8; 32];
     let apdu = speculos::build_apdu(0x10, &app_hash, None, None, Some(0x34));
     let apdu = PyBytes::new(py, &apdu);
-    let result: PyBytes = comm.call_method(py, "_exchange", (&apdu,), None).unwrap().extract(py).unwrap();
+    let result: PyBytes = comm
+        .call_method(py, "_exchange", (&apdu,), None)
+        .unwrap()
+        .extract(py)
+        .unwrap();
     Ok(result)
 }

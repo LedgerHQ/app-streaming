@@ -60,7 +60,8 @@ fn exchange_(data: &[u8]) -> Vec<u8> {
     hex::decode(body.data).unwrap()
 }
 
-pub fn build_apdu(ins: u8,
+pub fn build_apdu(
+    ins: u8,
     data: &[u8],
     p1: Option<u8>,
     p2: Option<u8>,

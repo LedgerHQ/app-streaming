@@ -11,5 +11,5 @@ import comm as host_comm
 
 if __name__ == "__main__":
     with host_comm.get_client(use_speculos=True) as comm:
-        data = streaming.get_pubkey("blah", comm)
-        print(data)
+        data = streaming.get_pubkey("/tmp/app.zip", comm)
+        print(f"pubkey: {data.hex()}")
