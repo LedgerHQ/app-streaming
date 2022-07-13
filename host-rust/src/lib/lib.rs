@@ -12,7 +12,9 @@ extern crate zip;
 pub mod app;
 pub mod comm;
 pub mod manifest;
+mod merkletree;
 pub mod serialization;
+pub mod stream;
 
 use cpython::{py_fn, py_module_initializer, PyBytes, PyNone, PyObject, PyResult, Python};
 

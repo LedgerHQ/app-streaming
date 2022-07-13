@@ -17,17 +17,17 @@ type Page = [u8; PAGE_SIZE];
 type Mac = [u8; 32];
 
 pub struct App {
-    code_pages: Vec<Page>,
-    data_pages: Vec<Page>,
+    pub code_pages: Vec<Page>,
+    pub data_pages: Vec<Page>,
 
-    code_macs: Option<Vec<Mac>>,
-    data_macs: Option<Vec<Mac>>,
+    pub code_macs: Option<Vec<Mac>>,
+    pub data_macs: Option<Vec<Mac>>,
 
     device_pubkey: Option<Vec<u8>>,
 
-    manifest: [u8; MANIFEST_SIZE],
+    pub manifest: [u8; MANIFEST_SIZE],
     manifest_hsm_signature: Vec<u8>,
-    manifest_device_signature: Option<Vec<u8>>,
+    pub manifest_device_signature: Option<Vec<u8>>,
 }
 
 fn zip_readfile<R>(archive: &mut zip::ZipArchive<R>, name: &str) -> Option<Vec<u8>>

@@ -7,7 +7,7 @@ use hex_literal::hex;
 type Digest = [u8; 32];
 
 #[derive(Clone, Copy)]
-struct Entry {
+pub struct Entry {
     addr: u32,
     counter: u32,
 }
@@ -28,7 +28,7 @@ impl Entry {
     }
 }
 
-struct MerkleTree {
+pub struct MerkleTree {
     entries: Vec<Entry>,
 }
 
@@ -57,16 +57,16 @@ impl MerkleTree {
         self.entries.iter().position(|e| e.addr == addr)
     }
 
-    pub fn update(&mut self, entry: Entry) {
+    pub fn update(&mut self, addr: u32, counter: u32) {
         let n = self
-            .find_index_by_addr(entry.addr)
+            .find_index_by_addr(addr)
             .expect("can't update non-existing entry");
-        self.entries[n].update_counter(entry.counter);
+        self.entries[n].update_counter(counter);
     }
 
-    pub fn insert(&mut self, entry: Entry) {
-        assert!(self.find_index_by_addr(entry.addr).is_none());
-        self.entries.push(entry)
+    pub fn insert(&mut self, addr: u32, counter: u32) {
+        assert!(self.find_index_by_addr(addr).is_none());
+        self.entries.push(Entry { addr, counter })
     }
 
     pub fn root_hash(&self) -> Digest {
@@ -158,13 +158,11 @@ pub fn test_merkle_tree() {
     let mut m = MerkleTree::new();
 
     for addr in 0..7 {
-        let entry = Entry::from_addr(addr);
-        m.insert(entry);
+        m.insert(addr, 0);
     }
 
     for addr in 7..70 {
-        let entry = Entry::from_addr(addr);
-        m.insert(entry);
+        m.insert(addr, 0);
     }
 
     let mut e1 = Entry::from_addr(0x1234);
@@ -172,8 +170,8 @@ pub fn test_merkle_tree() {
     let mut e2 = Entry::from_addr(0x1234);
     e2.update_counter(2);
 
-    m.insert(e1);
-    m.update(e2);
+    m.insert(e1.addr, e1.counter);
+    m.update(e2.addr, e2.counter);
 
     assert_eq!(m.entries.len(), 71);
     let (entry, proof) = m.get_proof(0x1234);
