@@ -51,28 +51,47 @@ struct Stream<'a> {
 
 #[repr(C, packed)]
 struct ReadReq {
-    addr: u32,
+    addr: Addr,
 }
 
 impl Deserialize for ReadReq {}
 
 #[repr(C, packed)]
+struct WriteReq1 {
+    page_data: PageData,
+}
+
+#[repr(C, packed)]
+struct WriteReq2 {
+    addr: Addr,
+    iv: u32,
+    mac: Mac,
+}
+
+impl Deserialize for WriteReq1 {}
+impl Deserialize for WriteReq2 {}
+
+#[repr(C, packed)]
 struct ReadRes {
     iv: u32,
-    mac: [u8; 32],
+    mac: Mac,
 }
 
 impl Serialize for ReadRes {}
 
 impl<'a> Stream<'a> {
-    /*fn write_page(addr: Addr, data: &PageData, mac: &Mac, iv: u32) {
-            /*if let Some(page) = pages.get_mut(addr) {
-                    page.update(&data, &mac, 0);
-                    merkletree.update();
-                } else {
-            }*/
-        contains_key
-    }*/
+    fn write_page(&mut self, addr: Addr, data: &PageData, mac: &Mac, iv: u32) {
+        assert_eq!(addr & PAGE_MASK_INVERT, 0);
+
+        if let Some(page) = self.pages.get_mut(&addr) {
+            page.update(data, mac, iv);
+            self.merkletree.update(addr, iv);
+        } else {
+            let page = Page::new(data, mac, false);
+            self.pages.insert(addr, page);
+            self.merkletree.insert(addr, iv);
+        }
+    }
 
     pub fn new(path: &str, comm: Comm<'a>) -> Self {
         let mut pages = HashMap::new();
@@ -137,7 +156,7 @@ impl<'a> Stream<'a> {
         self.pages.get(&addr).expect("failed to get page")
     }
 
-    pub fn handle_read_access(&mut self, data: &[u8]) -> (u16, Vec<u8>) {
+    pub fn handle_read_access(&self, data: &[u8]) -> (u16, Vec<u8>) {
         // retrieve the encrypted page associated to the given address
         let req = ReadReq::from_bytes(data);
         let page = self.get_page(req.addr);
@@ -166,5 +185,30 @@ impl<'a> Stream<'a> {
         } else {
             (status, data)
         }
+    }
+
+    pub fn handle_write_access(&mut self, data: &[u8]) -> (u16, Vec<u8>) {
+        let req1 = WriteReq1::from_bytes(data);
+
+        // receive addr, iv and mac
+        let (status, data) = self.comm.exchange(0x01, &[0u8; 0], None, None, None);
+        assert_eq!(status, 0x6202); // COMMIT_HMAC
+        let req = WriteReq2::from_bytes(&data);
+        assert_eq!(req.addr & PAGE_MASK_INVERT, 0);
+
+        // commit page and send merkle proof
+        let (_entry, proof) = if self.merkletree.has_addr(req.addr) {
+            let (entry, proof) = self.merkletree.get_proof(req.addr);
+            assert_eq!((entry.addr, entry.counter + 1), (req.addr, req.iv));
+            (entry, proof)
+        } else {
+            self.merkletree.get_proof_of_last_entry()
+        };
+
+        self.write_page(req.addr, &req1.page_data, &req.mac, req.iv);
+
+        assert!(proof.len() <= 250);
+
+        self.comm.exchange(0x02, &proof, None, None, None)
     }
 }

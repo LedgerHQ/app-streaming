@@ -6,7 +6,7 @@ use hex_literal::hex;
 
 type Digest = [u8; 32];
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug)]
 pub struct Entry {
     pub addr: u32,
     pub counter: u32,
@@ -131,7 +131,7 @@ impl MerkleTree {
         (self.entries[m], proof)
     }
 
-    pub fn has_addr(self, addr: u32) -> bool {
+    pub fn has_addr(&self, addr: u32) -> bool {
         self.find_index_by_addr(addr).is_some()
     }
 }
