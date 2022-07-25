@@ -40,15 +40,6 @@ impl Page {
     }
 }
 
-struct Stream<'a> {
-    pages: HashMap<Addr, Page>,
-    app: App,
-    manifest: manifest::Manifest,
-    initialized: bool,
-    comm: Comm<'a>,
-    merkletree: MerkleTree,
-}
-
 #[repr(C, packed)]
 struct ReadReq {
     addr: Addr,
@@ -79,7 +70,16 @@ struct ReadRes {
 
 impl Serialize for ReadRes {}
 
-impl<'a> Stream<'a> {
+pub struct Stream {
+    pages: HashMap<Addr, Page>,
+    app: App,
+    manifest: manifest::Manifest,
+    initialized: bool,
+    comm: Comm,
+    merkletree: MerkleTree,
+}
+
+impl Stream {
     fn write_page(&mut self, addr: Addr, data: &PageData, mac: &Mac, iv: u32) {
         assert_eq!(addr & PAGE_MASK_INVERT, 0);
 
@@ -93,7 +93,12 @@ impl<'a> Stream<'a> {
         }
     }
 
-    pub fn new(path: &str, comm: Comm<'a>) -> Self {
+    fn get_page(&self, addr: u32) -> &Page {
+        assert_eq!(addr & PAGE_MASK_INVERT, 0);
+        self.pages.get(&addr).expect("failed to get page")
+    }
+
+    pub fn new(path: &str, comm: Comm) -> Self {
         let mut pages = HashMap::new();
         let app = App::from_zip(path);
         let manifest = manifest::Manifest::from_bytes(&app.manifest);
@@ -130,7 +135,7 @@ impl<'a> Stream<'a> {
         }
     }
 
-    pub fn init_app(&mut self) -> (u16, Vec<u8>) {
+    pub fn init(&mut self) -> (u16, Vec<u8>) {
         assert!(!self.initialized);
 
         let signature = self
@@ -149,11 +154,6 @@ impl<'a> Stream<'a> {
         data[3..].copy_from_slice(&manifest);
 
         self.comm.exchange(0x00, &data, None, None, None)
-    }
-
-    fn get_page(&self, addr: u32) -> &Page {
-        assert_eq!(addr & PAGE_MASK_INVERT, 0);
-        self.pages.get(&addr).expect("failed to get page")
     }
 
     pub fn handle_read_access(&self, data: &[u8]) -> (u16, Vec<u8>) {

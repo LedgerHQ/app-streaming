@@ -1,4 +1,4 @@
-use cpython::{ObjectProtocol, PyBytes, PyObject, Python};
+use cpython::{ObjectProtocol, PyBytes, PyClone, PyObject, Python};
 use std::convert::TryInto;
 
 pub struct Apdu<'a> {
@@ -23,25 +23,28 @@ impl Apdu<'_> {
     }
 }
 
-pub struct Comm<'a> {
-    py: Python<'a>,
-    comm: &'a PyObject,
+pub struct Comm {
+    comm: PyObject,
 }
 
-impl Comm<'_> {
-    pub fn new<'a>(py: Python<'a>, comm: &'a PyObject) -> Comm<'a> {
-        Comm { py, comm }
+impl Comm {
+    pub fn new(py: Python, comm: &PyObject) -> Comm {
+        Comm {
+            comm: comm.clone_ref(py),
+        }
     }
 
     pub fn exchange_apdu(&self, apdu: &[u8]) -> Vec<u8> {
-        let data = PyBytes::new(self.py, apdu);
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let data = PyBytes::new(py, apdu);
         let result: PyBytes = self
             .comm
-            .call_method(self.py, "_exchange", (&data,), None)
+            .call_method(py, "_exchange", (&data,), None)
             .unwrap()
-            .extract(self.py)
+            .extract(py)
             .unwrap();
-        result.data(self.py).to_vec()
+        result.data(py).to_vec()
     }
 
     pub fn exchange(

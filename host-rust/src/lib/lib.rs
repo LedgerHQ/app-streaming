@@ -1,4 +1,5 @@
 #![allow(dead_code)] // XXX
+#![allow(clippy::manual_strip)] // https://github.com/dgrunwald/rust-cpython/issues/245#934934
 #![feature(proc_macro_hygiene)]
 
 extern crate cpython;
