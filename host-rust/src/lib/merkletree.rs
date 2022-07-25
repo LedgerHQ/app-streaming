@@ -6,10 +6,10 @@ use hex_literal::hex;
 
 type Digest = [u8; 32];
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Entry {
-    addr: u32,
-    counter: u32,
+    pub addr: u32,
+    pub counter: u32,
 }
 
 impl Entry {

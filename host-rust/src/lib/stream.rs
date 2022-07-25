@@ -5,9 +5,11 @@ use app::App;
 use comm::Comm;
 use manifest;
 use merkletree::MerkleTree;
-use serialization::Deserialize;
+use serialization::{Deserialize, Serialize};
 
 const PAGE_SIZE: usize = 256;
+const PAGE_MASK: u32 = 0xffffff00;
+const PAGE_MASK_INVERT: u32 = 0x000000ff;
 
 type PageData = [u8; PAGE_SIZE];
 type Mac = [u8; 32];
@@ -44,7 +46,23 @@ struct Stream<'a> {
     manifest: manifest::Manifest,
     initialized: bool,
     comm: Comm<'a>,
+    merkletree: MerkleTree,
 }
+
+#[repr(C, packed)]
+struct ReadReq {
+    addr: u32,
+}
+
+impl Deserialize for ReadReq {}
+
+#[repr(C, packed)]
+struct ReadRes {
+    iv: u32,
+    mac: [u8; 32],
+}
+
+impl Serialize for ReadRes {}
 
 impl<'a> Stream<'a> {
     /*fn write_page(addr: Addr, data: &PageData, mac: &Mac, iv: u32) {
@@ -75,10 +93,10 @@ impl<'a> Stream<'a> {
         let mut addr = manifest.data_start;
         zip::<&Vec<PageData>, &Vec<Mac>>(app.data_pages.as_ref(), app.data_macs.as_ref().unwrap())
             .for_each(|(data, mac)| {
-                (data, mac, true);
                 // The IV is set to 0. It allows the VM to tell which key should be
                 // used for decryption and HMAC verification.
                 let page = Page::new(data, mac, false);
+                pages.insert(addr, page);
                 merkletree.insert(addr, 0);
                 addr += PAGE_SIZE as u32;
             });
@@ -89,10 +107,11 @@ impl<'a> Stream<'a> {
             manifest,
             initialized: false,
             comm,
+            merkletree,
         }
     }
 
-    pub fn init_app(&mut self) /*-> (u16, Vec<u8>)*/ {
+    pub fn init_app(&mut self) -> (u16, Vec<u8>) {
         assert!(!self.initialized);
 
         let signature = self
@@ -100,9 +119,52 @@ impl<'a> Stream<'a> {
             .manifest_device_signature
             .as_ref()
             .expect("app isn't signed");
-        let (status, data) = self.comm.exchange(0x00, signature, None, None, None);
+        let (status, _data) = self.comm.exchange(0x00, signature, None, None, None);
         assert_eq!(status, 0x6701); // REQUEST_MANIFEST
 
         self.initialized = true;
+
+        // Pad with 3 bytes because of alignment.
+        let manifest = self.manifest.to_vec();
+        let mut data = vec![0; 3 + manifest.len()];
+        data[3..].copy_from_slice(&manifest);
+
+        self.comm.exchange(0x00, &data, None, None, None)
+    }
+
+    fn get_page(&self, addr: u32) -> &Page {
+        assert_eq!(addr & PAGE_MASK_INVERT, 0);
+        self.pages.get(&addr).expect("failed to get page")
+    }
+
+    pub fn handle_read_access(&mut self, data: &[u8]) -> (u16, Vec<u8>) {
+        // retrieve the encrypted page associated to the given address
+        let req = ReadReq::from_bytes(data);
+        let page = self.get_page(req.addr);
+
+        // send the page data
+        let (status, _data) =
+            self.comm
+                .exchange(0x01, &page.data[1..], None, Some(page.data[0]), None);
+        assert_eq!(status, 0x6102); // REQUEST_HMAC
+
+        // send IV and Mac
+        let res = ReadRes {
+            iv: page.iv,
+            mac: page.mac,
+        };
+        let (status, data) = self.comm.exchange(0x02, &res.to_vec(), None, None, None);
+
+        // send merkle proof
+        if !page.read_only {
+            assert_eq!(status, 0x6103); // REQUEST_PROOF
+            let (entry, proof) = self.merkletree.get_proof(req.addr);
+            assert_eq!((entry.addr, entry.counter), (req.addr, page.iv));
+            // TODO: handle larger proofs
+            assert!(proof.len() <= 250);
+            self.comm.exchange(0x03, &proof, None, None, None)
+        } else {
+            (status, data)
+        }
     }
 }
