@@ -149,7 +149,12 @@ class DeviceStream:
         assert len(proof) <= 260
         cmd, data = self.cmd_exchange(proof)
 
-        # 3. if it's an update, send the old page
+        # 3. commit new page
+        assert cmd == Cmd.COMMIT_PAGE
+        assert len(data) == DeviceStream.PAGE_SIZE
+        self._write_page(request.addr, data, request.iv)
+
+        # 4. if it's an update, send the old page
         if update:
             page = self._get_page(request.addr)
             data_struct = Struct("iv" / Int32ul, "page_data" / Bytes(DeviceStream.PAGE_SIZE))
@@ -157,10 +162,7 @@ class DeviceStream:
         else:
             return self.cmd_exchange()
 
-        # 4. commit new page
-        assert cmd == Cmd.COMMIT_PAGE
-        assert len(data) == DeviceStream.PAGE_SIZE
-        self._write_page(request.addr, data, request.iv)
+
 
     def handle_send_buffer(self, data: bytes) -> bool:
         logger.debug(f"got buffer {data!r}")

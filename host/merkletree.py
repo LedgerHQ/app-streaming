@@ -72,7 +72,6 @@ class MerkleTree:
 
         i = self._find_index_by_addr(value.addr)
         assert i == -1
-
         self.entries.append(bytes(value))
 
     def root_hash(self) -> bytes:

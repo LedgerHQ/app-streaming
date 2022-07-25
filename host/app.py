@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 from typing import cast, List, Optional, Type
 from zipfile import ZipFile
 
-from comm import ApduCmd, get_client, CommClient
+from comm import get_client, CommClient
 from elf import Segment
 from manifest import Manifest
 
