@@ -1,5 +1,6 @@
 #![allow(dead_code)] // XXX
 #![allow(clippy::manual_strip)] // https://github.com/dgrunwald/rust-cpython/issues/245#934934
+#![allow(clippy::zero_ptr)]
 #![feature(proc_macro_hygiene)]
 
 extern crate cpython;
@@ -17,7 +18,10 @@ mod merkletree;
 pub mod serialization;
 pub mod stream;
 
-use cpython::{py_fn, py_module_initializer, PyBytes, PyNone, PyObject, PyResult, Python};
+use cpython::{
+    py_class, py_fn, py_module_initializer, PyBytes, PyNone, PyObject, PyResult, Python,
+};
+use std::cell::RefCell;
 
 py_module_initializer!(libstreaming, |py, m| {
     m.add(py, "__doc__", "This module is implemented in Rust.")?;
@@ -31,7 +35,19 @@ py_module_initializer!(libstreaming, |py, m| {
         "device_sign_app",
         py_fn!(py, device_sign_app_py(path: &str, comm: &PyObject)),
     )?;
+
+    m.add_class::<Stream>(py)?;
+
     Ok(())
+});
+
+py_class!(class Stream |py| {
+    data stream: RefCell<stream::Stream>;
+
+    def __new__(_cls, path: &str, comm: &PyObject) -> PyResult<Stream> {
+        let comm = comm::Comm::new(py, comm);
+        Self::create_instance(py, RefCell::new(stream::Stream::new(path, comm)))
+    }
 });
 
 fn get_pubkey_py(py: Python, path: &str, comm: &PyObject) -> PyResult<PyBytes> {

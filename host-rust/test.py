@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import sys
 
@@ -10,7 +11,11 @@ import libstreaming as streaming
 import comm as host_comm
 
 if __name__ == "__main__":
+    path = "/tmp/app.zip"
     with host_comm.get_client(use_speculos=True) as comm:
-        data = streaming.get_pubkey("/tmp/app.zip", comm)
-        print(f"pubkey: {data.hex()}")
-        streaming.device_sign_app("/tmp/app.zip", comm)
+        if False:
+            data = streaming.get_pubkey(path, comm)
+            print(f"pubkey: {data.hex()}")
+            streaming.device_sign_app(path, comm)
+        else:
+            stream = streaming.Stream(path, comm)
