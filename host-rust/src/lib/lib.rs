@@ -48,6 +48,12 @@ py_class!(class Stream |py| {
         let comm = comm::Comm::new(py, comm);
         Self::create_instance(py, RefCell::new(stream::Stream::new(path, comm)))
     }
+
+    def exchange(&self, recv_buffer: &[u8]) -> PyResult<PyNone> {
+        let mut stream = self.stream(py).borrow_mut();
+        stream.exchange(recv_buffer);
+        Ok(PyNone)
+    }
 });
 
 fn get_pubkey_py(py: Python, path: &str, comm: &PyObject) -> PyResult<PyBytes> {

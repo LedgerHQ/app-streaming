@@ -19,3 +19,4 @@ if __name__ == "__main__":
             streaming.device_sign_app(path, comm)
         else:
             stream = streaming.Stream(path, comm)
+            stream.exchange(b"lol")

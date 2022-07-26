@@ -161,6 +161,9 @@ impl Stream {
         let req = ReadReq::from_bytes(data);
         let page = self.get_page(req.addr);
 
+        let addr = req.addr;
+        println!("read access: {:x}", addr);
+
         // send the page data
         let (status, _data) =
             self.comm
@@ -196,6 +199,10 @@ impl Stream {
         let req = WriteReq2::from_bytes(&data);
         assert_eq!(req.addr & PAGE_MASK_INVERT, 0);
 
+        // temporary variables for unaligned references
+        let (addr, iv) = (req.addr, req.iv);
+        println!("write access: {:x} {:x} {}", addr, iv, hex::encode(req.mac));
+
         // commit page and send merkle proof
         let (_entry, proof) = if self.merkletree.has_addr(req.addr) {
             let (entry, proof) = self.merkletree.get_proof(req.addr);
@@ -210,5 +217,24 @@ impl Stream {
         assert!(proof.len() <= 250);
 
         self.comm.exchange(0x02, &proof, None, None, None)
+    }
+
+    pub fn exchange(&mut self, recv_buffer: &[u8]) -> Option<Vec<u8>> {
+        let (mut status, mut data) = if !self.initialized {
+            self.init()
+        } else {
+            // resume execution after previous exchange call
+            self.comm.exchange(0x00, &[0u8; 0], None, None, None)
+        };
+
+        loop {
+            match status as Status {
+                Status::RequestPage => { (status, data) = self.handle_read_access(&data); }
+                Status::CommitPage => { (status, data) = self.handle_write_access(&data); }
+                _ => { panic!("TODO"); }
+            }
+        }
+
+        None
     }
 }
