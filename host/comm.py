@@ -76,8 +76,9 @@ class CommClientUSB(CommClient):
         return self
 
     def __exit__(self, type, value, traceback):
-        average = int((self.total_time * 1000) // self.number_exchanges)
-        logger.info(f"{self.number_exchanges} exchanges in {self.total_time:.1f} s, ~{average} ms / exchange")
+        if self.number_exchanges != 0:
+            average = int((self.total_time * 1000) // self.number_exchanges)
+            logger.info(f"{self.number_exchanges} exchanges in {self.total_time:.1f} s, ~{average} ms / exchange")
 
         self.client.close()
         self.client = None
@@ -108,8 +109,9 @@ class CommClientBLE(CommClient):
         return self
 
     def __exit__(self, type, value, traceback):
-        average = int((self.total_time * 1000) // self.number_exchanges)
-        logger.info(f"{self.number_exchanges} exchanges in {self.total_time:.1f} s, ~{average} ms / exchange")
+        if self.number_exchanges != 0:
+            average = int((self.total_time * 1000) // self.number_exchanges)
+            logger.info(f"{self.number_exchanges} exchanges in {self.total_time:.1f} s, ~{average} ms / exchange")
 
         self.disconnect_ble_client(self.client)
         self.client = None
