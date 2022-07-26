@@ -15,6 +15,21 @@ type PageData = [u8; PAGE_SIZE];
 type Mac = [u8; 32];
 type Addr = u32;
 
+enum Status {
+    RequestPage = 0x6101,
+    RequestHmac = 0x6102,
+    RequestProof = 0x6103,
+    CommitPage = 0x6201,
+    CommitHmac = 0x6202,
+    SendBuffer = 0x6301,
+    RecvBuffer = 0x6401,
+    Exit = 0x6501,
+    Fatal = 0x6601,
+    RequestManifest = 0x6701,
+    RequestAppPage = 0x6801,
+    RequestAppHmac = 0x6802,
+}
+
 struct Page {
     data: PageData,
     mac: Mac,
@@ -144,7 +159,7 @@ impl Stream {
             .as_ref()
             .expect("app isn't signed");
         let (status, _data) = self.comm.exchange(0x00, signature, None, None, None);
-        assert_eq!(status, 0x6701); // REQUEST_MANIFEST
+        assert_eq!(status, Status::RequestManifest as u16);
 
         self.initialized = true;
 
@@ -165,7 +180,7 @@ impl Stream {
         let (status, _data) =
             self.comm
                 .exchange(0x01, &page.data[1..], None, Some(page.data[0]), None);
-        assert_eq!(status, 0x6102); // REQUEST_HMAC
+        assert_eq!(status, Status::RequestHmac as u16);
 
         // send IV and Mac
         let res = ReadRes {
@@ -176,7 +191,7 @@ impl Stream {
 
         // send merkle proof
         if !page.read_only {
-            assert_eq!(status, 0x6103); // REQUEST_PROOF
+            assert_eq!(status, Status::RequestProof as u16);
             let (entry, proof) = self.merkletree.get_proof(req.addr);
             assert_eq!((entry.addr, entry.counter), (req.addr, page.iv));
             // TODO: handle larger proofs
@@ -192,7 +207,7 @@ impl Stream {
 
         // receive addr, iv and mac
         let (status, data) = self.comm.exchange(0x01, &[0u8; 0], None, None, None);
-        assert_eq!(status, 0x6202); // COMMIT_HMAC
+        assert_eq!(status, Status::CommitHmac as u16);
         let req = WriteReq2::from_bytes(&data);
         assert_eq!(req.addr & PAGE_MASK_INVERT, 0);
 
