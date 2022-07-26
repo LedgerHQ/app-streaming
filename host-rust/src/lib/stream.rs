@@ -33,7 +33,7 @@ impl Page {
     }
 
     pub fn update(&mut self, data: &PageData, mac: &Mac, iv: u32) {
-        assert!(self.read_only);
+        assert!(!self.read_only);
         self.data = *data;
         self.mac = *mac;
         self.iv = iv;
