@@ -27,7 +27,7 @@ impl Page {
         Page {
             data: *data,
             mac: *mac,
-            iv: iv,
+            iv,
             read_only,
         }
     }
@@ -278,8 +278,8 @@ impl Stream {
         };
 
         // the first byte is in p2
-        let (p2, data) = if buf.len() == 0 {
-            (0x00 as u8, [0u8; 0].as_slice())
+        let (p2, data) = if buf.is_empty() {
+            (0x00, [0u8; 0].as_slice())
         } else {
             (buf[0], &buf[1..])
         };

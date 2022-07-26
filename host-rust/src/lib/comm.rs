@@ -1,7 +1,7 @@
 use cpython::{ObjectProtocol, PyBytes, PyClone, PyObject, Python};
 use std::convert::TryInto;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Status {
     RequestPage = 0x6101,
     RequestHmac = 0x6102,
