@@ -40,11 +40,16 @@ impl Page {
     }
 }
 
-struct Buffer<'a> {
+struct RBuffer<'a> {
     counter: usize,
     index: usize,
     data: &'a [u8],
     received: bool,
+}
+
+struct SBuffer {
+    counter: usize,
+    data: Vec<u8>,
 }
 
 #[repr(C, packed)]
@@ -84,6 +89,15 @@ struct RecvReq {
 }
 
 impl Deserialize for RecvReq {}
+
+#[repr(C, packed)]
+struct SendReq {
+    data: [u8; 249],
+    size: u8,
+    counter: u32,
+}
+
+impl Deserialize for SendReq {}
 
 pub struct Stream {
     pages: HashMap<Addr, Page>,
@@ -234,7 +248,7 @@ impl Stream {
         self.comm.exchange(0x02, &proof, None, None, None)
     }
 
-    fn handle_recv_buffer(&self, data: &[u8], buffer: &mut Buffer) -> (Status, Vec<u8>) {
+    fn handle_recv_buffer(&self, data: &[u8], buffer: &mut RBuffer) -> (Status, Vec<u8>) {
         // ensure the app doesn't call xrecv() twice
         assert!(!buffer.received);
 
@@ -273,6 +287,23 @@ impl Stream {
         self.comm.exchange(0x00, data, Some(last), Some(p2), None)
     }
 
+    fn handle_send_buffer(&self, data: &[u8], buffer: &mut SBuffer) -> bool {
+        let req = SendReq::from_bytes(data);
+
+        let stop = (req.counter & 0x80000000) != 0;
+
+        let counter = req.counter & 0x7fffffff;
+        assert_eq!(counter as usize, buffer.counter);
+
+        buffer.counter += 1;
+
+        assert!(req.size <= 249);
+        let size = req.size as usize;
+        buffer.data.extend_from_slice(&req.data[..size]);
+
+        stop
+    }
+
     pub fn exchange(&mut self, recv_buffer: &[u8]) -> Option<Vec<u8>> {
         let (mut status, mut data) = if !self.initialized {
             self.init()
@@ -281,11 +312,15 @@ impl Stream {
             self.comm.exchange(0x00, &[0u8; 0], None, None, None)
         };
 
-        let mut rbuffer = Buffer {
+        let mut rbuffer = RBuffer {
             counter: 0,
             index: 0,
             data: recv_buffer,
             received: false,
+        };
+        let mut sbuffer = SBuffer {
+            counter: 0,
+            data: Vec::new(),
         };
         loop {
             match status as Status {
@@ -297,6 +332,14 @@ impl Stream {
                 }
                 Status::RecvBuffer => {
                     (status, data) = self.handle_recv_buffer(&data, &mut rbuffer);
+                }
+                Status::SendBuffer => {
+                    let stop = self.handle_send_buffer(&data, &mut sbuffer);
+                    if stop {
+                        return Some(sbuffer.data);
+                    } else {
+                        (status, data) = self.comm.exchange(0x00, &[0u8; 0], None, None, None)
+                    }
                 }
                 _ => {
                     panic!("TODO");
