@@ -7,7 +7,7 @@ use std::convert::TryInto;
 use std::fs;
 use std::io::{Read, Seek, Write};
 
-use comm::Comm;
+use comm::{Comm, Status};
 use manifest::{Manifest, MANIFEST_SIZE};
 use serialization::{Deserialize, Serialize};
 
@@ -83,16 +83,16 @@ fn get_encrypted_macs(pages: &[Page], last: bool, comm: &Comm) -> (Vec<Mac>, Vec
         .enumerate()
         .map(|(i, &page)| {
             let (status, data) = comm.exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
-            assert_eq!(status, 0x6802); // REQUEST_APP_HMAC
-            println!("{} {:x} {}", i, status, hex::encode(&data));
+            assert_eq!(status, Status::RequestAppHmac);
+            println!("{} {:x} {}", i, status as u16, hex::encode(&data));
             let mac: Mac = data.try_into().expect("invalid MAC size");
 
             let (status, data) = comm.exchange(0x01, &[0u8; 0], None, None, None);
             if last && i == pages.len() - 1 {
                 apdu_data = data;
-                assert_eq!(status, 0x9000);
+                assert_eq!(status, Status::Success);
             } else {
-                assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
+                assert_eq!(status, Status::RequestAppPage);
             }
             mac
         })
@@ -208,7 +208,7 @@ impl App {
     pub fn get_pubkey(&self, comm: &Comm) -> [u8; 65] {
         let app_hash = &Manifest::from_bytes(&self.manifest).app_hash;
         let (status, data) = comm.exchange(0x10, app_hash, None, None, Some(0x34));
-        assert_eq!(status, 0x9000);
+        assert_eq!(status, Status::Success);
         data.try_into().expect("invalid public key size")
     }
 
@@ -225,7 +225,7 @@ impl App {
         };
 
         let (status, _) = comm.exchange(0x11, &req.to_vec(), None, None, Some(0x34));
-        assert_eq!(status, 0x6801); // REQUEST_APP_PAGE
+        assert_eq!(status, Status::RequestAppPage);
 
         let (code_macs, _) = get_encrypted_macs(&self.code_pages, false, comm);
         let (data_macs, apdu_data) = get_encrypted_macs(&self.data_pages, true, comm);

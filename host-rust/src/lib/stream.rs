@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::zip;
 
 use app::App;
-use comm::Comm;
+use comm::{Comm, Status};
 use manifest;
 use merkletree::MerkleTree;
 use serialization::{Deserialize, Serialize};
@@ -14,21 +14,6 @@ const PAGE_MASK_INVERT: u32 = 0x000000ff;
 type PageData = [u8; PAGE_SIZE];
 type Mac = [u8; 32];
 type Addr = u32;
-
-enum Status {
-    RequestPage = 0x6101,
-    RequestHmac = 0x6102,
-    RequestProof = 0x6103,
-    CommitPage = 0x6201,
-    CommitHmac = 0x6202,
-    SendBuffer = 0x6301,
-    RecvBuffer = 0x6401,
-    Exit = 0x6501,
-    Fatal = 0x6601,
-    RequestManifest = 0x6701,
-    RequestAppPage = 0x6801,
-    RequestAppHmac = 0x6802,
-}
 
 struct Page {
     data: PageData,
@@ -150,7 +135,7 @@ impl Stream {
         }
     }
 
-    pub fn init(&mut self) -> (u16, Vec<u8>) {
+    pub fn init(&mut self) -> (Status, Vec<u8>) {
         assert!(!self.initialized);
 
         let signature = self
@@ -159,7 +144,7 @@ impl Stream {
             .as_ref()
             .expect("app isn't signed");
         let (status, _data) = self.comm.exchange(0x00, signature, None, None, None);
-        assert_eq!(status, Status::RequestManifest as u16);
+        assert_eq!(status, Status::RequestManifest);
 
         self.initialized = true;
 
@@ -171,7 +156,7 @@ impl Stream {
         self.comm.exchange(0x00, &data, None, None, None)
     }
 
-    pub fn handle_read_access(&self, data: &[u8]) -> (u16, Vec<u8>) {
+    pub fn handle_read_access(&self, data: &[u8]) -> (Status, Vec<u8>) {
         // retrieve the encrypted page associated to the given address
         let req = ReadReq::from_bytes(data);
         let page = self.get_page(req.addr);
@@ -180,7 +165,7 @@ impl Stream {
         let (status, _data) =
             self.comm
                 .exchange(0x01, &page.data[1..], None, Some(page.data[0]), None);
-        assert_eq!(status, Status::RequestHmac as u16);
+        assert_eq!(status, Status::RequestHmac);
 
         // send IV and Mac
         let res = ReadRes {
@@ -191,7 +176,7 @@ impl Stream {
 
         // send merkle proof
         if !page.read_only {
-            assert_eq!(status, Status::RequestProof as u16);
+            assert_eq!(status, Status::RequestProof);
             let (entry, proof) = self.merkletree.get_proof(req.addr);
             assert_eq!((entry.addr, entry.counter), (req.addr, page.iv));
             // TODO: handle larger proofs
@@ -202,12 +187,12 @@ impl Stream {
         }
     }
 
-    pub fn handle_write_access(&mut self, data: &[u8]) -> (u16, Vec<u8>) {
+    pub fn handle_write_access(&mut self, data: &[u8]) -> (Status, Vec<u8>) {
         let req1 = WriteReq1::from_bytes(data);
 
         // receive addr, iv and mac
         let (status, data) = self.comm.exchange(0x01, &[0u8; 0], None, None, None);
-        assert_eq!(status, Status::CommitHmac as u16);
+        assert_eq!(status, Status::CommitHmac);
         let req = WriteReq2::from_bytes(&data);
         assert_eq!(req.addr & PAGE_MASK_INVERT, 0);
 
