@@ -23,11 +23,11 @@ struct Page {
 }
 
 impl Page {
-    pub fn new(data: &PageData, mac: &Mac, read_only: bool) -> Self {
+    pub fn new(data: &PageData, mac: &Mac, iv: u32, read_only: bool) -> Self {
         Page {
             data: *data,
             mac: *mac,
-            iv: 0,
+            iv: iv,
             read_only,
         }
     }
@@ -38,6 +38,13 @@ impl Page {
         self.mac = *mac;
         self.iv = iv;
     }
+}
+
+struct Buffer<'a> {
+    counter: usize,
+    index: usize,
+    data: &'a [u8],
+    received: bool,
 }
 
 #[repr(C, packed)]
@@ -70,6 +77,14 @@ struct ReadRes {
 
 impl Serialize for ReadRes {}
 
+#[repr(C, packed)]
+struct RecvReq {
+    counter: u32,
+    maxsize: u16,
+}
+
+impl Deserialize for RecvReq {}
+
 pub struct Stream {
     pages: HashMap<Addr, Page>,
     app: App,
@@ -87,7 +102,7 @@ impl Stream {
             page.update(data, mac, iv);
             self.merkletree.update(addr, iv);
         } else {
-            let page = Page::new(data, mac, false);
+            let page = Page::new(data, mac, iv, false);
             self.pages.insert(addr, page);
             self.merkletree.insert(addr, iv);
         }
@@ -107,8 +122,8 @@ impl Stream {
         let mut addr = manifest.code_start;
         zip::<&Vec<PageData>, &Vec<Mac>>(app.code_pages.as_ref(), app.code_macs.as_ref().unwrap())
             .for_each(|(data, mac)| {
-                let page = Page::new(data, mac, true);
-                // Since this pages are read-only, don't call _write_page() to avoid
+                let page = Page::new(data, mac, 0, true);
+                // Since this pages are read-only, don't call write_page() to avoid
                 // inserting them in the merkle tree.
                 pages.insert(addr, page);
                 addr += PAGE_SIZE as u32;
@@ -119,7 +134,7 @@ impl Stream {
             .for_each(|(data, mac)| {
                 // The IV is set to 0. It allows the VM to tell which key should be
                 // used for decryption and HMAC verification.
-                let page = Page::new(data, mac, false);
+                let page = Page::new(data, mac, 0, false);
                 pages.insert(addr, page);
                 merkletree.insert(addr, 0);
                 addr += PAGE_SIZE as u32;
@@ -135,7 +150,7 @@ impl Stream {
         }
     }
 
-    pub fn init(&mut self) -> (Status, Vec<u8>) {
+    fn init(&mut self) -> (Status, Vec<u8>) {
         assert!(!self.initialized);
 
         let signature = self
@@ -156,7 +171,7 @@ impl Stream {
         self.comm.exchange(0x00, &data, None, None, None)
     }
 
-    pub fn handle_read_access(&self, data: &[u8]) -> (Status, Vec<u8>) {
+    fn handle_read_access(&self, data: &[u8]) -> (Status, Vec<u8>) {
         // retrieve the encrypted page associated to the given address
         let req = ReadReq::from_bytes(data);
         let page = self.get_page(req.addr);
@@ -190,7 +205,7 @@ impl Stream {
         }
     }
 
-    pub fn handle_write_access(&mut self, data: &[u8]) -> (Status, Vec<u8>) {
+    fn handle_write_access(&mut self, data: &[u8]) -> (Status, Vec<u8>) {
         let req1 = WriteReq1::from_bytes(data);
 
         // receive addr, iv and mac
@@ -219,6 +234,45 @@ impl Stream {
         self.comm.exchange(0x02, &proof, None, None, None)
     }
 
+    fn handle_recv_buffer(&self, data: &[u8], buffer: &mut Buffer) -> (Status, Vec<u8>) {
+        // ensure the app doesn't call xrecv() twice
+        assert!(!buffer.received);
+
+        let req = RecvReq::from_bytes(data);
+
+        let counter = req.counter as usize;
+        let maxsize = req.maxsize as usize;
+        assert_eq!(counter, buffer.counter);
+
+        println!("recv buffer: counter: {}, maxsize: {}", counter, maxsize);
+
+        let size = if maxsize > buffer.data.len() - buffer.index {
+            buffer.data.len() - buffer.index
+        } else {
+            maxsize
+        };
+
+        let buf = &buffer.data[buffer.index..buffer.index + size];
+        buffer.index += size;
+        buffer.counter += 1;
+
+        let last = if buffer.index == buffer.data.len() {
+            buffer.received = true;
+            0x01
+        } else {
+            0x00
+        };
+
+        // the first byte is in p2
+        let (p2, data) = if buf.len() == 0 {
+            (0x00 as u8, [0u8; 0].as_slice())
+        } else {
+            (buf[0], &buf[1..])
+        };
+
+        self.comm.exchange(0x00, data, Some(last), Some(p2), None)
+    }
+
     pub fn exchange(&mut self, recv_buffer: &[u8]) -> Option<Vec<u8>> {
         let (mut status, mut data) = if !self.initialized {
             self.init()
@@ -227,11 +281,26 @@ impl Stream {
             self.comm.exchange(0x00, &[0u8; 0], None, None, None)
         };
 
+        let mut rbuffer = Buffer {
+            counter: 0,
+            index: 0,
+            data: recv_buffer,
+            received: false,
+        };
         loop {
             match status as Status {
-                Status::RequestPage => { (status, data) = self.handle_read_access(&data); }
-                Status::CommitPage => { (status, data) = self.handle_write_access(&data); }
-                _ => { panic!("TODO"); }
+                Status::RequestPage => {
+                    (status, data) = self.handle_read_access(&data);
+                }
+                Status::CommitPage => {
+                    (status, data) = self.handle_write_access(&data);
+                }
+                Status::RecvBuffer => {
+                    (status, data) = self.handle_recv_buffer(&data, &mut rbuffer);
+                }
+                _ => {
+                    panic!("TODO");
+                }
             }
         }
 
