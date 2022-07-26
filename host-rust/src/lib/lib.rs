@@ -49,10 +49,13 @@ py_class!(class Stream |py| {
         Self::create_instance(py, RefCell::new(stream::Stream::new(path, comm)))
     }
 
-    def exchange(&self, recv_buffer: &[u8]) -> PyResult<PyNone> {
+    def exchange(&self, recv_buffer: &[u8]) -> PyResult<PyBytes> {
         let mut stream = self.stream(py).borrow_mut();
-        stream.exchange(recv_buffer);
-        Ok(PyNone)
+        if let Some(data) = stream.exchange(recv_buffer) {
+            Ok(PyBytes::new(py, &data))
+        } else {
+            Ok(PyBytes::new(py, &[0u8; 0]))
+        }
     }
 });
 
