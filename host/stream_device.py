@@ -126,7 +126,7 @@ class DeviceStream:
         assert entry.counter == page.iv
 
         # TODO: handle larger proofs
-        assert len(proof) <= 260, f"{len(proof)} > 260"
+        #assert len(proof) <= 260, f"{len(proof)} > 260"
 
         logger.debug(f"sending merkle proof...")
         return self.cmd_exchange(proof)
@@ -150,7 +150,7 @@ class DeviceStream:
             update = False
 
         # TODO: handle larger proofs
-        assert len(proof) <= 260
+        #assert len(proof) <= 260
         cmd, data = self.cmd_exchange(proof)
 
         # 3. commit new page
