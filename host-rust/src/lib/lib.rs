@@ -19,9 +19,12 @@ pub mod serialization;
 pub mod stream;
 
 use cpython::{
-    py_class, py_fn, py_module_initializer, PyBytes, PyNone, PyObject, PyResult, Python,
+    py_class, py_fn, py_module_initializer, ObjectProtocol, PyBytes, PyClone, PyNone, PyObject,
+    PyResult, Python,
 };
 use std::cell::RefCell;
+
+use comm::Comm;
 
 py_module_initializer!(libstreaming, |py, m| {
     m.add(py, "__doc__", "This module is implemented in Rust.")?;
@@ -42,10 +45,10 @@ py_module_initializer!(libstreaming, |py, m| {
 });
 
 py_class!(class Stream |py| {
-    data stream: RefCell<stream::Stream>;
+    data stream: RefCell<stream::Stream<PyComm>>;
 
     def __new__(_cls, path: &str, comm: &PyObject) -> PyResult<Stream> {
-        let comm = comm::Comm::new(py, comm);
+        let comm = PyComm::new(py, comm);
         Self::create_instance(py, RefCell::new(stream::Stream::new(path, comm)))
     }
 
@@ -61,14 +64,41 @@ py_class!(class Stream |py| {
 
 fn get_pubkey_py(py: Python, path: &str, comm: &PyObject) -> PyResult<PyBytes> {
     let app = app::App::from_zip(path);
-    let comm = comm::Comm::new(py, comm);
+    let comm = PyComm::new(py, comm);
     let pubkey = app.get_pubkey(&comm);
     Ok(PyBytes::new(py, &pubkey))
 }
 
 fn device_sign_app_py(py: Python, path: &str, comm: &PyObject) -> PyResult<PyNone> {
     let mut app = app::App::from_zip(path);
-    let comm = comm::Comm::new(py, comm);
+    let comm = PyComm::new(py, comm);
     app.device_sign_app(&comm);
     Ok(PyNone)
+}
+
+pub struct PyComm {
+    comm: PyObject,
+}
+
+impl PyComm {
+    fn new(py: Python, comm: &PyObject) -> PyComm {
+        PyComm {
+            comm: comm.clone_ref(py),
+        }
+    }
+}
+
+impl Comm for PyComm {
+    fn exchange_apdu(&self, apdu: &[u8]) -> Vec<u8> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let data = PyBytes::new(py, apdu);
+        let result: PyBytes = self
+            .comm
+            .call_method(py, "_exchange", (&data,), None)
+            .unwrap()
+            .extract(py)
+            .unwrap();
+        result.data(py).to_vec()
+    }
 }

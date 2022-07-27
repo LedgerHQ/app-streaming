@@ -99,16 +99,16 @@ struct SendReq {
 
 impl Deserialize for SendReq {}
 
-pub struct Stream {
+pub struct Stream<T> {
     pages: HashMap<Addr, Page>,
     app: App,
     manifest: manifest::Manifest,
     initialized: bool,
-    comm: Comm,
+    comm: T,
     merkletree: MerkleTree,
 }
 
-impl Stream {
+impl<T: Comm> Stream<T> {
     fn write_page(&mut self, addr: Addr, data: &PageData, mac: &Mac, iv: u32) {
         assert_eq!(addr & PAGE_MASK_INVERT, 0);
 
@@ -127,7 +127,7 @@ impl Stream {
         self.pages.get(&addr).expect("failed to get page")
     }
 
-    pub fn new(path: &str, comm: Comm) -> Self {
+    pub fn new(path: &str, comm: T) -> Self {
         let mut pages = HashMap::new();
         let app = App::from_zip(path);
         let manifest = manifest::Manifest::from_bytes(&app.manifest);

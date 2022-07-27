@@ -1,4 +1,3 @@
-use cpython::{ObjectProtocol, PyBytes, PyClone, PyObject, Python};
 use std::convert::TryInto;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -61,31 +60,12 @@ impl Apdu<'_> {
     }
 }
 
-pub struct Comm {
-    comm: PyObject,
-}
+pub trait Comm {
+    // This trait's method should be implemented by communication classes. It
+    // exchanges a single APDU with the device.
+    fn exchange_apdu(&self, apdu: &[u8]) -> Vec<u8>;
 
-impl Comm {
-    pub fn new(py: Python, comm: &PyObject) -> Comm {
-        Comm {
-            comm: comm.clone_ref(py),
-        }
-    }
-
-    pub fn exchange_apdu(&self, apdu: &[u8]) -> Vec<u8> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let data = PyBytes::new(py, apdu);
-        let result: PyBytes = self
-            .comm
-            .call_method(py, "_exchange", (&data,), None)
-            .unwrap()
-            .extract(py)
-            .unwrap();
-        result.data(py).to_vec()
-    }
-
-    pub fn exchange(
+    fn exchange(
         &self,
         ins: u8,
         data: &[u8],

@@ -76,7 +76,7 @@ fn macs_from_u8(data: &[u8]) -> Vec<[u8; 32]> {
         .collect()
 }
 
-fn get_encrypted_macs(pages: &[Page], last: bool, comm: &Comm) -> (Vec<Mac>, Vec<u8>) {
+fn get_encrypted_macs(pages: &[Page], last: bool, comm: &dyn Comm) -> (Vec<Mac>, Vec<u8>) {
     let mut apdu_data = Vec::new();
     let macs = pages
         .iter()
@@ -205,14 +205,14 @@ impl App {
         }
     }
 
-    pub fn get_pubkey(&self, comm: &Comm) -> [u8; 65] {
+    pub fn get_pubkey(&self, comm: &dyn Comm) -> [u8; 65] {
         let app_hash = &Manifest::from_bytes(&self.manifest).app_hash;
         let (status, data) = comm.exchange(0x10, app_hash, None, None, Some(0x34));
         assert_eq!(status, Status::Success);
         data.try_into().expect("invalid public key size")
     }
 
-    pub fn device_sign_app(&mut self, comm: &Comm) {
+    pub fn device_sign_app(&mut self, comm: &dyn Comm) {
         let device_pubkey = self.get_pubkey(comm);
         let mut signature = [0u8; 72];
         let size = self.manifest_hsm_signature.len();
