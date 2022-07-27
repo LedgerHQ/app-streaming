@@ -47,11 +47,16 @@ py_module_initializer!(libstreaming, |py, m| {
 py_class!(class Stream |py| {
     data stream: RefCell<stream::Stream<PyComm>>;
 
+    // S.new(path: str, comm: Comm) -> Stream
+    // XXX: using doc comment leads to an error.
     def __new__(_cls, path: &str, comm: &PyObject) -> PyResult<Stream> {
         let comm = PyComm::new(py, comm);
         Self::create_instance(py, RefCell::new(stream::Stream::new(path, comm)))
     }
 
+    /// S.exchange(buffer: bytes) -> bytes
+    ///
+    /// Send a buffer of an arbitrary size to the app and return the response.
     def exchange(&self, recv_buffer: &[u8]) -> PyResult<PyBytes> {
         let mut stream = self.stream(py).borrow_mut();
         if let Some(data) = stream.exchange(recv_buffer) {
