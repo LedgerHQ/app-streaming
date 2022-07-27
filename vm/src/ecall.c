@@ -187,7 +187,7 @@ void sys_exit(unsigned int code)
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, sizeof(*cmd));
 }
 
-#ifdef TARGET_NANOX
+#if defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 void sys_ux_rectangle(unsigned int color, unsigned int x, unsigned int y, unsigned int width, unsigned int height)
 {
     bagl_hal_draw_rect(color, x, y, width, height);

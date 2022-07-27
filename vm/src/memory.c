@@ -8,7 +8,7 @@
 #include "memory.h"
 #include "stream.h"
 
-#ifdef TARGET_NANOX
+#if defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 #define NPAGE_CODE  65
 #define NPAGE_STACK 10
 #define NPAGE_DATA  10

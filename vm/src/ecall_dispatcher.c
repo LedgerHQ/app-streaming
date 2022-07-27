@@ -31,7 +31,7 @@ bool ecall(struct rv_cpu *cpu)
         // stop execution
         success = false;
         break;
-#ifdef TARGET_NANOX
+#if defined(TARGET_NANOX) || defined(TARGET_NANOS2)
     case ECALL_UX_RECTANGLE:
         sys_ux_rectangle(cpu->regs[RV_REG_A0], cpu->regs[RV_REG_A1], cpu->regs[RV_REG_A2], cpu->regs[RV_REG_A3], cpu->regs[RV_REG_A4]);
         break;
