@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use std::time::Duration;
 
-use comm::Apdu;
+use comm::CApdu;
 
 #[derive(Debug, Serialize)]
 struct HttpRequest<'a> {
@@ -47,7 +47,7 @@ pub fn exchange(
     p2: Option<u8>,
     cla: Option<u8>,
 ) -> (u16, Vec<u8>) {
-    let apdu = Apdu {
+    let apdu = CApdu {
         cla: cla.unwrap_or(0x12),
         ins,
         p1: p1.unwrap_or(0x00),

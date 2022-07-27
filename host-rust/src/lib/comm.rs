@@ -38,7 +38,8 @@ impl From<u16> for Status {
     }
 }
 
-pub struct Apdu<'a> {
+// Command APDU
+pub struct CApdu<'a> {
     cla: u8,
     ins: u8,
     p1: u8,
@@ -47,7 +48,7 @@ pub struct Apdu<'a> {
     data: &'a [u8],
 }
 
-impl Apdu<'_> {
+impl CApdu<'_> {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![0; 5 + self.data.len()];
         bytes[0] = self.cla;
@@ -57,6 +58,23 @@ impl Apdu<'_> {
         bytes[4] = self.lc;
         bytes[5..].copy_from_slice(self.data);
         bytes
+    }
+}
+
+// Response APDU
+pub struct RApdu {
+    pub status: Status,
+    pub data: Vec<u8>,
+}
+
+impl RApdu {
+    pub fn from_bytes(data: Vec<u8>) -> Self {
+        assert!(data.len() >= 2);
+        let status = u16::from_be_bytes(data[data.len() - 2..].try_into().unwrap());
+        RApdu {
+            status: Status::from(status),
+            data: data[..data.len() - 2].to_vec(),
+        }
     }
 }
 
@@ -72,8 +90,8 @@ pub trait Comm {
         p1: Option<u8>,
         p2: Option<u8>,
         cla: Option<u8>,
-    ) -> (Status, Vec<u8>) {
-        let apdu = Apdu {
+    ) -> RApdu {
+        let capdu = CApdu {
             cla: cla.unwrap_or(0x12),
             ins,
             p1: p1.unwrap_or(0x00),
@@ -81,9 +99,7 @@ pub trait Comm {
             lc: data.len().try_into().unwrap(),
             data,
         };
-        let data = self.exchange_apdu(&apdu.to_bytes());
-        assert!(data.len() >= 2);
-        let status = u16::from_be_bytes(data[data.len() - 2..].try_into().unwrap());
-        (Status::from(status), data[..data.len() - 2].to_vec())
+        let data = self.exchange_apdu(&capdu.to_bytes());
+        RApdu::from_bytes(data)
     }
 }

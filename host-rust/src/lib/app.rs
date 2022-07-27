@@ -82,17 +82,22 @@ fn get_encrypted_macs(pages: &[Page], last: bool, comm: &dyn Comm) -> (Vec<Mac>,
         .iter()
         .enumerate()
         .map(|(i, &page)| {
-            let (status, data) = comm.exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
-            assert_eq!(status, Status::RequestAppHmac);
-            println!("{} {:x} {}", i, status as u16, hex::encode(&data));
-            let mac: Mac = data.try_into().expect("invalid MAC size");
+            let rapdu = comm.exchange(0x01, &page[1..], None, Some(page[0]), Some(0x34));
+            assert_eq!(rapdu.status, Status::RequestAppHmac);
+            println!(
+                "{} {:x} {}",
+                i,
+                rapdu.status as u16,
+                hex::encode(&rapdu.data)
+            );
+            let mac: Mac = rapdu.data.try_into().expect("invalid MAC size");
 
-            let (status, data) = comm.exchange(0x01, &[0u8; 0], None, None, None);
+            let rapdu = comm.exchange(0x01, &[0u8; 0], None, None, None);
             if last && i == pages.len() - 1 {
-                apdu_data = data;
-                assert_eq!(status, Status::Success);
+                apdu_data = rapdu.data;
+                assert_eq!(rapdu.status, Status::Success);
             } else {
-                assert_eq!(status, Status::RequestAppPage);
+                assert_eq!(rapdu.status, Status::RequestAppPage);
             }
             mac
         })
@@ -207,9 +212,9 @@ impl App {
 
     pub fn get_pubkey(&self, comm: &dyn Comm) -> [u8; 65] {
         let app_hash = &Manifest::from_bytes(&self.manifest).app_hash;
-        let (status, data) = comm.exchange(0x10, app_hash, None, None, Some(0x34));
-        assert_eq!(status, Status::Success);
-        data.try_into().expect("invalid public key size")
+        let rapdu = comm.exchange(0x10, app_hash, None, None, Some(0x34));
+        assert_eq!(rapdu.status, Status::Success);
+        rapdu.data.try_into().expect("invalid public key size")
     }
 
     pub fn device_sign_app(&mut self, comm: &dyn Comm) {
@@ -224,8 +229,8 @@ impl App {
             size: size.try_into().unwrap(),
         };
 
-        let (status, _) = comm.exchange(0x11, &req.to_vec(), None, None, Some(0x34));
-        assert_eq!(status, Status::RequestAppPage);
+        let rapdu = comm.exchange(0x11, &req.to_vec(), None, None, Some(0x34));
+        assert_eq!(rapdu.status, Status::RequestAppPage);
 
         let (code_macs, _) = get_encrypted_macs(&self.code_pages, false, comm);
         let (data_macs, apdu_data) = get_encrypted_macs(&self.data_pages, true, comm);

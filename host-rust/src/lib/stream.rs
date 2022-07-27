@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::zip;
 
 use app::App;
-use comm::{Comm, Status};
+use comm::{Comm, RApdu, Status};
 use manifest;
 use merkletree::MerkleTree;
 use serialization::{Deserialize, Serialize};
@@ -164,7 +164,7 @@ impl<T: Comm> Stream<T> {
         }
     }
 
-    fn init(&mut self) -> (Status, Vec<u8>) {
+    fn init(&mut self) -> RApdu {
         assert!(!self.initialized);
 
         let signature = self
@@ -172,8 +172,8 @@ impl<T: Comm> Stream<T> {
             .manifest_device_signature
             .as_ref()
             .expect("app isn't signed");
-        let (status, _data) = self.comm.exchange(0x00, signature, None, None, None);
-        assert_eq!(status, Status::RequestManifest);
+        let rapdu = self.comm.exchange(0x00, signature, None, None, None);
+        assert_eq!(rapdu.status, Status::RequestManifest);
 
         self.initialized = true;
 
@@ -185,7 +185,7 @@ impl<T: Comm> Stream<T> {
         self.comm.exchange(0x00, &data, None, None, None)
     }
 
-    fn handle_read_access(&self, data: &[u8]) -> (Status, Vec<u8>) {
+    fn handle_read_access(&self, data: &[u8]) -> RApdu {
         // retrieve the encrypted page associated to the given address
         let req = ReadReq::from_bytes(data);
         let page = self.get_page(req.addr);
@@ -194,38 +194,38 @@ impl<T: Comm> Stream<T> {
         println!("read access: {:x}", addr);
 
         // send the page data
-        let (status, _data) =
-            self.comm
-                .exchange(0x01, &page.data[1..], None, Some(page.data[0]), None);
-        assert_eq!(status, Status::RequestHmac);
+        let rapdu = self
+            .comm
+            .exchange(0x01, &page.data[1..], None, Some(page.data[0]), None);
+        assert_eq!(rapdu.status, Status::RequestHmac);
 
         // send IV and Mac
         let res = ReadRes {
             iv: page.iv,
             mac: page.mac,
         };
-        let (status, data) = self.comm.exchange(0x02, &res.to_vec(), None, None, None);
+        let rapdu = self.comm.exchange(0x02, &res.to_vec(), None, None, None);
 
         // send merkle proof
         if !page.read_only {
-            assert_eq!(status, Status::RequestProof);
+            assert_eq!(rapdu.status, Status::RequestProof);
             let (entry, proof) = self.merkletree.get_proof(req.addr);
             assert_eq!((entry.addr, entry.counter), (req.addr, page.iv));
             // TODO: handle larger proofs
             assert!(proof.len() <= 250);
             self.comm.exchange(0x03, &proof, None, None, None)
         } else {
-            (status, data)
+            rapdu
         }
     }
 
-    fn handle_write_access(&mut self, data: &[u8]) -> (Status, Vec<u8>) {
+    fn handle_write_access(&mut self, data: &[u8]) -> RApdu {
         let req1 = WriteReq1::from_bytes(data);
 
         // receive addr, iv and mac
-        let (status, data) = self.comm.exchange(0x01, &[0u8; 0], None, None, None);
-        assert_eq!(status, Status::CommitHmac);
-        let req = WriteReq2::from_bytes(&data);
+        let rapdu = self.comm.exchange(0x01, &[0u8; 0], None, None, None);
+        assert_eq!(rapdu.status, Status::CommitHmac);
+        let req = WriteReq2::from_bytes(&rapdu.data);
         assert_eq!(req.addr & PAGE_MASK_INVERT, 0);
 
         // temporary variables for unaligned references
@@ -248,7 +248,7 @@ impl<T: Comm> Stream<T> {
         self.comm.exchange(0x02, &proof, None, None, None)
     }
 
-    fn handle_recv_buffer(&self, data: &[u8], buffer: &mut RBuffer) -> (Status, Vec<u8>) {
+    fn handle_recv_buffer(&self, data: &[u8], buffer: &mut RBuffer) -> RApdu {
         // ensure the app doesn't call xrecv() twice
         assert!(!buffer.received);
 
@@ -305,7 +305,7 @@ impl<T: Comm> Stream<T> {
     }
 
     pub fn exchange(&mut self, recv_buffer: &[u8]) -> Option<Vec<u8>> {
-        let (mut status, mut data) = if !self.initialized {
+        let mut rapdu = if !self.initialized {
             self.init()
         } else {
             // resume execution after previous exchange call
@@ -323,22 +323,22 @@ impl<T: Comm> Stream<T> {
             data: Vec::new(),
         };
         loop {
-            match status as Status {
+            match rapdu.status {
                 Status::RequestPage => {
-                    (status, data) = self.handle_read_access(&data);
+                    rapdu = self.handle_read_access(&rapdu.data);
                 }
                 Status::CommitPage => {
-                    (status, data) = self.handle_write_access(&data);
+                    rapdu = self.handle_write_access(&rapdu.data);
                 }
                 Status::RecvBuffer => {
-                    (status, data) = self.handle_recv_buffer(&data, &mut rbuffer);
+                    rapdu = self.handle_recv_buffer(&rapdu.data, &mut rbuffer);
                 }
                 Status::SendBuffer => {
-                    let stop = self.handle_send_buffer(&data, &mut sbuffer);
+                    let stop = self.handle_send_buffer(&rapdu.data, &mut sbuffer);
                     if stop {
                         return Some(sbuffer.data);
                     } else {
-                        (status, data) = self.comm.exchange(0x00, &[0u8; 0], None, None, None)
+                        rapdu = self.comm.exchange(0x00, &[0u8; 0], None, None, None)
                     }
                 }
                 _ => {
