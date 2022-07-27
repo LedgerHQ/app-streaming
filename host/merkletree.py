@@ -15,25 +15,25 @@ class Entry:
     """
 
     @staticmethod
-    def from_values(addr: int,  page_data: bytes, counter: int = 0) -> "Entry":
-        return Entry(addr.to_bytes(4, "little") + page_data + counter.to_bytes(4, "little"))
+    def from_values(addr: int,  data: bytes, counter: int = 0) -> "Entry":
+        return Entry(addr.to_bytes(4, "little") + data + counter.to_bytes(4, "little"))
 
-    def __init__(self, data: bytes) -> None:
-        assert len(data) >= 8
-        self.data = data
-        self.addr = int.from_bytes(data[:4], "little")
-        self.page_data = data[4:-4]
-        self.counter = int.from_bytes(data[-4:], "little")
+    def __init__(self, raw_entry: bytes) -> None:
+        assert len(raw_entry) >= 8
+        self._raw_entry = raw_entry
+        self.addr = int.from_bytes(raw_entry[:4], "little")
+        self.data = raw_entry[4:-4]
+        self.counter = int.from_bytes(raw_entry[-4:], "little")
 
     def update_counter(self, counter: int) -> None:
         self.counter = counter
-        self.data = self.data[:-4] + counter.to_bytes(4, "little")
+        self._raw_entry = self._raw_entry[:-4] + counter.to_bytes(4, "little")
 
     def __bytes__(self) -> bytes:
-        return self.data
+        return self._raw_entry
 
     def __repr__(self):
-        return f"<addr:{self.addr:#x}, page_data:{self.page_data.hex()}, counter:{self.counter:#x}>"
+        return f"<addr:{self.addr:#x}, data:{self.data.hex()}, counter:{self.counter:#x}>"
 
 
 def largest_power_of_two(n) -> int:
@@ -63,9 +63,7 @@ class MerkleTree:
         i = self._find_index_by_addr(value.addr)
         assert i != -1
 
-        e = Entry(self.entries[i])
-        e.update_counter(value.counter)
-        self.entries[i] = bytes(e)
+        self.entries[i] = bytes(value)
 
     def insert(self, value: Entry) -> None:
         assert type(value) == Entry

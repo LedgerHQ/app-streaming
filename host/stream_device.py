@@ -112,9 +112,10 @@ class DeviceStream:
         # 2. send encrypted page data
         page = self._get_page(addr)
         assert len(page.data) == DeviceStream.PAGE_SIZE
-        data_struct = Struct("iv" / Int32ul, "page_data" / Bytes(DeviceStream.PAGE_SIZE))
+        data_struct = Struct("iv" / Int32ul, "data" / Bytes(DeviceStream.PAGE_SIZE))
 
-        cmd, data = self.cmd_exchange(data_struct.build(dict(iv=page.iv, page_data=page.data)))
+        logger.debug(f"sending iv and page_data...")
+        cmd, data = self.cmd_exchange(data_struct.build(dict(iv=page.iv, data=page.data)))
 
         assert cmd == Cmd.REQUEST_PROOF
         assert addr == DeviceStream._parse_request(Struct("addr" / Int32ul), data).addr
@@ -127,18 +128,21 @@ class DeviceStream:
         # TODO: handle larger proofs
         assert len(proof) <= 260, f"{len(proof)} > 260"
 
+        logger.debug(f"sending merkle proof...")
         return self.cmd_exchange(proof)
 
     def handle_write_access(self, data: bytes) -> Tuple[int, bytes]:
         # 1. receive contextual information
         request = DeviceStream._parse_request(Struct("addr" / Int32ul, "iv" / Int32ul), data)
+        logger.debug(f"write access: {hex(request.addr) = } {request.iv = }")
 
         # 2. send merkle proof
         if self.merkletree.has_addr(request.addr):
             # proof of previous value
-            old_page, proof = self.merkletree.get_proof(request.addr)
-            assert old_page.addr == request.addr
-            assert old_page.counter + 1 == request.iv
+            old_entry, proof = self.merkletree.get_proof(request.addr)
+            assert len(old_entry.data) == DeviceStream.PAGE_SIZE
+            assert old_entry.addr == request.addr
+            assert old_entry.counter + 1 == request.iv
             update = True
         else:
             # proof of last entry
@@ -156,9 +160,9 @@ class DeviceStream:
 
         # 4. if it's an update, send the old page
         if update:
-            page = self._get_page(request.addr)
             data_struct = Struct("iv" / Int32ul, "page_data" / Bytes(DeviceStream.PAGE_SIZE))
-            return self.cmd_exchange(data_struct.build(dict(iv=page.iv, page_data=page.data)))
+            logger.debug(f"send old page: iv = {old_entry.counter}, data = {old_entry.data[:8].hex()}, data len = {len(old_entry.data)}")
+            return self.cmd_exchange(data_struct.build(dict(iv=old_entry.counter, page_data=old_entry.data)))
         else:
             return self.cmd_exchange()
 
