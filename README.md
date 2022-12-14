@@ -1,8 +1,8 @@
 ## App Streaming
 
-The *App Streaming* project allows running any app on Ledger Nano devices (X, S+, FatStacks) without restrictions such as memory limitations. Basically, the Ledger Nano runs a VM which can launch any app ; the (unlimited) memory is exported encrypted on the PC or the smartphone of the user.
+The *App Streaming* project allows running any app on Ledger Nano devices (X, S+, Stax) without restrictions such as memory limitations. Basically, the Ledger Nano runs a VM which can launch any app ; the (unlimited) memory is exported encrypted on the PC or the smartphone of the user.
 
-For developers, development is now standard since there's no restriction on the stack, heap nor code size. Modern software stack can be used (which implies standard toolchains, tests, fuzzing tools and standard libraries) along usual development patterns. The code is totally independent from the firmware and the same app is compatible with Nano X, Nano S+ and Fatstacks. An emulator such as speculos isn't required anymore and apps can be developed in Rust.
+For developers, development is now standard since there's no restriction on the stack, heap nor code size. Modern software stack can be used (which implies standard toolchains, tests, fuzzing tools and standard libraries) along usual development patterns. The code is totally independent from the firmware and the same app is compatible with Nano X, Nano S+ and Stax. An emulator such as speculos isn't required anymore and apps can be developed in Rust.
 
 For end-users, it means that there's no restrictions on the number of apps since there's no app install anymore: all supported apps are immediately available. In a similary way, there are no no app updates anymore, app version is always the latest. Regarding the transport, there's no USB or BLE deconnection when switching from an app to another.
 
