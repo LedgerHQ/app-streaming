@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+// PAGE_SIZE can be defined by libc headers, for test targets
+#undef PAGE_SIZE
+
 #define PAGE_SIZE 256
 #define PAGE_MASK ~(PAGE_SIZE - 1)
 
