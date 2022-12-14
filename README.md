@@ -47,4 +47,4 @@ Technical and usage information can be found in the [docs/](docs/) folder.
 
 ### Community
 
-Feel free to join the `#app-streaming` Slack channel.
+Feel free to join the [#streaming-project](https://discord.com/channels/885256081289379850/1052612612837355682) discord channel.
