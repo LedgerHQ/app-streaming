@@ -1,3 +1,10 @@
+# DISCLAIMER
+
+:warning: | THIS IS AN EXPERIMENTAL PROJECT.<br/>Please don't start depending on it, and do not use it in production. Large parts of this project are subject to change, and there might be critical vulnerabilities.<br/>This is an open source project developed by a dedicated team in Ledger, but it is not an official Ledger product. | :warning:
+:---: | :--- | :---
+
+---
+
 ## App Streaming
 
 The *App Streaming* project allows running any app on Ledger Nano devices (X, S+, Stax) without restrictions such as memory limitations. Basically, the Ledger Nano runs a VM which can launch any app ; the (unlimited) memory is exported encrypted on the PC or the smartphone of the user.
