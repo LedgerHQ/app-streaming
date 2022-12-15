@@ -45,6 +45,11 @@ Once the project will be adopted more broadly, it will be split into several rep
 Technical and usage information can be found in the [docs/](docs/) folder.
 
 
+### Licensing
+
+This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the full license text.
+
+
 ### Community
 
 Feel free to join the [#streaming-project](https://discord.com/channels/885256081289379850/1052612612837355682) discord channel.
