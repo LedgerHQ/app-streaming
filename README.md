@@ -1,8 +1,15 @@
+# DISCLAIMER
+
+:warning: | THIS IS AN EXPERIMENTAL PROJECT.<br/>Please don't start depending on it, and do not use it in production. Large parts of this project are subject to change, and there might be critical vulnerabilities.<br/>This is an open source project developed by a dedicated team in Ledger, but it is not an official Ledger product. | :warning:
+:---: | :--- | :---
+
+---
+
 ## App Streaming
 
-The *App Streaming* project allows running any app on Ledger Nano devices (X, S+, FatStacks) without restrictions such as memory limitations. Basically, the Ledger Nano runs a VM which can launch any app ; the (unlimited) memory is exported encrypted on the PC or the smartphone of the user.
+The *App Streaming* project allows running any app on Ledger Nano devices (X, S+, Stax) without restrictions such as memory limitations. Basically, the Ledger Nano runs a VM which can launch any app ; the (unlimited) memory is exported encrypted on the PC or the smartphone of the user.
 
-For developers, development is now standard since there's no restriction on the stack, heap nor code size. Modern software stack can be used (which implies standard toolchains, tests, fuzzing tools and standard libraries) along usual development patterns. The code is totally independent from the firmware and the same app is compatible with Nano X, Nano S+ and Fatstacks. An emulator such as speculos isn't required anymore and apps can be developed in Rust.
+For developers, development is now standard since there's no restriction on the stack, heap nor code size. Modern software stack can be used (which implies standard toolchains, tests, fuzzing tools and standard libraries) along usual development patterns. The code is totally independent from the firmware and the same app is compatible with Nano X, Nano S+ and Stax. An emulator such as speculos isn't required anymore and apps can be developed in Rust.
 
 For end-users, it means that there's no restrictions on the number of apps since there's no app install anymore: all supported apps are immediately available. In a similary way, there are no no app updates anymore, app version is always the latest. Regarding the transport, there's no USB or BLE deconnection when switching from an app to another.
 
@@ -38,6 +45,11 @@ Once the project will be adopted more broadly, it will be split into several rep
 Technical and usage information can be found in the [docs/](docs/) folder.
 
 
+### Licensing
+
+This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the full license text.
+
+
 ### Community
 
-Feel free to join the `#app-streaming` Slack channel.
+Feel free to join the [#streaming-project](https://discord.com/channels/885256081289379850/1052612612837355682) discord channel.
