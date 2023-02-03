@@ -1,5 +1,5 @@
-use sdk::glyphs::{ICON_CROSSMARK, ICON_EYE, ICON_VALIDATE};
-use sdk::ux::*;
+use exapp_sdk::glyphs::{ICON_CROSSMARK, ICON_EYE, ICON_VALIDATE};
+use exapp_sdk::ux::*;
 
 pub fn sign_tx_validation(send_amount: &str, get_amount: &str, fees: &str) -> bool {
     let swap_ui: [UxItem; 6] = [

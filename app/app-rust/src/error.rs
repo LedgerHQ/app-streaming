@@ -1,7 +1,7 @@
 use alloc::string::{String, ToString};
 use alloc::{fmt, format};
 
-use sdk::SdkError;
+use exapp_sdk::SdkError;
 
 #[derive(Debug)]
 pub struct AppError {

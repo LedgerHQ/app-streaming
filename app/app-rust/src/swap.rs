@@ -7,8 +7,8 @@ use error::*;
 use ledger_swap::ledger_swap::*;
 use message::message::*;
 use partner::*;
-use sdk::crypto::{get_random_bytes, CtxSha256, CxCurve, EcfpPublicKey};
-use sdk::ux::app_loading_start;
+use exapp_sdk::crypto::{get_random_bytes, CtxSha256, CxCurve, EcfpPublicKey};
+use exapp_sdk::ux::app_loading_start;
 use ui::sign_tx_validation;
 
 // mutable static is unsafe (because of threads)

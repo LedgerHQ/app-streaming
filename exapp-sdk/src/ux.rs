@@ -1,5 +1,5 @@
-use sdk::glyphs::*;
-use sdk::{
+use crate::glyphs::*;
+use crate::{
     ecall_app_loading_start, ecall_app_loading_stop, ecall_bagl_draw_with_context,
     ecall_bagl_hal_draw_bitmap_within_rect, ecall_screen_update, ecall_ux_idle, ecall_wait_button,
 };

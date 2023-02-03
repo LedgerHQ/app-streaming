@@ -1,5 +1,4 @@
-#![feature(default_alloc_error_handler)]
-#![cfg_attr(target_arch = "riscv32", no_main, no_std)]
+#![cfg_attr(target_arch = "riscv32", no_std, no_main)]
 
 extern crate alloc;
 extern crate bech32;
@@ -9,6 +8,7 @@ extern crate hex_literal;
 extern crate primitive_types;
 extern crate quick_protobuf;
 extern crate serde;
+extern crate exapp_sdk;
 
 #[cfg(not(target_arch = "riscv32"))]
 extern crate core;
@@ -20,7 +20,6 @@ mod eth;
 mod ledger_swap;
 mod message;
 mod partner;
-mod sdk;
 mod swap;
 mod ui;
 mod version;
@@ -36,6 +35,8 @@ use message::message::mod_Request::OneOfrequest;
 use message::message::mod_Response::OneOfresponse;
 use message::message::*;
 use swap::*;
+
+use exapp_sdk::fatal;
 
 #[cfg(test)]
 use hex_literal::hex;
@@ -108,19 +109,20 @@ fn test_get_version() {
     assert_eq!(response, hex!("0a070a05312e322e33"));
 }
 
-pub fn main() {
+#[no_mangle]
+pub extern "C" fn main() {
     version::setup_app();
 
     loop {
-        sdk::ux::ux_idle();
+        exapp_sdk::ux::ux_idle();
 
-        let buffer = sdk::xrecv(512);
+        let buffer = exapp_sdk::xrecv(512);
 
-        sdk::ux::app_loading_start("Handling request...\x00");
+        exapp_sdk::ux::app_loading_start("Handling request...\x00");
 
         let result = handle_req(&buffer);
-        sdk::xsend(&result);
+        exapp_sdk::xsend(&result);
 
-        sdk::ux::app_loading_stop();
+        exapp_sdk::ux::app_loading_stop();
     }
 }

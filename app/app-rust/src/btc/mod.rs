@@ -9,7 +9,7 @@ use hex_literal::hex;
 
 use currency::*;
 use error::{Result, *};
-use sdk::crypto::*;
+use exapp_sdk::crypto::*;
 
 pub struct Btc {}
 

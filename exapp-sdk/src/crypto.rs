@@ -1,7 +1,9 @@
 #[cfg(test)]
 use hex_literal::hex;
 
-use sdk::*;
+use crate::{
+    ecall_hash_update, fatal, ecall::{ecall_hash_final, ecall_derive_node_bip32, ecall_cx_ecfp_generate_pair, ecall_get_random_bytes, ecall_ecdsa_verify}, SdkError
+};
 
 #[repr(C)]
 pub struct CtxSha256 {
@@ -185,7 +187,7 @@ pub fn derive_node_bip32(
     path: &[u32],
     privkey_data: Option<&mut [u8]>,
     chain_code: Option<&mut [u8]>,
-) -> Result<()> {
+) -> Result<(), SdkError> {
     let privkey_data = if let Some(p) = privkey_data {
         p.as_mut_ptr()
     } else {
@@ -210,7 +212,7 @@ pub fn ecfp_generate_keypair(
     pubkey: &mut EcfpPublicKey,
     privkey: &mut EcfpPrivateKey,
     keep_privkey: bool,
-) -> Result<()> {
+) -> Result<(), SdkError> {
     if !unsafe { ecall_cx_ecfp_generate_pair(curve, pubkey, privkey, keep_privkey) } {
         Err(SdkError::KeyGeneration)
     } else {
@@ -237,7 +239,7 @@ impl EcfpPublicKey {
         &self.w
     }
 
-    pub fn verify(&self, hash: &[u8; 32], sig: &[u8]) -> Result<()> {
+    pub fn verify(&self, hash: &[u8; 32], sig: &[u8]) -> Result<(), SdkError> {
         if !unsafe { ecall_ecdsa_verify(self, hash.as_ptr(), sig.as_ptr(), sig.len()) } {
             Err(SdkError::SignatureVerification)
         } else {
@@ -245,7 +247,7 @@ impl EcfpPublicKey {
         }
     }
 
-    pub fn from_path(curve: CxCurve, path: &[u32]) -> Result<EcfpPublicKey> {
+    pub fn from_path(curve: CxCurve, path: &[u32]) -> Result<EcfpPublicKey, SdkError> {
         let mut privkey = EcfpPrivateKey::from_path(curve, path)?;
         let mut pubkey = EcfpPublicKey {
             curve,
@@ -266,7 +268,7 @@ impl EcfpPrivateKey {
         }
     }
 
-    pub fn from_path(curve: CxCurve, path: &[u32]) -> Result<EcfpPrivateKey> {
+    pub fn from_path(curve: CxCurve, path: &[u32]) -> Result<EcfpPrivateKey, SdkError> {
         let mut privkey = Self::new(curve, &[0; 32]);
         derive_node_bip32(curve, path, Some(&mut privkey.d), None)?;
         Ok(privkey)

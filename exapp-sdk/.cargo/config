@@ -1,0 +1,21 @@
+[target.x86_64-unknown-linux-gnu]
+rustflags = [
+  "-L../app/build/native/sdk",
+  "-L./lib/x64/",
+  "-lcxng",
+  "-lsdk",
+  "-lspeculos",
+  "-lcrypto",
+]
+
+[target.riscv32i-unknown-none-elf]
+rustflags = [
+  "-l", "sdk", "-L", "../app/build/sdk",
+  "-l", "ux", "-L", "../app/build/sdk/ux",
+
+  # link against libc coming from the RISC-V container (/usr/local/riscv32-unknown-linux-gnu/lib/libc.a)
+  "-l", "c", "-L", "./lib/risc-v/",
+]
+
+[build]
+target = "riscv32i-unknown-none-elf"
