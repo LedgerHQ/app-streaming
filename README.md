@@ -1,3 +1,8 @@
+# ARCHIVED
+
+> 📝 **New repository**: <br> Development continues in the [Vanadium repository](https://github.com/LedgerHQ/vanadium)
+
+
 # DISCLAIMER
 
 :warning: | THIS IS AN EXPERIMENTAL PROJECT.<br/>Please don't start depending on it, and do not use it in production. Large parts of this project are subject to change, and there might be critical vulnerabilities.<br/>This is an open source project developed by a dedicated team in Ledger, but it is not an official Ledger product. | :warning:
