@@ -32,7 +32,8 @@ jobs:
 
       - name: Tests
         run: |
-          cmake -Bbuild -Htests/
+          # CMakeTestCXXCompiler.cmake fails with ledger-app-builder image
+          cmake -DCMAKE_CXX_COMPILER_FORCED=1 -Bbuild -Htests/
           make -C build/
           make -C build/ test
 
