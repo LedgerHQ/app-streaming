@@ -33,8 +33,8 @@ A few apps are available in the [app/](app/) folder:
 
 - [app/app-ethereum/](app/app-ethereum/) is a subset of the current [Ethereum app](https://github.com/LedgerHQ/app-ethereum), with the addition of EIP-712 support
 - [app/app-swap/](app/app-ethereum/) is a subset of the current [Exchange app](https://github.com/LedgerHQ/app-exchange)
-- [app/app-rust/](app/app-rust/): also implements some features of the Exchange app, in Rust.
-- 2 SDKs are available, a [C SDK](app/sdk/) and a [Rust SDK](app/app-rust/src/sdk/).
+- [app-rust/](app-rust/): also implements some features of the Exchange app, in Rust.
+- 2 SDKs are available, a [C SDK](app/sdk/) and a [Rust SDK](app-rust/src/sdk/).
 
 The Nano RISC-V VM app is in [vm/](vm/) and Python tools to interact with the VM app are in [host/](host/).
 

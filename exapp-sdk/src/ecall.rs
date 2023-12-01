@@ -1,5 +1,5 @@
-use sdk::crypto::{CtxHashGuest, CxCurve, CxHashId, EcfpPrivateKey, EcfpPublicKey};
-use sdk::ux::BaglComponent;
+use crate::crypto::{CtxHashGuest, CxCurve, CxHashId, EcfpPrivateKey, EcfpPublicKey};
+use crate::ux::BaglComponent;
 
 extern "C" {
     pub fn ecall_app_loading_start(status: *const u8);

@@ -8,7 +8,7 @@ use hex_literal::hex;
 
 use currency::*;
 use error::*;
-use sdk::crypto::*;
+use exapp_sdk::crypto::*;
 
 pub struct Eth {}
 

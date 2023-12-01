@@ -1,0 +1,22 @@
+[package]
+name = "exapp_sdk"
+version = "0.1.0"
+edition = "2021"
+authors = ["greenknot"]
+
+[lib]
+name = "exapp_sdk"
+path = "src/lib.rs"
+
+[dev-dependencies]
+hex-literal = "0.3.4"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+strip = true
+opt-level = "z"
+#codegen-units = 1
+lto = true

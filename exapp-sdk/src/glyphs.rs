@@ -1,4 +1,4 @@
-use sdk::ux::*;
+use crate::ux::*;
 
 static ICON_LEFT_COLORS: [u32; 2] = [0x00000000, 0x00ffffff];
 static ICON_LEFT_BITMAP: [u8; 4] = [0x48, 0x12, 0x42, 0x08];

@@ -15,6 +15,7 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 hex-literal = "0.3.4"
 quick-protobuf = { version = "0.8.0", default-features = false }
 serde = { version = "1.0.*", default-features = false, features = ["derive", "alloc"] }
+exapp_sdk = { path = "../../exapp-sdk" }
 
 [profile.dev]
 panic = "abort"

@@ -1,2 +1,4 @@
 Cargo.lock
 target/
+lib/risc-v
+lib/x64
